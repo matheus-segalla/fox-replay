@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
-// Componente interno que consome os parâmetros da URL
+// Componente interno que consome os parâmetros da URL e renderiza o player premium
 function ConteudoJogada() {
     const searchParams = useSearchParams();
     const jogadaId = searchParams.get('id');
@@ -22,18 +22,18 @@ function ConteudoJogada() {
 
         async function buscarDadosJogada() {
             try {
-                // Busca o replay fazendo JOIN com quadras e com arenas ao mesmo tempo!
+                // Busca o replay fazendo JOIN relacional completo com quadras e arenas
                 const { data, error } = await supabase
                     .from('replays')
                     .select(`
-            video_url,
-            quadras (
-              nome,
-              arenas (
-                nome
-              )
-            )
-          `)
+                        video_url,
+                        quadras (
+                            nome,
+                            arenas (
+                                nome
+                            )
+                        )
+                    `)
                     .eq('id', jogadaId)
                     .single();
 
@@ -48,7 +48,7 @@ function ConteudoJogada() {
 
             } catch (err) {
                 console.error(err);
-                setErro('Não foi possível carregar este replay. O link pode ter expirado.');
+                setErro('Não foi possível carregar este replay. O vídeo pode ter sido removido ou o link expirou.');
             } finally {
                 setCarregando(false);
             }
@@ -57,7 +57,7 @@ function ConteudoJogada() {
         buscarDadosJogada();
     }, [jogadaId]);
 
-    // Função de download seguro via Blob (aquela que remove os 3 pontinhos do player)
+    // Função de download seguro via Blob (força o download na galeria do celular)
     const baixarVideo = async () => {
         if (!dados?.videoUrl) return;
         try {
@@ -73,76 +73,87 @@ function ConteudoJogada() {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
         } catch (err) {
-            alert('Erro ao baixar o vídeo. Tente novamente.');
+            alert('Erro ao processar o download. Tente novamente.');
         }
     };
 
     if (carregando) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0d0d0d]">
-                <p className="animate-pulse text-[#00ff66] font-medium">Buscando seu lance fantástico...</p>
+            <div className="flex items-center justify-center min-h-screen bg-bg-main">
+                <div className="text-center space-y-3">
+                    <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="animate-pulse text-gold font-bold tracking-wider text-xs uppercase">Buscando seu lance fantástico...</p>
+                </div>
             </div>
         );
     }
 
     if (erro) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0d0d] p-6 text-center">
-                <span className="text-4xl mb-4">🦊</span>
-                <h1 className="text-xl font-bold text-white mb-2">Ops! Algo deu errado</h1>
-                <p className="text-gray-400 text-sm max-w-sm">{erro}</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-bg-main p-6 text-center relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-red-500/5 rounded-full blur-[100px] pointer-events-none" />
+                <span className="text-4xl mb-4 relative z-10">🦊</span>
+                <h1 className="text-xl font-black text-white mb-2 relative z-10 uppercase tracking-wide">Lance Indisponível</h1>
+                <p className="text-gray-500 text-sm max-w-sm relative z-10 leading-relaxed">{erro}</p>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0d0d] text-white p-4 font-sans">
-            <div className="w-full max-w-[400px] flex flex-col items-center">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-bg-main text-white p-4 font-sans relative overflow-hidden">
+            {/* Efeitos de iluminação de fundo (Glow estético e jovial) */}
+            <div className="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] bg-gold-glow rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-gold-glow rounded-full blur-[120px] pointer-events-none" />
 
-                {/* IDENTIFICAÇÃO DA ARENA DINÂMICA */}
-                <div className="text-center mb-6">
-                    <span className="text-xs font-bold text-[#00ff66] uppercase tracking-widest bg-[#00ff66]/10 px-3 py-1 rounded-full border border-[#00ff66]/20">
+            <div className="w-full max-w-[400px] flex flex-col items-center relative z-10 py-6">
+
+                {/* HEADER / IDENTIFICAÇÃO DO JOGADOR */}
+                <div className="text-center mb-6 space-y-3">
+                    <span className="text-[10px] font-black text-gold uppercase tracking-widest bg-gold/5 px-3 py-1.5 rounded-full border border-gold/10 shadow-sm inline-block">
                         {dados?.nomeQuadra}
                     </span>
-                    <h1 className="text-2xl font-extrabold mt-3 tracking-tight">
+                    <h1 className="text-2xl font-black tracking-tight text-white uppercase">
                         {dados?.nomeArena}
                     </h1>
-                    <p className="text-gray-400 text-xs mt-1">Reveja sua jogada e salve direto na sua galeria</p>
+                    <p className="text-gray-400 text-xs font-medium">Reveja a sua jogada e salve direto na sua galeria</p>
                 </div>
 
-                {/* PLAYER DE VÍDEO COMPACTO ESTILO INSTAGRAM STORIES */}
-                <div className="w-full aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 relative">
+                {/* PLAYER SMARTPHONE-STYLE (1:1 ou 9:16 Vertical Imersivo) */}
+                <div className="w-full aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl border border-border-card relative group hover:border-gold/30 transition-all duration-300">
                     <video
                         src={dados?.videoUrl}
                         className="w-full h-full object-cover"
                         controls
                         controlsList="nodownload"
                         playsInline
+                        autoPlay
+                        muted
                     />
                 </div>
 
-                {/* BOTÃO DE DOWNLOAD ULTRA DESTACADO */}
+                {/* BOTÃO DE DOWNLOAD PREMIUM */}
                 <button
                     onClick={baixarVideo}
-                    className="w-full py-4 mt-6 bg-[#00ff66] text-black font-extrabold text-base rounded-2xl shadow-xl shadow-[#00ff66]/10 hover:brightness-110 active:scale-[0.99] transition-all"
+                    className="w-full py-4 mt-6 bg-gold hover:bg-gold-dark text-black font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl shadow-gold-glow active:scale-[0.99] transition-all duration-200"
                 >
                     Baixar Replay na Galeria 📥
                 </button>
 
-                <p className="text-[10px] text-gray-600 mt-6 tracking-widest uppercase">
-                    Powered by <span className="font-bold text-gray-500">FOX REPLAY</span>
+                {/* BRAND FOOTER CRIPTOGRAFADO */}
+                <p className="text-[9px] text-gray-600 mt-8 tracking-widest uppercase font-medium">
+                    Powered by <span className="font-bold text-gray-400 tracking-normal">FOX <span className="text-gold">REPLAY</span></span>
                 </p>
             </div>
         </div>
     );
 }
 
-// Next.js exige o uso de Suspense para componentes que usano 'useSearchParams'
+// O Next.js exige o uso de Suspense obrigatoriamente para rotas que consomem parâmetros de URL (searchParams)
 export default function PaginaJogada() {
     return (
         <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen bg-[#0d0d0d]">
-                <p className="animate-pulse text-gray-500">Preparando tela...</p>
+            <div className="flex items-center justify-center min-h-screen bg-bg-main text-white">
+                <p className="animate-pulse text-gray-600 text-xs uppercase tracking-widest font-bold">Inicializando Player...</p>
             </div>
         }>
             <ConteudoJogada />

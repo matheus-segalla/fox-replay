@@ -16,7 +16,7 @@ export default function ListaVideosQuadra() {
     useEffect(() => {
         async function carregarVideos() {
             try {
-                // 1. Busca os nomes para o cabeçalho
+                // 1. Busca os nomes para o cabeçalho via relacionamentos
                 const { data: dadosQuadra, error: errQ } = await supabase
                     .from('quadras')
                     .select('nome, arenas(nome)')
@@ -29,7 +29,7 @@ export default function ListaVideosQuadra() {
                     arena: dadosQuadra.arenas?.nome
                 });
 
-                // 2. Busca os replays da quadra (últimos 3 dias)
+                // 2. Busca os replays da quadra ordenados pelos mais recentes
                 const { data: dadosReplays, error: errR } = await supabase
                     .from('replays')
                     .select('*')
@@ -40,7 +40,7 @@ export default function ListaVideosQuadra() {
                 setReplays(dadosReplays || []);
 
             } catch (error) {
-                console.error(error);
+                console.error('Erro ao carregar lances da quadra:', error);
             } finally {
                 setCarregando(false);
             }
@@ -51,7 +51,7 @@ export default function ListaVideosQuadra() {
 
     // Função para baixar o vídeo direto via Blob sem sair da página
     const baixarDireto = async (e, videoUrl, id) => {
-        e.stopPropagation(); // Impede que o clique abra o player de tela cheia
+        e.stopPropagation(); // Impede que o clique no botão abra o player em tela cheia
         try {
             const resposta = await fetch(videoUrl);
             const blob = await resposta.blob();
@@ -71,63 +71,82 @@ export default function ListaVideosQuadra() {
 
     if (carregando) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0d0d0d] text-white">
-                <p className="animate-pulse text-[#00ff66]">Buscando os melhores lances...</p>
+            <div className="flex items-center justify-center min-h-screen bg-bg-main">
+                <div className="text-center space-y-3">
+                    <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="animate-pulse text-gold font-bold tracking-wider text-xs uppercase">Buscando os melhores lances...</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0d0d0d] text-white font-sans p-4 pb-12 flex flex-col items-center">
-            <div className="w-full max-w-[450px]">
+        <div className="min-h-screen bg-bg-main text-white font-sans p-4 pb-12 flex flex-col items-center relative overflow-hidden">
+            {/* Spots de luz dourada ao fundo */}
+            <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gold-glow rounded-full blur-[130px] pointer-events-none" />
 
-                {/* Botão Voltar */}
-                <button onClick={() => router.push(`/arena/${arenaId}`)} className="text-xs text-gray-400 hover:text-white mb-6">
+            <div className="w-full max-w-[440px] relative z-10">
+
+                {/* Botão Voltar Navegável */}
+                <button
+                    onClick={() => router.push(`/arena/${arenaId}`)}
+                    className="text-xs text-gray-500 hover:text-white transition-colors mb-6 flex items-center gap-1.5 font-medium"
+                >
                     ← Voltar para as quadras
                 </button>
 
-                {/* Cabeçalho */}
-                <div className="text-center mb-8">
-                    <span className="text-xs font-bold text-[#00ff66] bg-[#00ff66]/10 px-3 py-1 rounded-full border border-[#00ff66]/20 uppercase">
+                {/* Cabeçalho da Quadra */}
+                <div className="text-center mb-8 space-y-3">
+                    <span className="text-[10px] font-black text-gold uppercase tracking-widest bg-gold/5 px-3 py-1.5 rounded-full border border-gold/10 inline-block shadow-sm">
                         {nomes?.quadra}
                     </span>
-                    <h1 className="text-2xl font-black mt-3">{nomes?.arena}</h1>
-                    <p className="text-gray-400 text-xs mt-1">Toque no card para assistir ou clique no botão para baixar</p>
+                    <h1 className="text-2xl font-black text-white uppercase tracking-tight">{nomes?.arena}</h1>
+                    <p className="text-gray-400 text-xs font-medium">Toque no card para assistir ou clique abaixo para baixar</p>
                 </div>
 
-                {/* LISTAGEM DOS LANCES */}
-                <div className="space-y-4">
+                {/* LISTAGEM DOS LANCES COLETADOS */}
+                <div className="space-y-5">
                     {replays.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-8">Nenhum replay salvo nesta quadra recentemente.</p>
+                        <div className="bg-bg-card border border-dashed border-border-card rounded-2xl p-10 text-center text-gray-500 text-sm">
+                            Nenhum replay salvo nesta quadra recentemente. 🔘
+                        </div>
                     ) : (
                         replays.map((replay) => {
-                            const horario = replay.criado_em ? replay.criado_em.split('T')[1]?.substring(0, 5) : 'Recente';
+                            const horario = replay.criated_em || replay.criado_em
+                                ? (replay.criated_em || replay.criado_em).split('T')[1]?.substring(0, 5)
+                                : 'Recente';
 
                             return (
                                 <div
                                     key={replay.id}
                                     onClick={() => router.push(`/jogada?id=${replay.id}`)}
-                                    className="bg-[#141414] border border-gray-800 rounded-2xl p-4 flex flex-col gap-3 hover:border-gray-700 cursor-pointer active:scale-[0.99] transition-all"
+                                    className="bg-bg-card border border-border-card rounded-2xl p-4 flex flex-col gap-4 hover:border-border-card/80 cursor-pointer active:scale-[0.99] transition-all duration-200 group shadow-lg"
                                 >
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm font-bold text-white">🎥 Lance das {horario}</span>
-                                        <span className="text-[10px] text-gray-500">🔥 Assistir</span>
+                                        <span className="text-sm font-bold text-white tracking-wide group-hover:text-gold transition-colors">
+                                            🎥 Lance das {horario}
+                                        </span>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-bg-main px-2.5 py-1 rounded-lg border border-border-card/40">
+                                            🔥 Assistir
+                                        </span>
                                     </div>
 
-                                    {/* Thumbnail/Mini-player estático */}
-                                    <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-gray-800/60 relative">
+                                    {/* Thumbnail com Botão Play estilizado estilo e-sports */}
+                                    <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-border-card relative">
                                         <video src={replay.video_url} className="w-full h-full object-cover" muted preload="metadata" />
-                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                            <div className="w-10 h-10 bg-[#00ff66] rounded-full flex items-center justify-center text-black font-bold pl-0.5 shadow-lg">▶</div>
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition-all">
+                                            <div className="w-12 h-12 bg-gold text-black rounded-full flex items-center justify-center font-bold pl-1 shadow-xl shadow-gold-glow transform group-hover:scale-110 transition-transform duration-200">
+                                                ▶
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Botão de Download Direto sem abrir nova tela */}
+                                    {/* Botão de Download Direto com Peso Visual */}
                                     <button
                                         onClick={(e) => baixarDireto(e, replay.video_url, replay.id)}
-                                        className="w-full py-3 bg-gray-800 hover:bg-[#00ff66] hover:text-black text-white font-bold text-xs rounded-xl transition-all"
+                                        className="w-full py-3.5 bg-bg-main hover:bg-gold border border-border-card hover:border-gold text-silver hover:text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md"
                                     >
-                                        Baixar Direto na Galeria 📥
+                                        Baixar na Galeria 📥
                                     </button>
                                 </div>
                             );
@@ -135,6 +154,10 @@ export default function ListaVideosQuadra() {
                     )}
                 </div>
 
+                {/* Footer da Marca */}
+                <p className="text-[9px] text-gray-600 mt-12 text-center tracking-widest uppercase font-medium">
+                    Powered by <span className="font-bold text-gray-400 tracking-normal">FOX <span className="text-gold">REPLAY</span></span>
+                </p>
             </div>
         </div>
     );
