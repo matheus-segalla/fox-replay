@@ -16,20 +16,21 @@ export default function ListaVideosQuadra() {
     useEffect(() => {
         async function carregarVideos() {
             try {
-                // 1. Busca os nomes para o cabeçalho via relacionamentos
+                // 1. Busca os nomes e a foto da quadra ativa para o topo
                 const { data: dadosQuadra, error: errQ } = await supabase
                     .from('quadras')
-                    .select('nome, arenas(nome)')
+                    .select('nome, foto_url, arenas(nome)')
                     .eq('id', quadraId)
                     .single();
 
                 if (errQ) throw errQ;
                 setNomes({
                     quadra: dadosQuadra.nome,
-                    arena: dadosQuadra.arenas?.nome
+                    arena: dadosQuadra.arenas?.nome,
+                    fotoUrl: dadosQuadra.foto_url
                 });
 
-                // 2. Busca os replays da quadra ordenados pelos mais recentes
+                // 2. Coleta os replays associados
                 const { data: dadosReplays, error: errR } = await supabase
                     .from('replays')
                     .select('*')
@@ -40,7 +41,7 @@ export default function ListaVideosQuadra() {
                 setReplays(dadosReplays || []);
 
             } catch (error) {
-                console.error('Erro ao carregar lances da quadra:', error);
+                console.error('Erro ao buscar lances:', error);
             } finally {
                 setCarregando(false);
             }
@@ -49,9 +50,8 @@ export default function ListaVideosQuadra() {
         if (quadraId) carregarVideos();
     }, [quadraId]);
 
-    // Função para baixar o vídeo direto via Blob sem sair da página
     const baixarDireto = async (e, videoUrl, id) => {
-        e.stopPropagation(); // Impede que o clique no botão abra o player em tela cheia
+        e.stopPropagation();
         try {
             const resposta = await fetch(videoUrl);
             const blob = await resposta.blob();
@@ -85,18 +85,32 @@ export default function ListaVideosQuadra() {
             {/* Spots de luz dourada ao fundo */}
             <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gold-glow rounded-full blur-[130px] pointer-events-none" />
 
-            <div className="w-full max-w-[440px] relative z-10">
-
-                {/* Botão Voltar Navegável */}
+            {/* 🌟 HEADER PADRONIZADO DA MARCA (Estilo Aplicativo Nativo) 🌟 */}
+            <header className="w-full max-w-[440px] flex justify-between items-center py-3 border-b border-border-card/60 mb-8 shrink-0 relative z-20">
                 <button
                     onClick={() => router.push(`/arena/${arenaId}`)}
-                    className="text-xs text-gray-500 hover:text-white transition-colors mb-6 flex items-center gap-1.5 font-medium"
+                    className="text-xs font-bold text-gray-400 hover:text-white transition-colors bg-bg-card border border-border-card/80 px-3 py-1.5 rounded-xl flex items-center gap-1 active:scale-95"
                 >
-                    ← Voltar para as quadras
+                    ← Voltar
                 </button>
+                <h2 className="text-xs font-black tracking-widest text-white uppercase select-none">
+                    FOX <span className="text-gold">REPLAY</span>
+                </h2>
+                <div className="w-[62px] h-[30px] opacity-0 pointer-events-none hidden sm:block" />
+            </header>
 
-                {/* Cabeçalho da Quadra */}
+            {/* CONTEÚDO DOS VÍDEOS DA QUADRA */}
+            <div className="w-full max-w-[440px] relative z-10">
+
+                {/* CABEÇALHO COM FOTO PANORÂMICA EMBUTIDA */}
                 <div className="text-center mb-8 space-y-3">
+                    {nomes?.fotoUrl && (
+                        <div className="w-full h-36 bg-neutral-950 rounded-2xl overflow-hidden border border-border-card relative mb-5 shadow-lg">
+                            <img src={nomes.fotoUrl} alt={nomes.quadra} className="w-full h-full object-cover opacity-50" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-bg-main via-transparent to-black/30" />
+                        </div>
+                    )}
+
                     <span className="text-[10px] font-black text-gold uppercase tracking-widest bg-gold/5 px-3 py-1.5 rounded-full border border-gold/10 inline-block shadow-sm">
                         {nomes?.quadra}
                     </span>
@@ -112,15 +126,13 @@ export default function ListaVideosQuadra() {
                         </div>
                     ) : (
                         replays.map((replay) => {
-                            const horario = replay.criated_em || replay.criado_em
-                                ? (replay.criated_em || replay.criado_em).split('T')[1]?.substring(0, 5)
-                                : 'Recente';
+                            const horario = replay.criado_em ? replay.criado_em.split('T')[1]?.substring(0, 5) : 'Recente';
 
                             return (
                                 <div
                                     key={replay.id}
                                     onClick={() => router.push(`/jogada?id=${replay.id}`)}
-                                    className="bg-bg-card border border-border-card rounded-2xl p-4 flex flex-col gap-4 hover:border-border-card/80 cursor-pointer active:scale-[0.99] transition-all duration-200 group shadow-lg"
+                                    className="bg-bg-card border border-border-card rounded-2xl p-4 flex flex-col gap-4 hover:border-gold/20 cursor-pointer active:scale-[0.99] transition-all duration-200 group shadow-lg"
                                 >
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm font-bold text-white tracking-wide group-hover:text-gold transition-colors">
@@ -131,7 +143,6 @@ export default function ListaVideosQuadra() {
                                         </span>
                                     </div>
 
-                                    {/* Thumbnail com Botão Play estilizado estilo e-sports */}
                                     <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-border-card relative">
                                         <video src={replay.video_url} className="w-full h-full object-cover" muted preload="metadata" />
                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition-all">
@@ -141,7 +152,6 @@ export default function ListaVideosQuadra() {
                                         </div>
                                     </div>
 
-                                    {/* Botão de Download Direto com Peso Visual */}
                                     <button
                                         onClick={(e) => baixarDireto(e, replay.video_url, replay.id)}
                                         className="w-full py-3.5 bg-bg-main hover:bg-gold border border-border-card hover:border-gold text-silver hover:text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md"

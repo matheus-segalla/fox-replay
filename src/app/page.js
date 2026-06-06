@@ -1,17 +1,62 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabase'; // Conexão oficial do Supabase
 
 export default function LandingPage() {
   const router = useRouter();
   const [modalAberto, setModalAberto] = useState(false);
-  const [arenaIdInput, setArenaIdInput] = useState('');
 
-  const buscarArenaEIr = (e) => {
+  // Estados para a busca em tempo real de Arenas
+  const [busca, setBusca] = useState('');
+  const [arenasEncontradas, setArenasEncontradas] = useState([]);
+  const [arenaSelecionada, setArenaSelecionada] = useState(null);
+  const [carregandoArenas, setCarregandoArenas] = useState(false);
+
+  // Efeito de busca dinâmica (com debounce de 300ms para poupar requisições ao banco)
+  useEffect(() => {
+    if (!modalAberto) {
+      setBusca('');
+      setArenasEncontradas([]);
+      setArenaSelecionada(null);
+      return;
+    }
+
+    const efetuarBusca = async () => {
+      if (!busca.trim()) {
+        setArenasEncontradas([]);
+        return;
+      }
+
+      setCarregandoArenas(true);
+      try {
+        const { data, error } = await supabase
+          .from('arenas')
+          .select('id, nome')
+          .ilike('nome', `%${busca}%`) // Busca parcial sem diferenciar maiúsculas/minúsculas
+          .limit(5);
+
+        if (error) throw error;
+        setArenasEncontradas(data || []);
+      } catch (err) {
+        console.error('Erro ao buscar arenas:', err);
+      } finally {
+        setCarregandoArenas(false);
+      }
+    };
+
+    const delayDebounce = setTimeout(() => {
+      efetuarBusca();
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [busca, modalAberto]);
+
+  const acessarPortalPublico = (e) => {
     e.preventDefault();
-    if (arenaIdInput.trim()) {
-      router.push(`/arena/${arenaIdInput.trim()}`);
+    if (arenaSelecionada) {
+      router.push(`/arena/${arenaSelecionada.id}`);
     }
   };
 
@@ -106,13 +151,13 @@ export default function LandingPage() {
         </p>
       </footer>
 
-      {/* MODAL INTERATIVO PARA ENTRAR NO HUB DE UMA ARENA */}
+      {/* 🌟 MODAL TOTALMENTE ATUALIZADO: BUSCA DE ARENAS DISPONÍVEIS COM AUTOCOMPLETE 🌟 */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-[400px] space-y-4 animate-fadeIn">
+          <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-[400px] space-y-4 animate-fadeIn relative">
 
             <div className="flex justify-between items-center">
-              <h3 className="font-black text-lg text-white">Buscar Arena</h3>
+              <h3 className="font-black text-lg text-white">Encontrar Minha Arena</h3>
               <button
                 onClick={() => setModalAberto(false)}
                 className="text-gray-500 hover:text-white text-sm"
@@ -122,23 +167,59 @@ export default function LandingPage() {
             </div>
 
             <p className="text-xs text-gray-400 leading-relaxed">
-              Digite o código identificador (ID da Arena) para acessar a lista de quadras e assistir aos vídeos clipados.
+              Digite o nome do complexo ou quadra onde você jogou para listar os clipes de vídeo salvos.
             </p>
 
-            <form onSubmit={buscarArenaEIr} className="space-y-3">
-              <input
-                type="text"
-                required
-                value={arenaIdInput}
-                onChange={(e) => setArenaIdInput(e.target.value)}
-                placeholder="Cole o ID da Arena aqui..."
-                className="w-full px-4 py-3 rounded-xl bg-bg-main border border-gray-800 text-white placeholder-gray-600 text-xs font-mono focus:outline-none focus:border-gold"
-              />
+            <form onSubmit={acessarPortalPublico} className="space-y-4 relative">
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value);
+                    setArenaSelecionada(null); // Reseta a seleção se ele voltar a digitar
+                  }}
+                  placeholder="Comece a digitar o nome da arena..."
+                  className="w-full px-4 py-3 rounded-xl bg-bg-main border border-gray-800 text-white placeholder-gray-600 text-xs font-semibold focus:outline-none focus:border-gold"
+                />
+
+                {/* Indicador de carregamento sutil */}
+                {carregandoArenas && (
+                  <div className="absolute right-3 top-3.5 w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
+                )}
+              </div>
+
+              {/* DROPDOWN DE RESULTADOS ENCONTRADOS */}
+              {arenasEncontradas.length > 0 && (
+                <div className="absolute left-0 right-0 top-[45px] bg-bg-main border border-gray-800 rounded-xl overflow-hidden z-50 shadow-2xl max-h-[180px] overflow-y-auto">
+                  {arenasEncontradas.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        setBusca(item.nome);
+                        setArenaSelecionada(item);
+                        setArenasEncontradas([]); // Limpa as sugestões após escolher
+                      }}
+                      className="px-4 py-3 text-xs font-bold text-gray-300 hover:bg-bg-card hover:text-gold cursor-pointer transition-colors border-b border-gray-900 last:border-0"
+                    >
+                      🏢 {item.nome}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Aviso caso digite algo e não ache nada */}
+              {busca.trim() && !carregandoArenas && arenasEncontradas.length === 0 && !arenaSelecionada && (
+                <p className="text-[10px] text-red-400 font-medium px-1">Nenhum complexo encontrado com esse nome.</p>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-3 bg-gold hover:bg-gold-dark text-black font-black text-xs rounded-xl transition-all"
+                disabled={!arenaSelecionada}
+                className="w-full py-3 bg-gold hover:bg-gold-dark text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-md shadow-gold-glow/10"
               >
-                Acessar Vídeos ➔
+                Acessar Portal da Arena ➔
               </button>
             </form>
           </div>
