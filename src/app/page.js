@@ -69,9 +69,17 @@ export default function LandingPage() {
 
       {/* HEADER / NAVBAR COMPACTA */}
       <header className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10">
-        <h1 className="text-xl font-black tracking-widest">
-          FOX <span className="text-gold">REPLAY</span>
-        </h1>
+        {/* SUBSTITUA O TEXTO DA LOGO POR ESTE COLOCO NAS SUAS NAVBARS */}
+        <div className="flex items-center gap-3 select-none">
+          <img
+            src="/logo-fox.jpeg"
+            alt="Logo Fox Replay"
+            className="h-9 w-9 object-cover rounded-xl border border-border-card shadow-md"
+          />
+          <span className="text-sm font-black tracking-widest text-white uppercase">
+            FOX <span className="text-gold">REPLAY</span>
+          </span>
+        </div>
         <button
           onClick={() => router.push('/login')}
           className="text-xs font-bold border border-border-card bg-bg-card hover:border-silver/40 px-4 py-2 rounded-xl transition-all"

@@ -18,7 +18,7 @@ export default function DashboardArena() {
     const [quadraSelecionada, setQuadraSelecionada] = useState(null);
     const [carregandoReplays, setCarregandoReplays] = useState(false);
 
-    // Novos Estados para Gerenciamento do Modal de Edição e Exclusão
+    // Estados para Gerenciamento do Modal de Edição e Exclusão
     const [modalEditarAberto, setModalEditarAberto] = useState(false);
     const [quadraParaEditar, setQuadraParaEditar] = useState(null);
     const [editNome, setEditNome] = useState('');
@@ -27,9 +27,48 @@ export default function DashboardArena() {
 
     const router = useRouter();
 
-    // URL base do sistema (quando fizermos o deploy, mudamos localhost para o link da Vercel)
+    // URL base do sistema (quando fizer o deploy, mude para o link da Vercel)
     const urlBaseSistema = "http://localhost:3000";
     const linkPortalPublico = arena ? `${urlBaseSistema}/arena/${arena.id}` : '';
+
+    // 🔒 AUTH GUARD REAL: Middleware de proteção de rotas via Supabase Auth
+    useEffect(() => {
+        async function verificarSessaoSegura() {
+            try {
+                // 1. Pergunta ao Supabase se existe um token de login ativo e descriptografado
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (sessionError || !session) {
+                    // Se o token expirou ou não existe, barra na hora e manda pro login
+                    router.push('/login');
+                    return;
+                }
+
+                // 2. Busca a Arena que pertence a este usuário logado de forma relacional
+                const { data: arenaData, error: arenaError } = await supabase
+                    .from('arenas')
+                    .select('id')
+                    .eq('usuario_id', session.user.id)
+                    .single();
+
+                if (arenaError || !arenaData) {
+                    console.error('Nenhuma arena vinculada a este ID de autenticação:', arenaError);
+                    router.push('/cadastro');
+                    return;
+                }
+
+                // 3. Estando tudo verificado com segurança, alimenta o ecossistema com os dados da arena
+                localStorage.setItem('fox_arena_id', arenaData.id);
+                carregarDados(arenaData.id);
+
+            } catch (err) {
+                console.error('Erro crítico no Auth Guard:', err);
+                router.push('/login');
+            }
+        }
+
+        verificarSessaoSegura();
+    }, [router]);
 
     async function carregarDados(arenaId) {
         try {
@@ -98,15 +137,6 @@ export default function DashboardArena() {
         }
     }
 
-    useEffect(() => {
-        const arenaId = localStorage.getItem('fox_arena_id');
-        if (!arenaId) {
-            router.push('/cadastro');
-            return;
-        }
-        carregarDados(arenaId);
-    }, [router]);
-
     const handleCriarQuadra = async (e) => {
         e.preventDefault();
         if (!nomeQuadra.trim() || !arena) return;
@@ -149,12 +179,10 @@ export default function DashboardArena() {
         alert('Copiado com sucesso! 📋');
     };
 
-    // Função nativa que aciona o driver de impressão da máquina do cliente
     const dispararImpressao = () => {
         window.print();
     };
 
-    // Função para abrir o modal de edição populando os campos locais da quadra escolhida
     const abrirModalEditar = (quadra) => {
         setQuadraParaEditar(quadra);
         setEditNome(quadra.nome);
@@ -162,7 +190,6 @@ export default function DashboardArena() {
         setModalEditarAberto(true);
     };
 
-    // Função para salvar as alterações de nome/foto no banco de dados Supabase
     const handleSalvarEdicao = async (e) => {
         e.preventDefault();
         if (!editNome.trim() || !quadraParaEditar || !arena) return;
@@ -179,7 +206,7 @@ export default function DashboardArena() {
 
             if (error) throw error;
 
-            alert('Quadra atualizada com sucesso! 🔄');
+            alert('Quadra updated com sucesso! 🔄');
             setModalEditarAberto(false);
             setQuadraParaEditar(null);
             carregarDados(arena.id);
@@ -191,7 +218,6 @@ export default function DashboardArena() {
         }
     };
 
-    // Função para excluir a quadra e limpar tokens e vídeos vinculados
     const handleExcluirQuadra = async (idQuadra) => {
         const confirmar = window.confirm("⚠️ ATENÇÃO: Tem certeza de que deseja excluir esta quadra? Isso apagará permanentemente o Totem de hardware vinculado e todo o histórico de lances salvos nela!");
         if (!confirmar) return;
@@ -214,10 +240,20 @@ export default function DashboardArena() {
         }
     };
 
+    // Função de Logout seguro limpando a sessão no servidor do Supabase Auth
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        localStorage.clear();
+        router.push('/login');
+    };
+
     if (carregando) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-bg-main text-white">
-                <p className="animate-pulse text-lg text-gold font-bold tracking-wider">Acessando os servidores FOX REPLAY...</p>
+                <div className="text-center space-y-3">
+                    <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="animate-pulse text-sm text-gold font-bold tracking-wider uppercase">Autenticando acesso seguro...</p>
+                </div>
             </div>
         );
     }
@@ -226,26 +262,32 @@ export default function DashboardArena() {
         <>
             {/* CONTAINER DO PAINEL DIGITAL (Escondido automaticamente na hora de imprimir) */}
             <div className="min-h-screen bg-bg-main text-white font-sans p-8 relative overflow-hidden print:hidden">
-                {/* Ambientação de iluminação de fundo */}
                 <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gold-glow rounded-full blur-[150px] pointer-events-none" />
 
                 <div className="max-w-[1100px] mx-auto relative z-10">
 
-                    {/* HEADER DO SAAS */}
+                    {/* 🦊 HEADER DO SAAS TOTALMENTE INTEGRADO COM A FOTO DA SUA LOGO METÁLICA */}
                     <div className="flex justify-between items-center border-b border-border-card pb-6 mb-8">
-                        <div>
-                            <h1 className="text-3xl font-black tracking-widest text-white">
-                                FOX <span className="text-gold">REPLAY</span>
-                            </h1>
-                            <p className="text-gray-500 text-xs mt-1">
-                                Painel Administrativo: <span className="text-silver font-semibold">{arena?.nome}</span>
-                            </p>
+                        <div className="flex items-center gap-3.5 select-none">
+                            <img
+                                src="/logo-fox.jpeg"
+                                alt="Logo Fox Replay"
+                                className="h-10 w-10 object-cover rounded-xl border border-border-card shadow-lg bg-neutral-900"
+                            />
+                            <div>
+                                <h1 className="text-2xl font-black tracking-widest text-white uppercase leading-none">
+                                    FOX <span className="text-gold">REPLAY</span>
+                                </h1>
+                                <p className="text-gray-500 text-[10px] font-medium mt-1.5">
+                                    Painel Administrativo: <span className="text-silver font-semibold">{arena?.nome}</span>
+                                </p>
+                            </div>
                         </div>
                         <button
-                            onClick={() => { localStorage.clear(); router.push('/cadastro'); }}
-                            className="text-xs bg-red-500/5 text-red-400 border border-red-500/10 px-4 py-2 rounded-xl hover:bg-red-500 hover:text-white transition-all font-semibold"
+                            onClick={handleLogout}
+                            className="text-xs bg-red-500/5 text-red-400 border border-red-500/10 px-4 py-2.5 rounded-xl hover:bg-red-600 hover:text-white hover:border-transparent transition-all font-bold"
                         >
-                            Sair / Trocar Arena
+                            Sair do Painel 👋
                         </button>
                     </div>
 
@@ -374,7 +416,6 @@ export default function DashboardArena() {
                                                         🎥 Ver Gravações
                                                     </button>
 
-                                                    {/* ⚙️ BOTÃO DE GERENCIAMENTO (EDITAR/EXCLUIR) */}
                                                     <button
                                                         onClick={() => abrirModalEditar(quadra)}
                                                         className="text-xs bg-transparent border border-border-card text-gray-500 px-3 py-1.5 rounded-xl hover:border-white/20 hover:text-white transition-all font-bold flex items-center gap-1"
@@ -460,7 +501,7 @@ export default function DashboardArena() {
                         </div>
                     )}
 
-                    {/* 🌟 NOVO MODAL INTERATIVO PARA EDITAR / EXCLUIR QUADRA 🌟 */}
+                    {/* MODAL INTERATIVO PARA EDITAR / EXCLUIR QUADRA */}
                     {modalEditarAberto && quadraParaEditar && (
                         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
                             <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-gold-glow/5 relative">
@@ -530,10 +571,8 @@ export default function DashboardArena() {
                 </div>
             </div>
 
-            {/* 🌟 FLYER EXCLUSIVO PARA IMPRESSÃO (Oculto na tela do PC, só aparece na folha de papel) 🌟 */}
+            {/* FLYER EXCLUSIVO PARA IMPRESSÃO */}
             <div className="hidden print:flex flex-col items-center justify-between bg-white text-black w-full h-screen p-16 font-sans text-center border-[24px] border-neutral-900 box-border">
-
-                {/* LOGO DA MARCA NO TOPO */}
                 <div className="space-y-1">
                     <h1 className="text-6xl font-black tracking-widest text-neutral-900 m-0">
                         FOX <span className="text-[#A6801E]">REPLAY</span>
@@ -543,7 +582,6 @@ export default function DashboardArena() {
                     </p>
                 </div>
 
-                {/* NOME DA ARENA */}
                 <div className="my-auto py-6 space-y-3">
                     <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider m-0">Você está jogando na</p>
                     <h2 className="text-5xl font-black text-neutral-950 uppercase tracking-tight leading-none">
@@ -552,7 +590,6 @@ export default function DashboardArena() {
                     <div className="w-24 h-1 bg-[#A6801E] mx-auto mt-4" />
                 </div>
 
-                {/* QR CODE GIGANTE DE ALTA RESOLUÇÃO */}
                 <div className="bg-white p-6 border-4 border-neutral-950 rounded-3xl shadow-sm inline-block">
                     {linkPortalPublico ? (
                         <QRCodeSVG value={linkPortalPublico} size={280} level="H" includeMargin={false} />
@@ -561,7 +598,6 @@ export default function DashboardArena() {
                     )}
                 </div>
 
-                {/* MANUAL DE INSTRUÇÕES DE USO DO HARDWARE E LINK */}
                 <div className="w-full max-w-xl bg-neutral-50 border-2 border-neutral-200 rounded-2xl p-6 mt-8 space-y-3 text-left">
                     <h4 className="font-black text-sm uppercase tracking-wider text-neutral-900 text-center border-b border-neutral-200 pb-2 mb-3">
                         👉 Como baixar a sua jogada:
@@ -580,7 +616,6 @@ export default function DashboardArena() {
                     </p>
                 </div>
 
-                {/* SUBFOOTER */}
                 <p className="text-[10px] text-neutral-400 font-bold tracking-widest uppercase m-0 mt-8">
                     SISTEMA AUTOMÁTICO DE REPLAYS ESPORTIVOS
                 </p>
