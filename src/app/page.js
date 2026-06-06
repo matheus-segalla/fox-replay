@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase'; // Conexão oficial do Supabase
+import { supabase } from '../lib/supabase';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -11,7 +11,6 @@ export default function LandingPage() {
   // Estados para a busca em tempo real de Arenas
   const [busca, setBusca] = useState('');
   const [arenasEncontradas, setArenasEncontradas] = useState([]);
-  const [arenaSelecionada, setArenaSelecionada] = useState(null);
   const [carregandoArenas, setCarregandoArenas] = useState(false);
 
   // Efeito de busca dinâmica (com debounce de 300ms para poupar requisições ao banco)
@@ -19,11 +18,10 @@ export default function LandingPage() {
     if (!modalAberto) {
       setBusca('');
       setArenasEncontradas([]);
-      setArenaSelecionada(null);
       return;
     }
 
-    const efetuarBusca = async () => {
+    const efetuaremBusca = async () => {
       if (!busca.trim()) {
         setArenasEncontradas([]);
         return;
@@ -31,10 +29,11 @@ export default function LandingPage() {
 
       setCarregandoArenas(true);
       try {
+        // 🚀 ESCALA: Busca combinada (Nome da Arena OU Nome da Cidade)
         const { data, error } = await supabase
           .from('arenas')
-          .select('id, nome')
-          .ilike('nome', `%${busca}%`) // Busca parcial sem diferenciar maiúsculas/minúsculas
+          .select('id, nome, cidade, estado')
+          .or(`nome.ilike.%${busca}%,cidade.ilike.%${busca}%`)
           .limit(5);
 
         if (error) throw error;
@@ -47,16 +46,17 @@ export default function LandingPage() {
     };
 
     const delayDebounce = setTimeout(() => {
-      efetuarBusca();
+      efetuaremBusca();
     }, 300);
 
     return () => clearTimeout(delayDebounce);
   }, [busca, modalAberto]);
 
-  const acessarPortalPublico = (e) => {
+  // Função disparada se o usuário pressionar "Enter" no teclado
+  const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (arenaSelecionada) {
-      router.push(`/arena/${arenaSelecionada.id}`);
+    if (arenasEncontradas.length > 0) {
+      router.push(`/arena/${arenasEncontradas[0].id}`);
     }
   };
 
@@ -69,17 +69,9 @@ export default function LandingPage() {
 
       {/* HEADER / NAVBAR COMPACTA */}
       <header className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10">
-        {/* SUBSTITUA O TEXTO DA LOGO POR ESTE COLOCO NAS SUAS NAVBARS */}
-        <div className="flex items-center gap-3 select-none">
-          <img
-            src="/logo-fox.jpeg"
-            alt="Logo Fox Replay"
-            className="h-9 w-9 object-cover rounded-xl border border-border-card shadow-md"
-          />
-          <span className="text-sm font-black tracking-widest text-white uppercase">
-            FOX <span className="text-gold">REPLAY</span>
-          </span>
-        </div>
+        <h1 className="text-xl font-black tracking-widest">
+          FOX <span className="text-gold">REPLAY</span>
+        </h1>
         <button
           onClick={() => router.push('/login')}
           className="text-xs font-bold border border-border-card bg-bg-card hover:border-silver/40 px-4 py-2 rounded-xl transition-all"
@@ -88,7 +80,7 @@ export default function LandingPage() {
         </button>
       </header>
 
-      {/* HERO SECTION (Apresentação de Impacto) */}
+      {/* HERO SECTION */}
       <main className="w-full max-w-4xl mx-auto px-6 text-center py-12 md:py-20 z-10 my-auto space-y-8">
 
         <div className="inline-flex items-center gap-2 bg-bg-card border border-border-card px-3 py-1.5 rounded-full shadow-inner">
@@ -109,8 +101,6 @@ export default function LandingPage() {
 
         {/* BOTÕES DE AÇÃO PRINCIPAIS */}
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-
-          {/* Botão Jogador */}
           <button
             onClick={() => setModalAberto(true)}
             className="w-full sm:w-auto px-8 py-4 bg-transparent border border-border-card hover:border-gold/40 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 group bg-bg-card"
@@ -119,17 +109,15 @@ export default function LandingPage() {
             <span className="text-gray-500 group-hover:text-gold transition-colors">➔</span>
           </button>
 
-          {/* Botão Dono de Arena */}
           <button
             onClick={() => router.push('/cadastro')}
             className="w-full sm:w-auto px-8 py-4 bg-gold hover:bg-gold-dark text-black font-black text-sm rounded-xl transition-all shadow-lg shadow-gold-glow flex items-center justify-center gap-2"
           >
             <span>🚀 Tenho uma Arena</span>
           </button>
-
         </div>
 
-        {/* RECURSOS / PROPOSTA EM GRID */}
+        {/* FEATURES GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-16 text-left">
           <div className="bg-bg-card border border-border-card rounded-2xl p-6 space-y-2">
             <div className="text-xl">🔘</div>
@@ -159,7 +147,7 @@ export default function LandingPage() {
         </p>
       </footer>
 
-      {/* 🌟 MODAL TOTALMENTE ATUALIZADO: BUSCA DE ARENAS DISPONÍVEIS COM AUTOCOMPLETE 🌟 */}
+      {/* 🌟 MODAL PREMIUM DE SELEÇÃO FLUIDA COM AUTOCOMPLETE AVANÇADO 🌟 */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-[400px] space-y-4 animate-fadeIn relative">
@@ -175,60 +163,58 @@ export default function LandingPage() {
             </div>
 
             <p className="text-xs text-gray-400 leading-relaxed">
-              Digite o nome do complexo ou quadra onde você jogou para listar os clipes de vídeo salvos.
+              Busque pelo **nome do complexo** ou por **sua cidade** para listar os lances gravados hoje.
             </p>
 
-            <form onSubmit={acessarPortalPublico} className="space-y-4 relative">
+            <form onSubmit={handleFormSubmit} className="space-y-4 relative">
               <div className="relative">
                 <input
                   type="text"
                   required
                   value={busca}
-                  onChange={(e) => {
-                    setBusca(e.target.value);
-                    setArenaSelecionada(null); // Reseta a seleção se ele voltar a digitar
-                  }}
-                  placeholder="Comece a digitar o nome da arena..."
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Ex: Nome da arena ou Cidade..."
                   className="w-full px-4 py-3 rounded-xl bg-bg-main border border-gray-800 text-white placeholder-gray-600 text-xs font-semibold focus:outline-none focus:border-gold"
                 />
 
-                {/* Indicador de carregamento sutil */}
+                {/* Loading indicator */}
                 {carregandoArenas && (
                   <div className="absolute right-3 top-3.5 w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
                 )}
               </div>
 
-              {/* DROPDOWN DE RESULTADOS ENCONTRADOS */}
+              {/* DROPDOWN DE RESULTADOS DINÂMICOS (Fricção zero) */}
               {arenasEncontradas.length > 0 && (
-                <div className="absolute left-0 right-0 top-[45px] bg-bg-main border border-gray-800 rounded-xl overflow-hidden z-50 shadow-2xl max-h-[180px] overflow-y-auto">
+                <div className="absolute left-0 right-0 top-[45px] bg-bg-main border border-gray-800 rounded-xl overflow-hidden z-50 shadow-2xl max-h-[220px] overflow-y-auto">
                   {arenasEncontradas.map((item) => (
                     <div
                       key={item.id}
                       onClick={() => {
-                        setBusca(item.nome);
-                        setArenaSelecionada(item);
-                        setArenasEncontradas([]); // Limpa as sugestões após escolher
+                        setModalAberto(false);
+                        router.push(`/arena/${item.id}`); // ⚡ REDIRECIONAMENTO INSTANTÂNEO NO PRIMEIRO CLIQUE!
                       }}
-                      className="px-4 py-3 text-xs font-bold text-gray-300 hover:bg-bg-card hover:text-gold cursor-pointer transition-colors border-b border-gray-900 last:border-0"
+                      className="px-4 py-3.5 text-xs text-gray-300 hover:bg-bg-card hover:text-gold cursor-pointer transition-colors border-b border-gray-900 last:border-0 flex flex-col gap-0.5"
                     >
-                      🏢 {item.nome}
+                      <span className="font-black text-white group-hover:text-gold">🏢 {item.nome}</span>
+                      {item.cidade && (
+                        <span className="text-[10px] text-gray-500 font-medium ml-5">
+                          📍 {item.cidade} - {item.estado?.toUpperCase() || 'SP'}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Aviso caso digite algo e não ache nada */}
-              {busca.trim() && !carregandoArenas && arenasEncontradas.length === 0 && !arenaSelecionada && (
-                <p className="text-[10px] text-red-400 font-medium px-1">Nenhum complexo encontrado com esse nome.</p>
+              {/* Estado vazio */}
+              {busca.trim() && !carregandoArenas && arenasEncontradas.length === 0 && (
+                <p className="text-[10px] text-red-400 font-medium px-1">Nenhum complexo esportivo localizado.</p>
               )}
 
-              <button
-                type="submit"
-                disabled={!arenaSelecionada}
-                className="w-full py-3 bg-gold hover:bg-gold-dark text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-md shadow-gold-glow/10"
-              >
-                Acessar Portal da Arena ➔
-              </button>
+              {/* Informação sutil de usabilidade */}
+              <p className="text-[9px] text-gray-600 text-center uppercase tracking-widest pt-2">
+                Pressione a sugestão acima para acessar na hora ⚡
+              </p>
             </form>
           </div>
         </div>

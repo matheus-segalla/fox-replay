@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function DashboardArena() {
+    const [usuarioId, setUsuarioId] = useState(null);
     const [arena, setArena] = useState(null);
+    const [minhasArenas, setMinhasArenas] = useState([]);
     const [quadras, setQuadras] = useState([]);
     const [nomeQuadra, setNomeQuadra] = useState('');
     const [carregando, setCarregando] = useState(true);
@@ -18,51 +20,105 @@ export default function DashboardArena() {
     const [quadraSelecionada, setQuadraSelecionada] = useState(null);
     const [carregandoReplays, setCarregandoReplays] = useState(false);
 
-    // Estados para Gerenciamento do Modal de Edição e Exclusão
+    // Estados para Gerenciamento do Modal de Edição e Exclusão de Quadras
     const [modalEditarAberto, setModalEditarAberto] = useState(false);
     const [quadraParaEditar, setQuadraParaEditar] = useState(null);
     const [editNome, setEditNome] = useState('');
     const [editFotoUrl, setEditFotoUrl] = useState('');
     const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
+    // Estados para o Cadastro de Nova Arena (Filial) de Dentro do Painel
+    const [modalNovaArenaAberto, setModalNovaArenaAberto] = useState(false);
+    const [novoNomeArena, setNovoNomeArena] = useState('');
+    const [novaCidadeArena, setNovaCidadeArena] = useState('');
+    const [novoEstadoArena, setNovoEstadoArena] = useState('');
+    const [criandoNovaArena, setCriandoNovaArena] = useState(false);
+
+    // 🌟 NOVO ESTADO: CONTROLADOR MESTRE DE POPUPS CUSTOMIZADOS 🌟
+    const [notificacao, setNotificacao] = useState({
+        aberto: false,
+        tipo: 'alert', // 'alert' (Aviso com botão Ok) ou 'confirm' (Opções Sim/Não)
+        titulo: '',
+        mensagem: '',
+        onConfirmar: null
+    });
+
     const router = useRouter();
 
-    // URL base do sistema (quando fizer o deploy, mude para o link da Vercel)
-    const urlBaseSistema = "http://localhost:3000";
+    const urlBaseSistema = "https://fox-replay.vercel.app";
     const linkPortalPublico = arena ? `${urlBaseSistema}/arena/${arena.id}` : '';
 
-    // 🔒 AUTH GUARD REAL: Middleware de proteção de rotas via Supabase Auth
+    // 🛠️ FUNÇÕES AUXILIARES PARA FAZER DISPAROS DE POPUPS PREMIUM
+    const mostrarAviso = (titulo, mensagem) => {
+        setNotificacao({
+            aberto: true,
+            tipo: 'alert',
+            titulo,
+            mensagem,
+            onConfirmar: null
+        });
+    };
+
+    const mostrarConfirmacao = (titulo, mensagem, acaoConfirmada) => {
+        setNotificacao({
+            aberto: true,
+            tipo: 'confirm',
+            titulo,
+            mensagem,
+            onConfirmar: acaoConfirmada
+        });
+    };
+
+    const fecharNotificacao = () => {
+        setNotificacao(prev => ({ ...prev, aberto: false }));
+    };
+
+    const gerarSlug = (texto) => {
+        return texto
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '') + '-' + Math.floor(1000 + Math.random() * 9000);
+    };
+
+    // AUTH GUARD SECURE MIDDLEWARE
     useEffect(() => {
         async function verificarSessaoSegura() {
             try {
-                // 1. Pergunta ao Supabase se existe um token de login ativo e descriptografado
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
                 if (sessionError || !session) {
-                    // Se o token expirou ou não existe, barra na hora e manda pro login
                     router.push('/login');
                     return;
                 }
 
-                // 2. Busca a Arena que pertence a este usuário logado de forma relacional
-                const { data: arenaData, error: arenaError } = await supabase
-                    .from('arenas')
-                    .select('id')
-                    .eq('usuario_id', session.user.id)
-                    .single();
+                setUsuarioId(session.user.id);
 
-                if (arenaError || !arenaData) {
-                    console.error('Nenhuma arena vinculada a este ID de autenticação:', arenaError);
+                const { data: arenasData, error: arenasError } = await supabase
+                    .from('arenas')
+                    .select('*')
+                    .order('nome', { ascending: true });
+
+                if (arenasError || !arenasData || arenasData.length === 0) {
                     router.push('/cadastro');
                     return;
                 }
 
-                // 3. Estando tudo verificado com segurança, alimenta o ecossistema com os dados da arena
-                localStorage.setItem('fox_arena_id', arenaData.id);
-                carregarDados(arenaData.id);
+                setMinhasArenas(arenasData);
+
+                let idAtivo = localStorage.getItem('fox_arena_id');
+                const arenaExiste = arenasData.find(a => a.id === idAtivo);
+
+                if (!idAtivo || !arenaExiste) {
+                    idAtivo = arenasData[0].id;
+                    localStorage.setItem('fox_arena_id', idAtivo);
+                }
+
+                carregarDados(idAtivo);
 
             } catch (err) {
-                console.error('Erro crítico no Auth Guard:', err);
+                console.error('Erro no Auth Guard:', err);
                 router.push('/login');
             }
         }
@@ -71,8 +127,8 @@ export default function DashboardArena() {
     }, [router]);
 
     async function carregarDados(arenaId) {
+        setCarregando(true);
         try {
-            // 1. Busca os detalhes da Arena administrada
             const { data: dadosArena, error: erroArena } = await supabase
                 .from('arenas')
                 .select('*')
@@ -82,7 +138,6 @@ export default function DashboardArena() {
             if (erroArena) throw erroArena;
             setArena(dadosArena);
 
-            // 2. Faz o JOIN relacional para trazer as quadras e seus tokens
             const { data: dadosQuadras, error: erroQuadras } = await supabase
                 .from('quadras')
                 .select(`
@@ -114,6 +169,55 @@ export default function DashboardArena() {
             setCarregando(false);
         }
     }
+
+    const handleMudarArenaAtiva = (idNovaArena) => {
+        localStorage.setItem('fox_arena_id', idNovaArena);
+        carregarDados(idNovaArena);
+    };
+
+    const handleCriarNovaArena = async (e) => {
+        e.preventDefault();
+        if (!novoNomeArena.trim() || !usuarioId) return;
+
+        setCriandoNovaArena(true);
+        try {
+            const slugGerado = gerarSlug(novoNomeArena);
+            const { data: novaArena, error: erroNovaArena } = await supabase
+                .from('arenas')
+                .insert([{
+                    nome: novoNomeArena.trim(),
+                    slug: slugGerado,
+                    usuario_id: usuarioId,
+                    cidade: novaCidadeArena.trim() || null,
+                    estado: novoEstadoArena.trim().toUpperCase() || null
+                }])
+                .select()
+                .single();
+
+            if (erroNovaArena) throw erroNovaArena;
+
+            mostrarAviso('Sucesso 🏢', 'Nova filial cadastrada com sucesso no sistema!');
+
+            setNovoNomeArena('');
+            novaCidadeArena('');
+            novoEstadoArena('');
+            setModalNovaArenaAberto(false);
+
+            const { data: novasArenasData } = await supabase
+                .from('arenas')
+                .select('*')
+                .order('nome', { ascending: true });
+
+            setMinhasArenas(novasArenasData || []);
+            handleMudarArenaAtiva(novaArena.id);
+
+        } catch (error) {
+            console.error('Erro ao cadastrar nova arena:', error);
+            mostrarAviso('Erro de Cadastro ❌', 'Não foi possível criar uma nova unidade agora.');
+        } finally {
+            setCriandoNovaArena(false);
+        }
+    };
 
     async function carregarReplaysDaQuadra(quadra) {
         setReplaysQuadra([]);
@@ -165,7 +269,7 @@ export default function DashboardArena() {
 
             setNomeQuadra('');
             setFotoUrl('');
-            alert('Nova quadra cadastrada com sucesso! 🎾');
+            mostrarAviso('Sucesso 🎾', 'Nova quadra vinculada e pronta para monitoramento!');
             carregarDados(arena.id);
         } catch (error) {
             console.error(error);
@@ -176,7 +280,7 @@ export default function DashboardArena() {
 
     const copiarParaTransferencia = (texto) => {
         navigator.clipboard.writeText(texto);
-        alert('Copiado com sucesso! 📋');
+        mostrarAviso('Copiado! 📋', 'O Token de hardware foi transferido para a sua área de transferência.');
     };
 
     const dispararImpressao = () => {
@@ -206,53 +310,56 @@ export default function DashboardArena() {
 
             if (error) throw error;
 
-            alert('Quadra updated com sucesso! 🔄');
+            mostrarAviso('Atualizado 🔄', 'As alterações da quadra foram salvas com sucesso.');
             setModalEditarAberto(false);
             setQuadraParaEditar(null);
             carregarDados(arena.id);
         } catch (error) {
             console.error('Erro ao editar quadra:', error);
-            alert('Erro ao salvar alterações.');
+            mostrarAviso('Erro ❌', 'Ocorreu uma falha ao tentar atualizar as informações da quadra.');
         } finally {
             setSalvandoEdicao(false);
         }
     };
 
-    const handleExcluirQuadra = async (idQuadra) => {
-        const confirmar = window.confirm("⚠️ ATENÇÃO: Tem certeza de que deseja excluir esta quadra? Isso apagará permanentemente o Totem de hardware vinculado e todo o histórico de lances salvos nela!");
-        if (!confirmar) return;
+    // 🔒 EXCLUSÃO REDIRECIONADA PARA O POPUP CUSTOMIZADO DE CONFIRMAÇÃO DO PRODUTO
+    const handleExcluirQuadra = (idQuadra) => {
+        mostrarConfirmacao(
+            "⚠️ EXCLUIR QUADRA DEFINITIVAMENTE",
+            "Atenção: Você tem certeza absoluta de que deseja remover esta quadra? Essa operação apagará permanentemente o Totem de hardware correspondente e anulará todo o histórico de lances salvos nela!",
+            async () => {
+                try {
+                    const { error } = await supabase
+                        .from('quadras')
+                        .delete()
+                        .eq('id', idQuadra);
 
-        try {
-            const { error } = await supabase
-                .from('quadras')
-                .delete()
-                .eq('id', idQuadra);
+                    if (error) throw error;
 
-            if (error) throw error;
-
-            alert('Quadra removida do sistema FOX REPLAY! 🗑️');
-            setModalEditarAberto(false);
-            setQuadraParaEditar(null);
-            carregarDados(arena.id);
-        } catch (error) {
-            console.error('Erro ao excluir quadra:', error);
-            alert('Não foi possível remover a quadra.');
-        }
+                    mostrarAviso('Removida 🗑️', 'A quadra foi completamente expurgada do ecossistema FOX REPLAY.');
+                    setModalEditarAberto(false);
+                    setQuadraParaEditar(null);
+                    carregarDados(arena.id);
+                } catch (error) {
+                    console.error('Erro ao excluir quadra:', error);
+                    mostrarAviso('Falha na Exclusão ❌', 'O banco de dados recusou a solicitação de remoção da quadra.');
+                }
+            }
+        );
     };
 
-    // Função de Logout seguro limpando a sessão no servidor do Supabase Auth
     const handleLogout = async () => {
         await supabase.auth.signOut();
         localStorage.clear();
         router.push('/login');
     };
 
-    if (carregando) {
+    if (carregando && minhasArenas.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-bg-main text-white">
                 <div className="text-center space-y-3">
                     <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="animate-pulse text-sm text-gold font-bold tracking-wider uppercase">Autenticando acesso seguro...</p>
+                    <p className="animate-pulse text-sm text-gold font-bold tracking-wider uppercase">Sincronizando suas Unidades...</p>
                 </div>
             </div>
         );
@@ -260,13 +367,12 @@ export default function DashboardArena() {
 
     return (
         <>
-            {/* CONTAINER DO PAINEL DIGITAL (Escondido automaticamente na hora de imprimir) */}
             <div className="min-h-screen bg-bg-main text-white font-sans p-8 relative overflow-hidden print:hidden">
                 <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gold-glow rounded-full blur-[150px] pointer-events-none" />
 
                 <div className="max-w-[1100px] mx-auto relative z-10">
 
-                    {/* 🦊 HEADER DO SAAS TOTALMENTE INTEGRADO COM A FOTO DA SUA LOGO METÁLICA */}
+                    {/* HEADER DO SAAS */}
                     <div className="flex justify-between items-center border-b border-border-card pb-6 mb-8">
                         <div className="flex items-center gap-3.5 select-none">
                             <img
@@ -278,9 +384,28 @@ export default function DashboardArena() {
                                 <h1 className="text-2xl font-black tracking-widest text-white uppercase leading-none">
                                     FOX <span className="text-gold">REPLAY</span>
                                 </h1>
-                                <p className="text-gray-500 text-[10px] font-medium mt-1.5">
-                                    Painel Administrativo: <span className="text-silver font-semibold">{arena?.nome}</span>
-                                </p>
+
+                                <div className="mt-2 flex items-center gap-2">
+                                    <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Unidade:</span>
+                                    <select
+                                        value={arena?.id || ''}
+                                        onChange={(e) => handleMudarArenaAtiva(e.target.value)}
+                                        className="bg-bg-card border border-border-card/80 text-silver text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-gold cursor-pointer transition-colors hover:text-white"
+                                    >
+                                        {minhasArenas.map((a) => (
+                                            <option key={a.id} value={a.id} className="bg-bg-main text-white">
+                                                {a.nome} {a.cidade ? `(${a.cidade})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    <button
+                                        onClick={() => setModalNovaArenaAberto(true)}
+                                        className="bg-gold/10 hover:bg-gold border border-gold/20 hover:border-transparent text-gold hover:text-black text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                                    >
+                                        ➕ Nova Arena
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <button
@@ -299,14 +424,14 @@ export default function DashboardArena() {
                             </span>
                             <h2 className="text-xl font-black text-white">Seu Portal de Replays está Pronto!</h2>
                             <p className="text-gray-400 text-sm leading-relaxed">
-                                Imprima a placa oficial customizada para colar no balcão da recepção ou nas grades das quadras. Quando os jogadores escanearrem, eles poderão escolher a quadra e salvar os lances direto no smartphone.
+                                Imprima a placa oficial customizada para colar no balcão da recepção ou nas grades das quadras da unidade selecionada acima. Cada complexo possui um QR Code independente.
                             </p>
                             <div className="pt-2 flex flex-wrap gap-3 justify-center md:justify-start">
                                 <button
                                     onClick={dispararImpressao}
                                     className="text-xs bg-gold hover:bg-gold-dark text-black border border-transparent px-5 py-2.5 rounded-xl transition-all font-black tracking-wide shadow-md shadow-gold-glow"
                                 >
-                                    🖨️ Imprimir Placa da Arena
+                                    🖨️ Imprimir Placa da Arena ({arena?.nome})
                                 </button>
                                 <a
                                     href={linkPortalPublico}
@@ -320,7 +445,11 @@ export default function DashboardArena() {
                         </div>
 
                         <div className="bg-white p-4 rounded-2xl shadow-2xl shadow-gold-glow text-center flex flex-col items-center shrink-0">
-                            <QRCodeSVG value={linkPortalPublico} size={135} />
+                            {linkPortalPublico ? (
+                                <QRCodeSVG value={linkPortalPublico} size={135} />
+                            ) : (
+                                <div className="w-[135px] h-[135px] bg-gray-200 animate-pulse rounded-xl" />
+                            )}
                             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-3">
                                 Pré-visualização 📱
                             </span>
@@ -329,7 +458,6 @@ export default function DashboardArena() {
 
                     {/* CORPO DO DASHBOARD */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
                         {/* CADASTRO DE QUADRAS */}
                         <div className="bg-bg-card p-6 rounded-2xl border border-border-card h-fit shadow-lg">
                             <h2 className="text-base font-black mb-4 text-gold uppercase tracking-wider">➕ Nova Quadra</h2>
@@ -344,7 +472,7 @@ export default function DashboardArena() {
                                         value={nomeQuadra}
                                         onChange={(e) => setNomeQuadra(e.target.value)}
                                         placeholder="Ex: Quadra 1 (Central)"
-                                        className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/20"
+                                        className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold"
                                     />
                                 </div>
 
@@ -357,14 +485,14 @@ export default function DashboardArena() {
                                         value={fotoUrl}
                                         onChange={(e) => setFotoUrl(e.target.value)}
                                         placeholder="https://linkdafoto.com/imagem.jpg"
-                                        className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/20"
+                                        className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold"
                                     />
                                 </div>
 
                                 <button
                                     type="submit"
                                     disabled={criandoQuadra}
-                                    className="w-full py-3.5 text-black font-black text-xs uppercase tracking-wider rounded-xl bg-gold hover:bg-gold-dark active:scale-[0.99] transition-all disabled:opacity-50 shadow-md shadow-gold-glow"
+                                    className="w-full py-3.5 text-black font-black text-xs uppercase tracking-wider rounded-xl bg-gold hover:bg-gold-dark transition-all disabled:opacity-50 shadow-md"
                                 >
                                     {criandoQuadra ? 'Salvando dados... ⏳' : 'Adicionar Quadra'}
                                 </button>
@@ -375,7 +503,12 @@ export default function DashboardArena() {
                         <div className="md:col-span-2 space-y-6">
                             <h2 className="text-base font-black text-silver uppercase tracking-wider">Suas Quadras Monitoradas</h2>
 
-                            {quadras.length === 0 ? (
+                            {carregando ? (
+                                <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                                    <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-xs text-gray-500 animate-pulse">Carregando quadras desta unidade...</p>
+                                </div>
+                            ) : quadras.length === 0 ? (
                                 <div className="bg-bg-card border border-dashed border-border-card rounded-2xl p-10 text-center text-gray-500 text-sm">
                                     Nenhuma quadra configurada nesta arena até o momento.
                                 </div>
@@ -383,10 +516,7 @@ export default function DashboardArena() {
                                 <div className="grid grid-cols-1 gap-4">
                                     {quadras.map((quadra) => (
                                         <div key={quadra.id} className="bg-bg-card border border-border-card rounded-2xl p-5 space-y-4 shadow-sm hover:border-border-card/80 transition-all">
-
                                             <div className="flex items-center justify-between gap-4">
-
-                                                {/* 📸 THUMBNAIL DA FOTO DA QUADRA */}
                                                 <div className="flex items-center gap-4 truncate">
                                                     {quadra.fotoUrl ? (
                                                         <img
@@ -415,7 +545,6 @@ export default function DashboardArena() {
                                                     >
                                                         🎥 Ver Gravações
                                                     </button>
-
                                                     <button
                                                         onClick={() => abrirModalEditar(quadra)}
                                                         className="text-xs bg-transparent border border-border-card text-gray-500 px-3 py-1.5 rounded-xl hover:border-white/20 hover:text-white transition-all font-bold flex items-center gap-1"
@@ -425,7 +554,6 @@ export default function DashboardArena() {
                                                 </div>
                                             </div>
 
-                                            {/* HARDWARE TOKEN */}
                                             <div className="flex items-center justify-between gap-3 bg-bg-main p-3 rounded-xl border border-border-card">
                                                 <div className="overflow-hidden">
                                                     <span className="block text-[9px] font-bold text-gold uppercase tracking-widest mb-1">🔑 Token Secreto do Totem (Raspberry)</span>
@@ -438,7 +566,6 @@ export default function DashboardArena() {
                                                     Copiar
                                                 </button>
                                             </div>
-
                                         </div>
                                     ))}
                                 </div>
@@ -466,7 +593,7 @@ export default function DashboardArena() {
                                     {carregandoReplays ? (
                                         <div className="flex flex-col items-center justify-center py-12 space-y-3">
                                             <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-                                            <p className="text-xs text-gray-500 animate-pulse uppercase tracking-widest font-bold">Buscando lances no banco...</p>
+                                            <p className="text-xs text-gray-500">Buscando lances no banco...</p>
                                         </div>
                                     ) : replaysQuadra.length === 0 ? (
                                         <p className="text-sm text-gray-500 text-center py-12">Nenhum take gravado nesta quadra recentemente.</p>
@@ -476,20 +603,20 @@ export default function DashboardArena() {
                                             const horario = replay.criado_em ? replay.criado_em.split('T')[1]?.substring(0, 8) : 'Identificado';
 
                                             return (
-                                                <div key={replay.id} className="bg-bg-main p-4 rounded-xl border border-border-card flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-border-card/80 transition-all">
+                                                <div key={replay.id} className="bg-bg-main p-4 rounded-xl border border-border-card flex flex-col sm:flex-row items-center justify-between gap-4">
                                                     <div className="flex items-center gap-4 w-full sm:w-auto">
-                                                        <div className="w-20 aspect-video bg-black rounded-lg overflow-hidden border border-border-card shrink-0 shadow-inner relative">
+                                                        <div className="w-20 aspect-video bg-black rounded-lg overflow-hidden border border-border-card shrink-0 relative">
                                                             <video src={replay.video_url} className="w-full h-full object-cover" muted preload="metadata" />
                                                             <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-xs">▶️</div>
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-bold text-white">Take gerado às {horario}</p>
-                                                            <a href={linkJogador} target="_blank" rel="noreferrer" className="text-xs text-gold hover:text-gold-dark hover:underline inline-block mt-1 font-medium">
+                                                            <a href={linkJogador} target="_blank" rel="noreferrer" className="text-xs text-gold hover:underline mt-1 font-medium">
                                                                 Abrir link isolado do lance 🔗
                                                             </a>
                                                         </div>
                                                     </div>
-                                                    <div className="bg-white p-2 rounded-xl shrink-0 shadow-md">
+                                                    <div className="bg-white p-2 rounded-xl shrink-0">
                                                         <QRCodeSVG value={linkJogador} size={55} />
                                                     </div>
                                                 </div>
@@ -504,15 +631,14 @@ export default function DashboardArena() {
                     {/* MODAL INTERATIVO PARA EDITAR / EXCLUIR QUADRA */}
                     {modalEditarAberto && quadraParaEditar && (
                         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-                            <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-gold-glow/5 relative">
-
+                            <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
                                 <div className="flex justify-between items-center border-b border-border-card pb-4 mb-5">
                                     <h3 className="text-sm font-black uppercase tracking-wider text-white">
                                         Configurações: <span className="text-gold">{quadraParaEditar.nome}</span>
                                     </h3>
                                     <button
                                         onClick={() => { setModalEditarAberto(false); setQuadraParaEditar(null); }}
-                                        className="text-xs text-gray-500 hover:text-white transition-colors"
+                                        className="text-xs text-gray-500 hover:text-white"
                                     >
                                         ✕
                                     </button>
@@ -557,19 +683,141 @@ export default function DashboardArena() {
                                         <button
                                             type="button"
                                             onClick={() => handleExcluirQuadra(quadraParaEditar.id)}
-                                            className="w-full py-3.5 bg-red-500/5 hover:bg-red-600 border border-red-500/10 hover:border-transparent text-red-400 hover:text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all"
+                                            className="w-full py-3.5 bg-red-500/5 hover:bg-red-600 border border-red-500/10 text-red-400 hover:text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all"
                                         >
                                             🗑️ Excluir Quadra Definitivamente
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    )}
 
+                    {/* MODAL PREMIUM PARA CADASTRAR NOVA ARENA (FILIAL) */}
+                    {modalNovaArenaAberto && (
+                        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+                            <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+
+                                <div className="flex justify-between items-center border-b border-border-card pb-4 mb-5">
+                                    <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                                        ➕ Cadastrar Nova Filial / Unidade
+                                    </h3>
+                                    <button
+                                        onClick={() => setModalNovaArenaAberto(false)}
+                                        className="text-xs text-gray-500 hover:text-white"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleCriarNovaArena} className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
+                                            Nome da Nova Arena
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={novoNomeArena}
+                                            onChange={(e) => setNovoNomeArena(e.target.value)}
+                                            placeholder="Ex: Arena Fox Unidade Centro"
+                                            className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white text-sm focus:outline-none focus:border-gold"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
+                                                Cidade
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={novaCidadeArena}
+                                                onChange={(e) => setNovaCidadeArena(e.target.value)}
+                                                placeholder="Ex: Campinas"
+                                                className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white text-sm focus:outline-none focus:border-gold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
+                                                UF / Estado
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                maxLength={2}
+                                                value={novoEstadoArena}
+                                                onChange={(e) => setNovoEstadoArena(e.target.value)}
+                                                placeholder="SP"
+                                                className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white text-sm text-center uppercase focus:outline-none focus:border-gold"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={criandoNovaArena}
+                                            className="w-full py-3.5 text-black font-black text-xs uppercase tracking-wider rounded-xl bg-gold hover:bg-gold-dark transition-all disabled:opacity-50"
+                                        >
+                                            {criandoNovaArena ? 'Integrando filial... ⏳' : 'Ativar Nova Arena Unidade 🚀'}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     )}
 
                 </div>
             </div>
+
+            {/* 🌟 NOVO DIÁLOGO INTERATIVO DE NOTIFICAÇÃO E CONFIRMAÇÃO DO PRODUTO (REMPLAÇA O WINDOW POPUP) 🌟 */}
+            {notificacao.aberto && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-bg-card border-2 border-border-card rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl shadow-gold-glow/5 relative space-y-4">
+
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-gold bg-gold/5 border border-gold/10 px-3 py-1.5 rounded-xl inline-block">
+                                {notificacao.titulo}
+                            </h3>
+                            <p className="text-sm font-semibold text-white leading-relaxed pt-2">
+                                {notificacao.mensagem}
+                            </p>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-center gap-3">
+                            {notificacao.tipo === 'confirm' ? (
+                                <>
+                                    <button
+                                        onClick={fecharNotificacao}
+                                        className="flex-1 py-3 bg-bg-main border border-border-card text-silver hover:text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                                    >
+                                        Não, Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (notificacao.onConfirmar) notificacao.onConfirmar();
+                                            fecharNotificacao();
+                                        }}
+                                        className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95"
+                                    >
+                                        Sim, Confirmar
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={fecharNotificacao}
+                                    className="w-full py-3 bg-gold hover:bg-gold-dark text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95"
+                                >
+                                    Entendido, fechar ➔
+                                </button>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             {/* FLYER EXCLUSIVO PARA IMPRESSÃO */}
             <div className="hidden print:flex flex-col items-center justify-between bg-white text-black w-full h-screen p-16 font-sans text-center border-[24px] border-neutral-900 box-border">
