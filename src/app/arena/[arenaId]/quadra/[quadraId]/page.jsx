@@ -14,41 +14,47 @@ export default function ListaVideosQuadra() {
     const [carregando, setCarregando] = useState(true);
 
     useEffect(() => {
-        async function carregarVideos() {
-            try {
-                // 1. Busca os nomes e a foto da quadra ativa para o topo
-                const { data: dadosQuadra, error: errQ } = await supabase
-                    .from('quadras')
-                    .select('nome, foto_url, arenas(nome)')
-                    .eq('id', quadraId)
-                    .single();
+    async function carregarVideos() {
+        try {
+            // 1. Busca os nomes e a foto da quadra ativa para o topo
+            const { data: dadosQuadra, error: errQ } = await supabase
+                .from('quadras')
+                .select('nome, foto_url, arenas(nome)')
+                .eq('id', quadraId)
+                .single();
 
-                if (errQ) throw errQ;
-                setNomes({
-                    quadra: dadosQuadra.nome,
-                    arena: dadosQuadra.arenas?.nome,
-                    fotoUrl: dadosQuadra.foto_url
-                });
+            if (errQ) throw errQ;
+            setNomes({
+                quadra: dadosQuadra.nome,
+                arena: dadosQuadra.arenas?.nome,
+                fotoUrl: dadosQuadra.foto_url
+            });
 
-                // 2. Coleta os replays associados
-                const { data: dadosReplays, error: errR } = await supabase
-                    .from('replays')
-                    .select('*')
-                    .eq('quadra_id', quadraId)
-                    .order('criado_em', { ascending: false });
+            // 🚀 OTIMIZAÇÃO: Filtra para carregar APENAS os vídeos gravados a partir das 00:00 de hoje
+            const hoje Inicial = new Date();
+            hojeInicial.setHours(0, 0, 0, 0);
+            const dataIsoHoje = hojeInicial.toISOString();
 
-                if (errR) throw errR;
-                setReplays(dadosReplays || []);
+            const { data: dadosReplays, error: errR } = await supabase
+                .from('replays')
+                .select('*')
+                .eq('quadra_id', quadraId)
+                .gte('criado_em', dataIsoHoje) // Filtro: maior ou igual a hoje
+                .order('criado_em', { ascending: false })
+                .limit(30); // Limite de segurança para o MVP não sobrecarregar
 
-            } catch (error) {
-                console.error('Erro ao buscar lances:', error);
-            } finally {
-                setCarregando(false);
-            }
+            if (errR) throw errR;
+            setReplays(dadosReplays || []);
+
+        } catch (error) {
+            console.error('Erro ao buscar lances:', error);
+        } finally {
+            setCarregando(false);
         }
+    }
 
-        if (quadraId) carregarVideos();
-    }, [quadraId]);
+    if (quadraId) carregarVideos();
+}, [quadraId]);
 
     const baixarDireto = async (e, videoUrl, id) => {
         e.stopPropagation();
