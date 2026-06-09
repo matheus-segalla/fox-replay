@@ -16,7 +16,6 @@ export default function PortalArena() {
     useEffect(() => {
         async function carregarPortal() {
             try {
-                // 1. Busca os dados da Arena
                 const { data: dadosArena, error: errA } = await supabase
                     .from('arenas')
                     .select('*')
@@ -26,7 +25,6 @@ export default function PortalArena() {
                 if (errA) throw errA;
                 setArena(dadosArena);
 
-                // 2. Busca todas as quadras trazendo a coluna foto_url
                 const { data: dadosQuadras, error: errQ } = await supabase
                     .from('quadras')
                     .select('id, nome, status, foto_url')
@@ -48,83 +46,86 @@ export default function PortalArena() {
 
     if (carregando) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-bg-main">
+            <div className="flex items-center justify-center min-h-screen bg-zinc-50">
                 <div className="text-center space-y-3">
-                    <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="animate-pulse text-gold font-bold tracking-wider text-xs uppercase">Abrindo portal da arena...</p>
+                    <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="animate-pulse text-zinc-500 font-bold tracking-widest text-xs uppercase">Conectando à Arena...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-bg-main text-white font-sans p-4 pb-12 flex flex-col items-center relative overflow-hidden">
-            {/* Iluminação difusa ao fundo estilo Tech */}
-            <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gold-glow rounded-full blur-[140px] pointer-events-none" />
+        <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-4 pb-12 flex flex-col items-center relative overflow-hidden">
 
-            {/* 🌟 NOVO HEADER / NAVBAR ESTILO APLICATIVO NATIVO 🌟 */}
-            <header className="w-full max-w-[440px] flex justify-between items-center py-3 border-b border-border-card/60 mb-8 shrink-0 relative z-20">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
+            <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-amber-400/20 rounded-full blur-[140px] pointer-events-none" />
+
+            {/* HEADER CLEAN APP STYLE */}
+            <header className="w-full max-w-[440px] flex justify-between items-center py-4 border-b border-zinc-200 mb-8 shrink-0 relative z-20">
                 <button
                     onClick={() => router.push('/')}
-                    className="text-xs font-bold text-gray-400 hover:text-white transition-colors bg-bg-card border border-border-card/80 px-3 py-1.5 rounded-xl flex items-center gap-1 active:scale-95"
+                    className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm active:scale-95"
                 >
-                    ← Voltar
+                    ← Início
                 </button>
-                <h2 className="text-xs font-black tracking-widest text-white uppercase select-none">
-                    FOX <span className="text-gold">REPLAY</span>
-                </h2>
-                {/* Div invisível apenas para manter o equilíbrio do flex space-between */}
-                <div className="w-[62px] h-[30px] opacity-0 pointer-events-none hidden sm:block" />
+                <div className="flex items-center gap-2 select-none">
+                    <img src="/logo-fox.jpeg" alt="Logo" className="h-6 w-6 object-cover rounded-md border border-zinc-200" />
+                    <h2 className="text-xs font-black tracking-widest text-zinc-900 uppercase">
+                        FOX <span className="text-amber-500">REPLAY</span>
+                    </h2>
+                </div>
+                <div className="w-[65px] h-[30px] opacity-0 pointer-events-none" />
             </header>
 
-            {/* CONTEÚDO PRINCIPAL DO PORTAL */}
-            <div className="w-full max-w-[440px] text-center relative z-10">
+            {/* CONTEÚDO */}
+            <div className="w-full max-w-[440px] text-center relative z-10 flex-1 flex flex-col justify-center py-4">
+                <div>
+                    <span className="text-[9px] font-black text-amber-600 bg-amber-500/10 border border-amber-500/10 px-3 py-1.5 rounded-full uppercase tracking-widest inline-block shadow-sm">
+                        Complexo Parceiro Oficial 🎾
+                    </span>
 
-                {/* IDENTIFICAÇÃO INTERNA */}
-                <span className="text-[9px] font-black text-gold uppercase tracking-widest bg-gold/5 px-2.5 py-1 rounded-full border border-gold/10 inline-block shadow-sm">
-                    Complexo Esportivo Parceiro
-                </span>
+                    <h1 className="text-3xl font-black mt-4 tracking-tight text-zinc-900 uppercase leading-none">{arena?.nome}</h1>
+                    <p className="text-zinc-500 text-xs mt-2.5 max-w-sm mx-auto leading-relaxed font-medium">
+                        Selecione a quadra em que você acabou de jogar para baixar os lances na sua galeria agora mesmo!
+                    </p>
+                </div>
 
-                <h1 className="text-3xl font-black mt-3 tracking-tight text-white uppercase">{arena?.nome}</h1>
-                <p className="text-gray-400 text-xs mt-2 max-w-sm mx-auto leading-relaxed">
-                    Selecione a quadra em que você jogou para assistir e baixar os seus takes de vídeo de hoje.
-                </p>
-
-                {/* GRID DE QUADRAS CUSTOMIZADO COM FOTO */}
-                <div className="mt-8 space-y-5 text-left">
+                {/* BENTO CARDS DE QUADRAS */}
+                <div className="mt-8 space-y-4 text-left">
                     {quadras.length === 0 ? (
-                        <div className="bg-bg-card border border-dashed border-border-card rounded-2xl p-8 text-center text-gray-500 text-sm">
-                            Nenhuma quadra configurada nesta arena até o momento.
+                        <div className="bg-white border border-dashed border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm font-medium">
+                            Nenhuma quadra ativa configurada no momento.
                         </div>
                     ) : (
                         quadras.map((quadra) => (
                             <button
                                 key={quadra.id}
                                 onClick={() => router.push(`/arena/${arenaId}/quadra/${quadra.id}`)}
-                                className="w-full bg-bg-card border border-border-card rounded-2xl flex flex-col overflow-hidden hover:border-gold/30 active:scale-[0.99] transition-all duration-200 group text-left shadow-lg"
+                                className="w-full bg-white border border-zinc-200/80 rounded-2xl flex flex-col overflow-hidden hover:border-amber-500/40 active:scale-[0.99] transition-all duration-200 group text-left shadow-md shadow-zinc-200/40"
                             >
-                                {/* Banner de capa caso a quadra possua foto cadastrada */}
                                 {quadra.foto_url && (
-                                    <div className="w-full h-32 relative overflow-hidden border-b border-border-card bg-neutral-950">
+                                    <div className="w-full h-28 relative overflow-hidden border-b border-zinc-100 bg-zinc-100">
                                         <img
                                             src={quadra.foto_url}
                                             alt={quadra.nome}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-85"
+                                            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300 opacity-90"
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-bg-card to-transparent" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-white/30 to-transparent" />
                                     </div>
                                 )}
 
-                                <div className="p-5 flex items-center justify-between w-full">
+                                <div className="p-4 flex items-center justify-between w-full bg-white">
                                     <div>
-                                        <h3 className="font-black text-base text-white group-hover:text-gold transition-colors tracking-wide">
+                                        <h3 className="font-bold text-base text-zinc-900 group-hover:text-amber-600 transition-colors tracking-wide uppercase">
                                             {quadra.nome}
                                         </h3>
-                                        <p className="text-xs text-gray-500 mt-1 font-medium">
-                                            Status: Totem de Gravação Ativo
+                                        <p className="text-[11px] text-zinc-400 mt-0.5 font-semibold flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Totem de Replay Conectado
                                         </p>
                                     </div>
-                                    <span className="text-lg text-gray-600 group-hover:text-gold group-hover:translate-x-1 transition-all duration-200">
+                                    <span className="text-sm text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all">
                                         ➔
                                     </span>
                                 </div>
@@ -133,9 +134,8 @@ export default function PortalArena() {
                     )}
                 </div>
 
-                {/* FOOTER PREMIUM */}
-                <p className="text-[9px] text-gray-600 mt-16 tracking-widest uppercase font-medium">
-                    Powered by <span className="font-bold text-gray-400 tracking-normal">FOX <span className="text-gold">REPLAY</span></span>
+                <p className="text-[9px] text-zinc-400 mt-16 tracking-widest uppercase font-bold">
+                    Powered by <span className="font-black text-zinc-600 tracking-normal">FOX <span className="text-amber-500">REPLAY</span></span>
                 </p>
             </div>
         </div>

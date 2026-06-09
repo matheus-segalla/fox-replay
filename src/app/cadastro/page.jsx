@@ -5,13 +5,14 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function CadastroArena() {
-    const [nomeArena, setNomeArena] = useState('');
-    const [cidade, setCidade] = useState(''); // Novo Estado para Cidade
-    const [estado, setEstado] = useState(''); // Novo Estado para Estado
+    const [nome, setNome] = useState('');
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
+    const [cidade, setCidade] = useState('');
+    const [estado, setEstado] = useState('');
     const [carregando, setCarregando] = useState(false);
     const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
+
     const router = useRouter();
 
     const gerarSlug = (texto) => {
@@ -29,171 +30,126 @@ export default function CadastroArena() {
         setMensagem({ tipo: '', texto: '' });
 
         try {
-            // 1. Cria a conta de autenticação segura do dono da arena
             const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: email,
+                email,
                 password: senha,
             });
 
             if (authError) throw authError;
 
-            const usuarioLogado = authData?.user;
-            if (!usuarioLogado) throw new Error('Erro ao criar credenciais de acesso.');
+            const novoUsuario = authData?.user;
+            if (!novoUsuario) throw new Error('Não foi possível gerar as credenciais de autenticação.');
 
-            // 2. Insere os dados da Arena injetando nativamente a Cidade e o Estado para indexação na busca
-            const slugGerado = gerarSlug(nomeArena);
-            const { data: arenaData, error: arenaError } = await supabase
+            const slugGerado = gerarSlug(nome);
+
+            const { error: dbError } = await supabase
                 .from('arenas')
                 .insert([{
-                    nome: nomeArena,
+                    nome: nome.trim(),
                     slug: slugGerado,
-                    usuario_id: usuarioLogado.id,
-                    cidade: cidade.trim(),
-                    estado: estado.trim().toUpperCase() // Força sigla em maiúsculas (Ex: SP, RJ, SC)
-                }])
-                .select()
-                .single();
+                    usuario_id: novoUsuario.id,
+                    cidade: cidade.trim() || null,
+                    estado: estado.trim().toUpperCase() || null
+                }]);
 
-            if (arenaError) throw arenaError;
+            if (dbError) throw dbError;
 
-            setMensagem({ tipo: 'sucesso', texto: 'Arena integrada com sucesso! Configurando painel... 🛠️' });
-            localStorage.setItem('fox_arena_id', arenaData.id);
+            setMensagem({ tipo: 'sucesso', texto: 'Conta e Arena criadas com absoluto sucesso! Redirecionando... 🚀' });
 
             setTimeout(() => {
-                router.push('/dashboard');
+                router.push('/login');
             }, 2000);
 
         } catch (err) {
-            setMensagem({ tipo: 'erro', texto: err.message || 'Erro ao efetuar cadastro.' });
+            setMensagem({ tipo: 'erro', texto: err.message || 'Houve uma falha interna no registro.' });
         } finally {
             setCarregando(false);
         }
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-bg-main font-sans p-6 relative overflow-hidden">
-            {/* Luzes de fundo sutis (Glow) */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gold-glow rounded-full blur-[120px] pointer-events-none" />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 relative overflow-hidden">
 
-            <div className="w-full max-w-[430px] bg-bg-card p-8 rounded-2xl border border-border-card shadow-2xl relative z-10">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-400/20 rounded-full blur-[120px] pointer-events-none" />
 
-                {/* 🦊 HEADER DO CREDENCIAMENTO COM LOGO COMPACTA OFICIAL */}
-                <div className="flex flex-col items-center justify-center gap-3 select-none mb-6">
+            <div className="w-full max-w-[440px] bg-white p-8 rounded-2xl border border-zinc-200 shadow-xl relative z-10">
+
+                <div className="flex flex-col items-center justify-center gap-2 select-none mb-6">
                     <img
                         src="/logo-fox.jpeg"
                         alt="Logo Fox Replay"
-                        className="h-12 w-12 object-cover rounded-xl border border-border-card shadow-lg bg-neutral-900"
+                        className="h-11 w-11 object-cover rounded-xl border border-zinc-200 shadow-sm bg-white"
                     />
-                    <div className="text-center">
-                        <h1 className="text-3xl font-black tracking-widest text-white uppercase leading-none">
-                            FOX <span className="text-gold">REPLAY</span>
-                        </h1>
-                        <p className="text-gray-500 text-[11px] font-medium mt-2">
-                            Credenciamento de Novas Arenas e Complexos
-                        </p>
-                    </div>
+                    <h1 className="text-xl font-black text-zinc-900 tracking-widest uppercase mt-1">
+                        CADASTRAR <span className="text-amber-500">ARENA</span>
+                    </h1>
                 </div>
 
-                {/* FORMULÁRIO */}
                 <form onSubmit={handleCadastro} className="space-y-4">
                     <div>
-                        <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
-                            Nome da Arena / Complexo
-                        </label>
+                        <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">Nome do Complexo</label>
                         <input
-                            type="text"
-                            required
-                            value={nomeArena}
-                            onChange={(e) => setNomeArena(e.target.value)}
-                            placeholder="Ex: Arena Ponto Beach"
-                            className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30"
+                            type="text" required value={nome} onChange={(e) => setNome(e.target.value)}
+                            placeholder="Ex: Arena Fox Beach"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-sm"
                         />
                     </div>
 
-                    {/* 📍 GRID INTELIGENTE: CIDADE E ESTADO ALINHADOS LADO A LADO */}
                     <div className="grid grid-cols-3 gap-3">
                         <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
-                                Cidade
-                            </label>
+                            <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">Cidade</label>
                             <input
-                                type="text"
-                                required
-                                value={cidade}
-                                onChange={(e) => setCidade(e.target.value)}
-                                placeholder="Ex: Sorocaba"
-                                className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30"
+                                type="text" required value={cidade} onChange={(e) => setCidade(e.target.value)}
+                                placeholder="Ex: Campinas"
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-sm"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
-                                UF / Estado
-                            </label>
+                            <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">Estado</label>
                             <input
-                                type="text"
-                                required
-                                maxLength={2}
-                                value={estado}
-                                onChange={(e) => setEstado(e.target.value)}
+                                type="text" required maxLength={2} value={estado} onChange={(e) => setEstado(e.target.value)}
                                 placeholder="SP"
-                                className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm text-center uppercase transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30"
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 text-center uppercase placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-sm"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
-                            E-mail Corporativo
-                        </label>
+                        <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">E-mail Administrativo</label>
                         <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                             placeholder="contato@suaarena.com"
-                            className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-sm"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-silver mb-2 uppercase tracking-widest">
-                            Senha do Administrador
-                        </label>
+                        <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">Senha de Acesso</label>
                         <input
-                            type="password"
-                            required
-                            minLength={6}
-                            value={senha}
-                            onChange={(e) => setSenha(e.target.value)}
-                            placeholder="No mínimo 6 dígitos"
-                            className="w-full px-4 py-3 rounded-xl bg-bg-main border border-border-card text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30"
+                            type="password" required value={senha} onChange={(e) => setSenha(e.target.value)}
+                            placeholder="Crie uma senha segura"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-sm"
                         />
                     </div>
 
                     {mensagem.texto && (
-                        <div className={`p-4 rounded-xl text-xs font-semibold border ${mensagem.tipo === 'sucesso'
-                            ? 'bg-gold/5 text-gold border-gold/20'
-                            : 'bg-red-500/5 text-red-400 border-red-500/10'
-                            }`}>
+                        <div className={`p-4 rounded-xl text-xs font-semibold border ${mensagem.tipo === 'sucesso' ? 'bg-amber-500/5 text-amber-600 border-amber-500/20' : 'bg-red-500/5 text-red-500 border-red-500/10'}`}>
                             {mensagem.texto}
                         </div>
                     )}
 
                     <button
-                        type="submit"
-                        disabled={carregando}
-                        className="w-full py-4 mt-2 text-black font-black text-sm rounded-xl bg-gold hover:bg-gold-dark active:scale-[0.99] transition-all disabled:opacity-50 shadow-lg shadow-gold-glow"
+                        type="submit" disabled={carregando}
+                        className="w-full py-3.5 mt-2 text-white font-black text-xs uppercase tracking-widest rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 active:scale-[0.99] transition-all disabled:opacity-50 shadow-md shadow-amber-500/10"
                     >
-                        {carregando ? 'Registrando informações... ⏳' : 'Ativar Nosso Sistema 🚀'}
+                        {carregando ? 'Processando credenciais... ⏳' : 'Finalizar Credenciamento 🚀'}
                     </button>
                 </form>
 
-                <p className="text-center text-xs text-gray-500 mt-6">
-                    Já possui um totem cadastrado?{' '}
-                    <span
-                        onClick={() => router.push('/login')}
-                        className="text-gold font-bold cursor-pointer hover:underline transition-all"
-                    >
+                <p className="text-center text-xs text-zinc-400 mt-6 font-medium">
+                    Já possui cadastro?{' '}
+                    <span onClick={() => router.push('/login')} className="text-amber-500 font-bold cursor-pointer hover:underline">
                         Fazer Login
                     </span>
                 </p>
