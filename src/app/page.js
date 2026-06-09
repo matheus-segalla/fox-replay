@@ -32,14 +32,17 @@ export default function LandingPage() {
 
         if (error) throw error;
 
+        // Removendo duplicatas locais de forma limpa em JavaScript
         const cidadesUnicas = [];
         const mapa = new Set();
         
         data.forEach(item => {
-          const chave = `${item.cidade.trim()}-${item.estado.trim()}`;
-          if (!mapa.has(chave)) {
-            mapa.add(chave);
-            cidadesUnicas.push(item);
+          if (item.cidade && item.estado) {
+            const chave = `${item.cidade.trim()}-${item.estado.trim()}`;
+            if (!mapa.has(chave)) {
+              mapa.add(chave);
+              cidadesUnicas.push(item);
+            }
           }
         });
 
@@ -65,7 +68,7 @@ export default function LandingPage() {
         const { data, error } = await supabase
           .from('arenas')
           .select('id, nome, cidade')
-          .eq('cidade', city => citySelecionada)
+          .eq('cidade', cidadeSelecionada)
           .order('nome', { ascending: true });
 
         if (error) throw error;
@@ -110,7 +113,7 @@ export default function LandingPage() {
       {/* HERO SECTION MODELO COM FLUIDEZ DE ESCALA */}
       <main className="w-full max-w-5xl mx-auto px-6 text-center py-16 md:py-20 z-10 flex-1 flex flex-col justify-center space-y-12">
         
-        <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4 animate-fadeIn">
           <div className="inline-flex items-center gap-2 bg-white border border-zinc-200 px-3 py-1.5 rounded-full shadow-sm">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Tecnologia Inteligente para Quadras</span>
@@ -201,7 +204,7 @@ export default function LandingPage() {
                 </div>
                 <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-3 shadow-sm hover:border-zinc-400 transition-all">
                   <div className="text-amber-500 text-xl font-bold">📢</div>
-                  <h4 className="font-bold text-zinc-900 text-sm uppercase tracking-wide">Marketing Espontâneo</h4>
+                  <h4 className="font-bold text-zinc-900 text-sm uppercase tracking-wide">Marketing Spontâneo</h4>
                   <p className="text-zinc-500 text-xs leading-relaxed font-medium">Os jogadores compartilham seus lances marcando o perfil da sua arena no Instagram, gerando divulgação contínua e orgânica.</p>
                 </div>
                 <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-3 shadow-sm hover:border-zinc-400 transition-all">
@@ -261,7 +264,7 @@ export default function LandingPage() {
 
               {/* PASSO 2: ARENAS DISPONÍVEIS */}
               {cidadeSelecionada && (
-                <div className="space-y-1.5 anonymity-fade">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-black uppercase text-zinc-400 tracking-widest">Selecione a Arena</label>
                   
                   {carregandoArenas ? (
