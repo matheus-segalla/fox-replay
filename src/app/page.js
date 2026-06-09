@@ -7,13 +7,14 @@ import { supabase } from '../lib/supabase';
 export default function LandingPage() {
   const router = useRouter();
   const [modalAberto, setModalAberto] = useState(false);
+  const [tabAtiva, setTabAtiva] = useState('atleta'); // 🚀 NOVO: Estado para alternador fluido de público-alvo
 
   // Estados para a busca em tempo real de Arenas
   const [busca, setBusca] = useState('');
   const [arenasEncontradas, setArenasEncontradas] = useState([]);
   const [carregandoArenas, setCarregandoArenas] = useState(false);
 
-  // Efeito de busca dinâmica (com debounce de 300ms para poupar requisições ao banco)
+  // Efeito de busca dinâmica com debounce
   useEffect(() => {
     if (!modalAberto) {
       setBusca('');
@@ -29,7 +30,6 @@ export default function LandingPage() {
 
       setCarregandoArenas(true);
       try {
-        // 🚀 ESCALA: Busca combinada (Nome da Arena OU Nome da Cidade)
         const { data, error } = await supabase
           .from('arenas')
           .select('id, nome, cidade, estado')
@@ -52,7 +52,6 @@ export default function LandingPage() {
     return () => clearTimeout(delayDebounce);
   }, [busca, modalAberto]);
 
-  // Função disparada se o usuário pressionar "Enter" no teclado
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (arenasEncontradas.length > 0) {
@@ -63,107 +62,166 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg-main text-white font-sans selection:bg-gold selection:text-black relative overflow-hidden flex flex-col justify-between">
 
-      {/* Detalhes de luz de fundo (Glows estilo Tech) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-gold/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-gold/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Detalhes de luz de fundo futurista (Glows de Elite) */}
+      <div className="absolute top-[-15%] left-[-10%] w-[600px] h-[600px] bg-gold/5 rounded-full blur-[160px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-gold/5 rounded-full blur-[130px] pointer-events-none" />
 
-      {/* HEADER / NAVBAR COMPACTA */}
-      <header className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10">
-        <h1 className="text-xl font-black tracking-widest">
-          FOX <span className="text-gold">REPLAY</span>
-        </h1>
+      {/* 🦊 HEADER / NAVBAR REMODELADA COM A LOGO METÁLICA OFICIAL */}
+      <header className="w-full max-w-6xl mx-auto px-6 py-5 flex justify-between items-center z-10 border-b border-border-card/40 backdrop-blur-md bg-bg-main/20 sticky top-0">
+        <div className="flex items-center gap-3 select-none">
+          <img 
+            src="/logo-fox.jpeg" 
+            alt="Logo Fox Replay" 
+            className="h-9 w-9 object-cover rounded-xl border border-border-card bg-neutral-900 shadow-md"
+          />
+          <h1 className="text-xl font-black tracking-widest uppercase">
+            FOX <span className="text-gold">REPLAY</span>
+          </h1>
+        </div>
         <button
           onClick={() => router.push('/login')}
-          className="text-xs font-bold border border-border-card bg-bg-card hover:border-silver/40 px-4 py-2 rounded-xl transition-all"
+          className="text-xs font-black tracking-wider uppercase border border-border-card bg-bg-card hover:border-gold/40 hover:text-gold px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-md"
         >
-          Painel do Dono 🔑
+          Acesso Administrativo 🔑
         </button>
       </header>
 
-      {/* HERO SECTION */}
-      <main className="w-full max-w-4xl mx-auto px-6 text-center py-12 md:py-20 z-10 my-auto space-y-8">
+      {/* HERO SECTION DE ALTO IMPACTO */}
+      <main className="w-full max-w-5xl mx-auto px-6 text-center py-12 md:py-16 z-10 flex-1 flex flex-col justify-center space-y-10">
+        
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 bg-bg-card border border-border-card px-3 py-1.5 rounded-full shadow-inner animate-fadeIn">
+            <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+            <span className="text-[10px] font-extrabold tracking-widest uppercase text-silver">O Futuro das Quadras Esportivas</span>
+          </div>
 
-        <div className="inline-flex items-center gap-2 bg-bg-card border border-border-card px-3 py-1.5 rounded-full shadow-inner">
-          <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-silver">O Futuro dos Complexos Esportivos</span>
+          <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-none max-w-4xl mx-auto uppercase">
+            O Replay do Seu Melhor Lance <br />
+            <span className="bg-gradient-to-r from-white via-silver to-gold bg-clip-text text-transparent">
+              Instantâneo no Celular
+            </span>
+          </h2>
+
+          <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            A tecnologia que transforma complexos esportivos em arenas digitais conectadas. Salve e compartilhe suas grandes jogadas instantaneamente com um clique.
+          </p>
         </div>
 
-        <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-none max-w-3xl mx-auto">
-          O REPLAY DA SUA JOGADA <br className="hidden md:block" />
-          <span className="bg-gradient-to-r from-white via-silver to-gold bg-clip-text text-transparent">
-            DIRETO NO SEU CELULAR
-          </span>
-        </h2>
-
-        <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-          O sistema inteligente que grava, costura e disponibiliza seus melhores lances instantaneamente. Um botão físico na quadra, um QR Code no balcão da arena, a gravação na sua galeria.
-        </p>
-
-        {/* BOTÕES DE AÇÃO PRINCIPAIS */}
-        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
+        {/* 🎛️ NOVO: TAB SYSTEM FLUIDO DE DUPLO DIRECIONAMENTO DE OBJETIVOS */}
+        <div className="bg-bg-card p-1.5 rounded-2xl border border-border-card w-full max-w-md mx-auto grid grid-cols-2 shadow-inner z-10 relative">
           <button
-            onClick={() => setModalAberto(true)}
-            className="w-full sm:w-auto px-8 py-4 bg-transparent border border-border-card hover:border-gold/40 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 group bg-bg-card"
+            onClick={() => setTabAtiva('atleta')}
+            className={`py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              tabAtiva === 'atleta'
+                ? 'bg-gold text-black shadow-lg shadow-gold-glow/20 font-black'
+                : 'text-gray-400 hover:text-white bg-transparent'
+            }`}
           >
-            <span>🎥 Ver Meus Clips</span>
-            <span className="text-gray-500 group-hover:text-gold transition-colors">➔</span>
+            🎾 Sou Atleta
           </button>
-
           <button
-            onClick={() => router.push('/cadastro')}
-            className="w-full sm:w-auto px-8 py-4 bg-gold hover:bg-gold-dark text-black font-black text-sm rounded-xl transition-all shadow-lg shadow-gold-glow flex items-center justify-center gap-2"
+            onClick={() => setTabAtiva('gestor')}
+            className={`py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              tabAtiva === 'gestor'
+                ? 'bg-gold text-black shadow-lg shadow-gold-glow/20 font-black'
+                : 'text-gray-400 hover:text-white bg-transparent'
+            }`}
           >
-            <span>🚀 Tenho uma Arena</span>
+            🏢 Sou Gestor de Arena
           </button>
         </div>
 
-        {/* FEATURES GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-16 text-left">
-          <div className="bg-bg-card border border-border-card rounded-2xl p-6 space-y-2">
-            <div className="text-xl">🔘</div>
-            <h4 className="font-bold text-white text-sm">Gravação Retroativa</h4>
-            <p className="text-gray-500 text-xs leading-relaxed">Fez um golaço ou um smash incrível? Aperte o botão e o sistema recupera os últimos segundos da câmera automaticamente.</p>
-          </div>
+        {/* ⚡ CONTEÚDO DINÂMICO DA ABA SELECIONADA (EXPLICAÇÕES OBJETIVAS E DIRETAS) */}
+        <div className="w-full max-w-4xl mx-auto animate-fadeIn min-h-[200px]">
+          {tabAtiva === 'atleta' ? (
+            <div className="space-y-8">
+              {/* Botão de ação rápido */}
+              <button
+                onClick={() => setModalAberto(true)}
+                className="px-10 py-4 bg-gold hover:bg-gold-dark text-black font-black text-sm uppercase tracking-wider rounded-xl transition-all shadow-xl shadow-gold-glow/10 hover:scale-[1.02] active:scale-95 inline-flex items-center gap-2"
+              >
+                <span>🎥 Acessar Meus Clips Agora</span>
+                <span className="font-sans">➔</span>
+              </button>
 
-          <div className="bg-bg-card border border-border-card rounded-2xl p-6 space-y-2">
-            <div className="text-xl">☁️</div>
-            <h4 className="font-bold text-white text-sm">Nuvem Instantânea</h4>
-            <p className="text-gray-500 text-xs leading-relaxed">Vídeos processados locais e enviados via HTTP de alta velocidade direto para os servidores para não gerar delay no seu jogo.</p>
-          </div>
+              {/* Grid explicativo simplificado */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left pt-6">
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="w-8 h-8 rounded-lg bg-gold/10 text-gold flex items-center justify-center font-black text-sm group-hover:bg-gold group-hover:text-black transition-colors">1</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Faça a Jogada</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Jogue normalmente na quadra. Fez um ponto sensacional ou golaço? O show começou.</p>
+                </div>
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="w-8 h-8 rounded-lg bg-gold/10 text-gold flex items-center justify-center font-black text-sm group-hover:bg-gold group-hover:text-black transition-colors">2</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Aperte o Botão</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Vá até o Totem físico na lateral da quadra e clique no botão para cortar retroativamente os últimos 15s.</p>
+                </div>
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="w-8 h-8 rounded-lg bg-gold/10 text-gold flex items-center justify-center font-black text-sm group-hover:bg-gold group-hover:text-black transition-colors">3</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Escanear & Salvar</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Abra a câmera do celular no QR Code da recepção, encontre seu take pelo horário e salve direto na galeria.</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Botão de ação rápido */}
+              <button
+                onClick={() => router.push('/cadastro')}
+                className="px-10 py-4 bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:scale-[1.02] active:scale-95 inline-flex items-center gap-2"
+              >
+                <span>🚀 Cadastrar Minha Arena Grátis</span>
+                <span className="font-sans">➔</span>
+              </button>
 
-          <div className="bg-bg-card border border-border-card rounded-2xl p-6 space-y-2">
-            <div className="text-xl">📱</div>
-            <h4 className="font-bold text-white text-sm">Hub da Arena Exclusivo</h4>
-            <p className="text-gray-500 text-xs leading-relaxed">Um único QR Code na recepção abre a lista de quadras e os lances organizados por horário. É só clicar e baixar na galeria.</p>
-          </div>
+              {/* Grid explicativo simplificado */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left pt-6">
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="text-gold text-xl">✨</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Diferencial de Elite</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Atraia mais clientes e fidelize os jogadores atuais oferecendo uma experiência tecnológica premium que nenhuma outra quadra possui.</p>
+                </div>
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="text-gold text-xl">📈</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Marketing Orgânico</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Os atletas baixam os lances com a marca d'água da sua arena e divulgam o seu complexo de graça nas redes sociais (Instagram/TikTok).</p>
+                </div>
+                <div className="bg-bg-card/40 backdrop-blur-sm border border-border-card/60 hover:border-gold/20 rounded-2xl p-5 space-y-2.5 transition-all hover:scale-[1.01] group">
+                  <div className="text-gold text-xl">📱</div>
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wide">Gestão Multi-Unidades</h4>
+                  <p className="text-gray-500 text-xs leading-relaxed">Gerencie uma ou dezenas de franquias e totens de hardware centralizados em uma única conta administrativa simples e segura.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-border-card/60 py-6 text-center z-10 bg-bg-main">
-        <p className="text-[10px] text-gray-600 tracking-widest uppercase">
-          © {new Date().getFullYear()} FOX REPLAY • Todos os direitos reservados
+      <footer className="w-full border-t border-border-card/60 py-5 text-center z-10 bg-bg-main">
+        <p className="text-[10px] text-gray-600 tracking-widest uppercase font-bold">
+          © {new Date().getFullYear()} FOX REPLAY • Tecnologia e Performance Esportiva
         </p>
       </footer>
 
-      {/* 🌟 MODAL PREMIUM DE SELEÇÃO FLUIDA COM AUTOCOMPLETE AVANÇADO 🌟 */}
+      {/* 🌟 MODAL FLUIDO COM AUTOCOMPLETE INTELIGENTE 🌟 */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-card border border-border-card rounded-2xl p-6 w-full max-w-[400px] space-y-4 animate-fadeIn relative">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-bg-card border-2 border-border-card rounded-2xl p-6 w-full max-w-[400px] space-y-4 relative shadow-2xl">
 
             <div className="flex justify-between items-center">
-              <h3 className="font-black text-lg text-white">Encontrar Minha Arena</h3>
+              <h3 className="font-black text-base uppercase tracking-wider text-white">🎥 Localizar Meu Complexo</h3>
               <button
                 onClick={() => setModalAberto(false)}
-                className="text-gray-500 hover:text-white text-sm"
+                className="text-gray-500 hover:text-white transition-colors text-sm bg-bg-main border border-border-card w-7 h-7 rounded-lg flex items-center justify-center"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Busque pelo **nome do complexo** ou por **sua cidade** para listar os lances gravados hoje.
+            <p className="text-xs text-gray-400 leading-relaxed font-medium">
+              Digite o **nome da arena** ou a **cidade** onde jogou para acessar a galeria de gravações de lances de hoje.
             </p>
 
             <form onSubmit={handleFormSubmit} className="space-y-4 relative">
@@ -173,31 +231,30 @@ export default function LandingPage() {
                   required
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Ex: Nome da arena ou Cidade..."
-                  className="w-full px-4 py-3 rounded-xl bg-bg-main border border-gray-800 text-white placeholder-gray-600 text-xs font-semibold focus:outline-none focus:border-gold"
+                  placeholder="Ex: Nome do complexo ou sua Cidade..."
+                  className="w-full px-4 py-3.5 rounded-xl bg-bg-main border border-gray-800 text-white placeholder-gray-600 text-xs font-bold focus:outline-none focus:border-gold transition-all"
                 />
 
-                {/* Loading indicator */}
                 {carregandoArenas && (
-                  <div className="absolute right-3 top-3.5 w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute right-3 top-4 w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
                 )}
               </div>
 
-              {/* DROPDOWN DE RESULTADOS DINÂMICOS (Fricção zero) */}
+              {/* DROPDOWN FLUIDO DE REPETIÇÃO DE RESULTADOS */}
               {arenasEncontradas.length > 0 && (
-                <div className="absolute left-0 right-0 top-[45px] bg-bg-main border border-gray-800 rounded-xl overflow-hidden z-50 shadow-2xl max-h-[220px] overflow-y-auto">
+                <div className="absolute left-0 right-0 top-[50px] bg-bg-main border border-gray-800 rounded-xl overflow-hidden z-50 shadow-2xl max-h-[220px] overflow-y-auto animate-fadeIn">
                   {arenasEncontradas.map((item) => (
                     <div
                       key={item.id}
                       onClick={() => {
                         setModalAberto(false);
-                        router.push(`/arena/${item.id}`); // ⚡ REDIRECIONAMENTO INSTANTÂNEO NO PRIMEIRO CLIQUE!
+                        router.push(`/arena/${item.id}`); 
                       }}
                       className="px-4 py-3.5 text-xs text-gray-300 hover:bg-bg-card hover:text-gold cursor-pointer transition-colors border-b border-gray-900 last:border-0 flex flex-col gap-0.5"
                     >
                       <span className="font-black text-white group-hover:text-gold">🏢 {item.nome}</span>
                       {item.cidade && (
-                        <span className="text-[10px] text-gray-500 font-medium ml-5">
+                        <span className="text-[10px] text-gray-500 font-medium ml-5 flex items-center gap-1">
                           📍 {item.cidade} - {item.estado?.toUpperCase() || 'SP'}
                         </span>
                       )}
@@ -206,14 +263,12 @@ export default function LandingPage() {
                 </div>
               )}
 
-              {/* Estado vazio */}
               {busca.trim() && !carregandoArenas && arenasEncontradas.length === 0 && (
-                <p className="text-[10px] text-red-400 font-medium px-1">Nenhum complexo esportivo localizado.</p>
+                <p className="text-[10px] text-red-400 font-bold px-1 animate-pulse">Nenhum complexo localizado nesta região.</p>
               )}
 
-              {/* Informação sutil de usabilidade */}
-              <p className="text-[9px] text-gray-600 text-center uppercase tracking-widest pt-2">
-                Pressione a sugestão acima para acessar na hora ⚡
+              <p className="text-[9px] text-gray-600 text-center uppercase tracking-widest pt-1 font-bold">
+                Pressione a sugestão para entrar na hora ⚡
               </p>
             </form>
           </div>
