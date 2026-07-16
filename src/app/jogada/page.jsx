@@ -9,9 +9,9 @@ function ConteudoJogada() {
     const searchParams = useSearchParams();
     const jogadaId = searchParams.get('id');
 
-    const [dados, setDados] = useState(null);
+    const [dados, setDados] = useState < any > (null);
     const [carregando, setCarregando] = useState(true);
-    const [erro, setErro] = useState(null);
+    const [erro, setErro] = useState < string | null > (null);
 
     useEffect(() => {
         if (!jogadaId) {
@@ -118,18 +118,45 @@ function ConteudoJogada() {
                     <p className="text-gray-400 text-xs font-medium">Reveja a sua jogada e salve direto na sua galeria</p>
                 </div>
 
-                {/* PLAYER SMARTPHONE-STYLE (1:1 ou 9:16 Vertical Imersivo) */}
-                <div className="w-full aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl border border-border-card relative group hover:border-gold/30 transition-all duration-300">
-                    <video
-                        src={dados?.videoUrl}
-                        className="w-full h-full object-cover"
-                        controls
-                        controlsList="nodownload"
-                        playsInline
-                        autoPlay
-                        muted
-                    />
+                {/* ======================================================== */}
+                {/* CONTAINER PRINCIPAL: VÍDEO + ANÚNCIOS (Conforme seu desenho) */}
+                {/* ======================================================== */}
+                <div className="w-full bg-black/40 rounded-3xl p-2 border border-border-card shadow-2xl backdrop-blur-sm flex flex-col gap-2">
+
+                    {/* 1. PLAYER DE VÍDEO (CLIPE) */}
+                    <div className="w-full aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group hover:border-gold/30 transition-all duration-300">
+                        <video
+                            src={dados?.videoUrl}
+                            className="w-full h-full object-cover"
+                            controls
+                            controlsList="nodownload"
+                            playsInline
+                            autoPlay
+                            muted
+                        />
+                    </div>
+
+                    {/* 2. ÁREA DOS ANÚNCIOS (GRID DE 4 ITENS) */}
+                    <div className="grid grid-cols-4 gap-2 w-full h-16 sm:h-20">
+                        {/* Anúncio 1 */}
+                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+                            <span className="text-[10px] font-black text-gray-500 tracking-wider">AD 1</span>
+                        </div>
+                        {/* Anúncio 2 */}
+                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+                            <span className="text-[10px] font-black text-gray-500 tracking-wider">AD 2</span>
+                        </div>
+                        {/* Anúncio 3 */}
+                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+                            <span className="text-[10px] font-black text-gray-500 tracking-wider">AD 3</span>
+                        </div>
+                        {/* Anúncio 4 */}
+                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+                            <span className="text-[10px] font-black text-gray-500 tracking-wider">AD 4</span>
+                        </div>
+                    </div>
                 </div>
+                {/* ======================================================== */}
 
                 {/* BOTÃO DE DOWNLOAD PREMIUM */}
                 <button
