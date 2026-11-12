@@ -147,12 +147,20 @@ export default function CadastroArena() {
                     </button>
                 </form>
 
-                <p className="text-center text-xs text-zinc-400 mt-6 font-medium">
-                    Já possui cadastro?{' '}
-                    <span onClick={() => router.push('/login')} className="text-amber-500 font-bold cursor-pointer hover:underline">
-                        Fazer Login
-                    </span>
-                </p>
+                <div className="text-center text-xs text-zinc-400 mt-6 font-medium space-y-2">
+                    <p>
+                        Já possui cadastro?{' '}
+                        <span onClick={() => router.push('/login')} className="text-amber-500 font-bold cursor-pointer hover:underline">
+                            Fazer Login
+                        </span>
+                    </p>
+                    <p>
+                        Quer conhecer os totens e valores?{' '}
+                        <span onClick={() => router.push('/para-arenas')} className="text-amber-500 font-bold cursor-pointer hover:underline">
+                            Ver Planos Comerciais 🏢
+                        </span>
+                    </p>
+                </div>
             </div>
         </div>
     );

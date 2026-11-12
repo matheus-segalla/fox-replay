@@ -130,15 +130,25 @@ export default function LoginArena() {
                     </button>
                 </form>
 
-                <p className="text-center text-xs text-zinc-400 mt-6 font-medium">
-                    Sua quadra ainda não faz parte?{' '}
-                    <span
-                        onClick={() => router.push('/cadastro')}
-                        className="text-amber-500 font-bold cursor-pointer hover:underline transition-all"
-                    >
-                        Cadastre-se Grátis
-                    </span>
-                </p>
+                <div className="text-center text-xs text-zinc-400 mt-6 font-medium space-y-2">
+                    <p>
+                        Sua quadra ainda não possui o Fox Replay?{' '}
+                        <span
+                            onClick={() => router.push('/para-arenas')}
+                            className="text-amber-500 font-bold cursor-pointer hover:underline transition-all"
+                        >
+                            Conheça nossos planos 🏢
+                        </span>
+                    </p>
+                    <p>
+                        <span
+                            onClick={() => router.push('/')}
+                            className="text-zinc-500 hover:text-zinc-800 cursor-pointer font-semibold text-[11px]"
+                        >
+                            ← Voltar ao Portal dos Atletas
+                        </span>
+                    </p>
+                </div>
             </div>
         </div>
     );

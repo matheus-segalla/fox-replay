@@ -34,6 +34,12 @@ export default function DashboardArena() {
     const [novoEstadoArena, setNovoEstadoArena] = useState('');
     const [criandoNovaArena, setCriandoNovaArena] = useState(false);
 
+    // Estados para o Pareamento Rápido de Totem (Smart Connect por Código)
+    const [modalParearAberto, setModalParearAberto] = useState(false);
+    const [codigoTotemInput, setCodigoTotemInput] = useState('');
+    const [quadraIdPareamento, setQuadraIdPareamento] = useState('');
+    const [salvandoPareamento, setSalvandoPareamento] = useState(false);
+
     // CONTROLADOR MESTRE DE POPUPS CUSTOMIZADOS
     const [notificacao, setNotificacao] = useState({
         aberto: false,
@@ -45,7 +51,14 @@ export default function DashboardArena() {
 
     const router = useRouter();
 
-    const urlBaseSistema = "https://fox-replay.vercel.app";
+    const [urlBaseSistema, setUrlBaseSistema] = useState(process.env.NEXT_PUBLIC_APP_URL || 'https://fox-replay.vercel.app');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setUrlBaseSistema(process.env.NEXT_PUBLIC_APP_URL || window.location.origin);
+        }
+    }, []);
+
     const linkPortalPublico = arena ? `${urlBaseSistema}/arena/${arena.id}` : '';
 
     // FUNÇÕES AUXILIARES PARA POPUPS PREMIUM
@@ -249,6 +262,70 @@ export default function DashboardArena() {
             setCarregandoReplays(false);
         }
     }
+
+    // FUNÇÃO PARA VINCULAR TOTEM INSTANTANEAMENTE VIA CÓDIGO DE 6 DÍGITOS
+    const handleConectarTotemPorCodigo = async (e) => {
+        e.preventDefault();
+        if (!codigoTotemInput.trim() || !quadraIdPareamento) {
+            mostrarAviso('Atenção ⚠️', 'Selecione a quadra e digite o código de 6 dígitos exibido no totem.');
+            return;
+        }
+
+        setSalvandoPareamento(true);
+        try {
+            let codLimpo = codigoTotemInput.trim().toUpperCase();
+            if (codLimpo.length === 6 && !codLimpo.includes('-')) {
+                codLimpo = `${codLimpo.substring(0, 3)}-${codLimpo.substring(3, 6)}`;
+            }
+
+            // 1. Busca se o código existe e está aguardando ativação
+            const { data: pareamento, error: erroBusca } = await supabase
+                .from('pareamentos')
+                .select('*')
+                .eq('codigo', codLimpo)
+                .eq('status', 'pendente')
+                .single();
+
+            if (erroBusca || !pareamento) {
+                mostrarAviso('Código Inválido ❌', 'O código digitado não foi encontrado ou já foi utilizado. Verifique o código exibido na tela da quadra.');
+                return;
+            }
+
+            // 2. Gera novo token seguro para a quadra
+            const tokenGerado = `fox_tok_${Math.random().toString(36).substr(2, 9)}_${Date.now().toString(36)}`;
+
+            // 3. Cadastra o dispositivo
+            const { error: erroDisp } = await supabase
+                .from('dispositivos')
+                .insert([{ quadra_id: quadraIdPareamento, token_autenticacao: tokenGerado }]);
+
+            if (erroDisp) throw erroDisp;
+
+            // 4. Marca o pareamento como vinculado para liberar o Raspberry Pi na hora
+            const { error: erroUp } = await supabase
+                .from('pareamentos')
+                .update({
+                    status: 'vinculado',
+                    token_gerado: tokenGerado,
+                    quadra_id: quadraIdPareamento
+                })
+                .eq('id', pareamento.id);
+
+            if (erroUp) throw erroUp;
+
+            mostrarAviso('Totem Ativado! 🎉', 'O totem na quadra foi sincronizado com sucesso e já iniciou a gravação!');
+            setModalParearAberto(false);
+            setCodigoTotemInput('');
+            setQuadraIdPareamento('');
+            carregarDados(arena.id);
+
+        } catch (err) {
+            console.error('Erro ao parear totem:', err);
+            mostrarAviso('Falha no Pareamento ❌', err.message || 'Não foi possível conectar o totem.');
+        } finally {
+            setSalvandoPareamento(false);
+        }
+    };
 
     const handleCriarQuadra = async (e) => {
         e.preventDefault();
@@ -505,9 +582,30 @@ export default function DashboardArena() {
                                     disabled={criandoQuadra}
                                     className="w-full py-3 text-white font-black text-xs uppercase tracking-widest rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-all disabled:opacity-50 shadow-md"
                                 >
-                                    {criandoQuadra ? 'Salvando dados... ⏳' : 'Vincular Quadra à Unidade'}
+                                    {criandoQuadra ? 'Salvando dados... ⏳' : 'Cadastrar Quadra'}
                                 </button>
                             </form>
+
+                            {/* PAREAMENTO RÁPIDO VIA CÓDIGO (ESTILO SMART TV) */}
+                            <div className="pt-4 border-t border-zinc-100 space-y-2.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-amber-500 font-bold text-base">⚡</span>
+                                    <h3 className="text-xs font-black uppercase text-zinc-900 tracking-wider">
+                                        Vincular Totem da Quadra
+                                    </h3>
+                                </div>
+                                <p className="text-[11px] text-zinc-400 font-medium leading-relaxed">
+                                    Ligou o Raspberry na quadra? Digite o código exibido na TV para ativar sem precisar abrir código.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setModalParearAberto(true)}
+                                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-500/10 active:scale-95 flex items-center justify-center gap-1.5"
+                                >
+                                    <span>Digitar Código de Pareamento</span>
+                                    <span>➔</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Listagem de Quadras Cadastradas */}
@@ -612,7 +710,9 @@ export default function DashboardArena() {
                                     ) : (
                                         replaysQuadra.map((replay) => {
                                             const linkJogador = `${urlBaseSistema}/jogada?id=${replay.id}`;
-                                            const horario = replay.criado_em ? replay.criado_em.split('T')[1]?.substring(0, 5) : 'Recente';
+                                            const horario = replay.criado_em
+                                                ? new Date(replay.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                                                : 'Recente';
 
                                             return (
                                                 <div key={replay.id} className="bg-zinc-50 p-4 rounded-xl border border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
@@ -827,6 +927,85 @@ export default function DashboardArena() {
                             )}
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL PAREAMENTO RÁPIDO DO TOTEM (CÓDIGO DE 6 DÍGITOS) */}
+            {modalParearAberto && (
+                <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-[420px] space-y-5 relative shadow-2xl">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">⚡</span>
+                                <h3 className="text-sm font-black uppercase tracking-wider text-zinc-900">
+                                    Vincular Totem da Quadra
+                                </h3>
+                            </div>
+                            <button
+                                onClick={() => setModalParearAberto(false)}
+                                className="text-zinc-400 hover:text-zinc-700 text-xs bg-zinc-50 border border-zinc-200 w-7 h-7 rounded-lg flex items-center justify-center"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                            Ligue o totem na quadra e veja o código exibido na TV (ex: <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-800 font-bold">852-149</code>). Digite abaixo para ativar na hora:
+                        </p>
+
+                        <form onSubmit={handleConectarTotemPorCodigo} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">
+                                    1. Qual quadra está com este totem?
+                                </label>
+                                <select
+                                    required
+                                    value={quadraIdPareamento}
+                                    onChange={(e) => setQuadraIdPareamento(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 font-bold text-xs focus:outline-none focus:border-amber-500 cursor-pointer"
+                                >
+                                    <option value="">Selecione a quadra...</option>
+                                    {quadras.map((q) => (
+                                        <option key={q.id} value={q.id}>
+                                            🎾 {q.nome}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">
+                                    2. Código de Ativação (6 dígitos)
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={7}
+                                    value={codigoTotemInput}
+                                    onChange={(e) => setCodigoTotemInput(e.target.value)}
+                                    placeholder="Ex: 852-149"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border-2 border-zinc-200 text-zinc-900 placeholder-zinc-400 text-center text-lg font-black tracking-widest focus:outline-none focus:border-amber-500 uppercase"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={salvandoPareamento}
+                                className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-[0.99] flex items-center justify-center gap-2"
+                            >
+                                {salvandoPareamento ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                        <span>Conectando ao Totem...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Ativar Totem na Quadra 🚀</span>
+                                    </>
+                                )}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
