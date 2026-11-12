@@ -16,6 +16,7 @@ function ConteudoJogada() {
     const [baixando, setBaixando] = useState(false);
     const [toastMensagem, setToastMensagem] = useState(null);
     const [salvoFavorito, setSalvoFavorito] = useState(false);
+    const [modalPerfilAberto, setModalPerfilAberto] = useState(false);
     const [modalPrivacidadeAberto, setModalPrivacidadeAberto] = useState(false);
 
     const exibirToast = (msg) => {
@@ -33,14 +34,14 @@ function ConteudoJogada() {
         } catch (e) {}
     }, [jogadaId]);
 
-    const alternarFavorito = () => {
+    const alternarFavorito = async () => {
         if (!dados) return;
         try {
             let salvos = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
             if (salvoFavorito) {
                 salvos = salvos.filter(item => item.id !== jogadaId);
                 setSalvoFavorito(false);
-                exibirToast('Lance removido dos seus favoritos.');
+                exibirToast('Lance removido do seu perfil.');
             } else {
                 salvos.unshift({
                     id: dados.id,
@@ -50,7 +51,15 @@ function ConteudoJogada() {
                     criadoEm: dados.criadoEm
                 });
                 setSalvoFavorito(true);
-                exibirToast('Lance salvo nos seus favoritos! ⭐');
+                exibirToast('Lance salvo no seu perfil! ⭐');
+
+                // Se o usuário ainda não tiver conta/sessão, convida de forma sutil
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.user) {
+                        setTimeout(() => setModalPerfilAberto(true), 600);
+                    }
+                } catch (e) {}
             }
             localStorage.setItem('fox_lances_salvos', JSON.stringify(salvos));
         } catch (e) {
@@ -339,7 +348,7 @@ function ConteudoJogada() {
                                     : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
                             }`}
                         >
-                            <span>{salvoFavorito ? '★ Salvo' : '☆ Salvar'}</span>
+                            <span>{salvoFavorito ? '★ No Perfil' : '⭐ Salvar'}</span>
                         </button>
 
                         <button
@@ -393,6 +402,37 @@ function ConteudoJogada() {
                     </p>
                 </div>
             </div>
+
+            {/* MODAL DE CONVITE SUTIL PARA CRIAR PERFIL */}
+            {modalPerfilAberto && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative text-center">
+                        <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-2xl mx-auto border border-amber-500/30">
+                            ⭐
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-black text-white uppercase tracking-wide">Lance Salvo no seu Perfil!</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                                Esse replay já está guardado no seu histórico local. Quer criar uma conta gratuita para não perder se trocar de celular?
+                            </p>
+                        </div>
+                        <div className="space-y-2 pt-2">
+                            <button
+                                onClick={() => router.push('/login')}
+                                className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg active:scale-95 transition-all"
+                            >
+                                Criar Conta / Entrar ➔
+                            </button>
+                            <button
+                                onClick={() => setModalPerfilAberto(false)}
+                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                            >
+                                Continuar sem login
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 🌟 MODAL DE PRIVACIDADE E EXCLUSÃO DE VÍDEO (LGPD) 🌟 */}
             {modalPrivacidadeAberto && (
