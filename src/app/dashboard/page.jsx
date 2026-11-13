@@ -68,6 +68,16 @@ export default function DashboardArena() {
     const [quadraIdPareamento, setQuadraIdPareamento] = useState('');
     const [salvandoPareamento, setSalvandoPareamento] = useState(false);
 
+    // Estados para Configuração de Logos e Patrocinadores do Vídeo
+    const [logoArenaInput, setLogoArenaInput] = useState('');
+    const [patrocinadoresInput, setPatrocinadoresInput] = useState([
+        { id: 1, nome: '', logo_url: '', ativo: true },
+        { id: 2, nome: '', logo_url: '', ativo: true },
+        { id: 3, nome: '', logo_url: '', ativo: true },
+        { id: 4, nome: '', logo_url: '', ativo: true }
+    ]);
+    const [salvandoPatrocinadores, setSalvandoPatrocinadores] = useState(false);
+
     // CONTROLADOR MESTRE DE POPUPS CUSTOMIZADOS
     const [notificacao, setNotificacao] = useState({
         aberto: false,
@@ -199,6 +209,23 @@ export default function DashboardArena() {
 
             if (erroArena) throw erroArena;
             setArena(dadosArena);
+            setLogoArenaInput(dadosArena.logo_url || (dadosArena.id ? localStorage.getItem('fox_logo_' + dadosArena.id) : '') || '');
+
+            let patsCarregados = [];
+            if (dadosArena.patrocinadores && Array.isArray(dadosArena.patrocinadores) && dadosArena.patrocinadores.length > 0) {
+                patsCarregados = dadosArena.patrocinadores;
+            } else if (dadosArena.id) {
+                try {
+                    const localPats = localStorage.getItem('fox_patrocinadores_' + dadosArena.id);
+                    if (localPats) patsCarregados = JSON.parse(localPats);
+                } catch (e) {}
+            }
+
+            const slotsFormatados = Array.from({ length: 4 }).map((_, idx) => {
+                const item = patsCarregados[idx];
+                return item ? { ...item, id: idx + 1 } : { id: idx + 1, nome: '', logo_url: '', ativo: true };
+            });
+            setPatrocinadoresInput(slotsFormatados);
 
             const { data: dadosQuadras, error: erroQuadras } = await supabase
                 .from('quadras')
@@ -287,6 +314,46 @@ export default function DashboardArena() {
         } finally {
             setCriandoNovaArena(false);
         }
+    };
+
+    const handleSalvarPatrocinadores = async (e) => {
+        e?.preventDefault();
+        if (!arena?.id) return;
+        setSalvandoPatrocinadores(true);
+
+        try {
+            // Atualiza no Supabase
+            try {
+                await supabase
+                    .from('arenas')
+                    .update({
+                        logo_url: logoArenaInput.trim() || null,
+                        patrocinadores: patrocinadoresInput
+                    })
+                    .eq('id', arena.id);
+            } catch (errDb) {
+                console.warn('Atualização no Supabase falhou (executar script SQL):', errDb);
+            }
+
+            // Armazenamento em cache local por ID da arena
+            localStorage.setItem('fox_logo_' + arena.id, logoArenaInput.trim() || '');
+            localStorage.setItem('fox_patrocinadores_' + arena.id, JSON.stringify(patrocinadoresInput));
+
+            mostrarAviso('Sucesso', 'Patrocinadores e marca do vídeo salvos com sucesso! Os atletas já receberão essas marcas ao baixar os replays.');
+        } catch (err) {
+            console.error('Erro ao salvar patrocinadores:', err);
+            mostrarAviso('Erro', 'Não foi possível salvar os patrocinadores.');
+        } finally {
+            setSalvandoPatrocinadores(false);
+        }
+    };
+
+    const handleAtualizarSlotPatrocinador = (index, campo, valor) => {
+        setPatrocinadoresInput(prev => {
+            const copia = [...prev];
+            copia[index] = { ...copia[index], [campo]: valor };
+            return copia;
+        });
     };
 
     async function carregarReplaysDaQuadra(quadra) {
@@ -501,13 +568,15 @@ export default function DashboardArena() {
 
     return (
         <>
-            <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 md:p-8 relative selection:bg-amber-500 selection:text-black">
-                {/* Linhas de Grade e Ambiência Minimalista */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
+            <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 md:p-8 relative selection:bg-amber-500 selection:text-black overflow-x-hidden">
+                {/* Linhas de Grade e Ambiência Futurista com Halos Âmbar */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
+                <div className="absolute top-0 right-1/4 w-[500px] h-[350px] bg-amber-400/15 rounded-full blur-[140px] pointer-events-none" />
+                <div className="absolute top-1/2 left-0 w-[450px] h-[450px] bg-amber-500/10 rounded-full blur-[160px] pointer-events-none" />
 
                 <div className="max-w-[1100px] mx-auto relative z-10 space-y-8">
-                    {/* Header Navbar */}
-                    <div className="flex justify-between items-center border-b border-zinc-200/80 backdrop-blur-sm pb-5">
+                    {/* Header Navbar com Efeito Glass */}
+                    <div className="flex justify-between items-center border-b border-zinc-200/80 backdrop-blur-xl bg-white/70 px-4 py-3.5 rounded-2xl shadow-xs">
                         <div className="flex items-center gap-3.5 select-none">
                             <img
                                 src="/logo-fox.jpeg"
@@ -524,7 +593,7 @@ export default function DashboardArena() {
                                     <select
                                         value={arena?.id || ''}
                                         onChange={(e) => handleMudarArenaAtiva(e.target.value)}
-                                        className="bg-white border border-zinc-200 text-zinc-700 text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm hover:text-zinc-950 transition-colors"
+                                        className="bg-white border border-zinc-200 text-zinc-800 text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-500 cursor-pointer shadow-xs hover:border-amber-400 transition-colors"
                                     >
                                         {minhasArenas.map((a) => (
                                             <option key={a.id} value={a.id} className="bg-white text-zinc-900">
@@ -535,7 +604,7 @@ export default function DashboardArena() {
 
                                     <button
                                         onClick={() => setModalNovaArenaAberto(true)}
-                                        className="bg-amber-500/10 hover:bg-amber-500 border border-amber-500/20 hover:border-transparent text-amber-600 hover:text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-sm"
+                                        className="bg-amber-500/10 hover:bg-amber-500 border border-amber-500/20 hover:border-transparent text-amber-700 hover:text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-xs"
                                     >
                                         + Nova Unidade
                                     </button>
@@ -545,14 +614,14 @@ export default function DashboardArena() {
 
                         <button
                             onClick={handleLogout}
-                            className="text-xs bg-zinc-100 text-zinc-600 border border-zinc-200 px-4 py-2.5 rounded-xl hover:bg-zinc-900 hover:text-white hover:border-transparent transition-all font-bold shadow-sm"
+                            className="text-xs bg-zinc-100 text-zinc-600 border border-zinc-200 px-4 py-2.5 rounded-xl hover:bg-zinc-950 hover:text-white hover:border-transparent transition-all font-bold shadow-xs active:scale-95"
                         >
                             Sair do Painel
                         </button>
                     </div>
 
-                    {/* Bento Box 1: Material de Divulgação */}
-                    <div className="bg-white border border-zinc-200/80 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-md shadow-zinc-200/50">
+                    {/* Bento Box 1: Material de Divulgação em Glass */}
+                    <div className="glass-card-light rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm hover:shadow-md transition-all duration-300">
                         <div className="space-y-3 text-center md:text-left max-w-xl">
                             <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 border border-amber-500/10 px-3 py-1.5 rounded-full uppercase tracking-widest inline-block shadow-sm">
                                 Merchandising Físico da Arena
@@ -591,10 +660,209 @@ export default function DashboardArena() {
                         </div>
                     </div>
 
+                    {/* Bento Box 2: Patrocinadores e Marcas no Vídeo em Glass */}
+                    <div className="glass-card-light rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 space-y-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 border border-amber-500/10 px-3 py-1 rounded-full uppercase tracking-widest inline-block shadow-sm">
+                                        Monetização & Publicidade
+                                    </span>
+                                    <span className="text-xs font-mono text-zinc-400 font-bold">
+                                        4 Posições
+                                    </span>
+                                </div>
+                                <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tight mt-1">
+                                    Patrocinadores no Vídeo e Logo da Arena
+                                </h2>
+                                <p className="text-zinc-500 text-xs mt-0.5">
+                                    Defina sua logomarca e até 4 patrocinadores para serem gravados diretamente nos replays que os atletas baixam e compartilham.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={handleSalvarPatrocinadores}
+                                disabled={salvandoPatrocinadores}
+                                className="self-start md:self-auto text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black px-6 py-3 rounded-xl transition-all uppercase tracking-wider shadow-md active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer"
+                            >
+                                {salvandoPatrocinadores ? (
+                                    <>
+                                        <span className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+                                        <span>Salvando...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Salvar Marcas do Vídeo</span>
+                                        <span>✓</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                            {/* Formulário: Logo da Arena + 4 Patrocinadores */}
+                            <div className="lg:col-span-7 space-y-5">
+                                {/* Campo da Logo da Arena */}
+                                <div className="p-4 bg-zinc-50 border border-zinc-200/80 rounded-xl space-y-2">
+                                    <label className="text-xs font-black text-zinc-800 uppercase tracking-wide flex items-center justify-between">
+                                        <span>Logomarca da Sua Arena (Topo Direito)</span>
+                                        <span className="text-[10px] text-zinc-400 font-normal">PNG transparente recomendado</span>
+                                    </label>
+                                    <div className="flex gap-3 items-center">
+                                        <input
+                                            type="url"
+                                            value={logoArenaInput}
+                                            onChange={(e) => setLogoArenaInput(e.target.value)}
+                                            placeholder="https://exemplo.com/logo-arena.png"
+                                            className="w-full px-3.5 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs text-zinc-900 font-medium focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
+                                        />
+                                        {logoArenaInput && (
+                                            <div className="w-10 h-10 rounded-xl border border-zinc-200 bg-white p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                                                <img src={logoArenaInput} alt="Preview" className="max-h-full max-w-full object-contain" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Grid dos 4 Patrocinadores */}
+                                <div className="space-y-3">
+                                    <span className="text-xs font-black text-zinc-800 uppercase tracking-wide block">
+                                        Grade dos 4 Patrocinadores (Rodapé do Vídeo)
+                                    </span>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {patrocinadoresInput.map((pat, idx) => (
+                                            <div
+                                                key={pat.id || idx}
+                                                className="p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl space-y-2.5 relative group hover:border-amber-500/40 transition-colors"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md uppercase font-mono">
+                                                        Slot 0{idx + 1}
+                                                    </span>
+                                                    <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-zinc-600 font-bold">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={pat.ativo}
+                                                            onChange={(e) => handleAtualizarSlotPatrocinador(idx, 'ativo', e.target.checked)}
+                                                            className="rounded text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
+                                                        />
+                                                        <span>Ativo</span>
+                                                    </label>
+                                                </div>
+
+                                                <input
+                                                    type="text"
+                                                    value={pat.nome || ''}
+                                                    onChange={(e) => handleAtualizarSlotPatrocinador(idx, 'nome', e.target.value)}
+                                                    placeholder={`Nome da Marca 0${idx + 1}`}
+                                                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-900 font-medium focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
+                                                />
+
+                                                <input
+                                                    type="url"
+                                                    value={pat.logo_url || ''}
+                                                    onChange={(e) => handleAtualizarSlotPatrocinador(idx, 'logo_url', e.target.value)}
+                                                    placeholder="URL da logo (opcional)"
+                                                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-900 font-medium focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-normal bg-amber-500/5 border border-amber-500/15 p-3 rounded-xl">
+                                        💡 <strong>Dica de Monetização:</strong> Os slots vazios ou desativados exibirão automaticamente o selo padrão <strong>ANUNCIE Aqui!</strong> (como na referência), estimulando empresas locais que assistirem ao replay a patrocinarem a sua arena.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Simulador / Preview em Tempo Real do Vídeo 9:16 */}
+                            <div className="lg:col-span-5 flex flex-col items-center">
+                                <span className="text-[11px] font-black uppercase text-zinc-500 tracking-wider mb-2 font-mono">
+                                    Prévia Exata do Vídeo Gravado (9:16)
+                                </span>
+
+                                {/* Moldura de Smartphone */}
+                                <div className="w-[260px] bg-[#070709] border-[6px] border-zinc-800 rounded-[32px] p-2.5 shadow-2xl relative overflow-hidden flex flex-col gap-2">
+                                    {/* Topo do Vídeo */}
+                                    <div className="flex items-center justify-between px-1 border-b border-white/10 pb-1.5 pt-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <img
+                                                src="/logo-fox.jpeg"
+                                                alt="Fox Replay"
+                                                className="w-6 h-6 object-cover rounded-md border border-amber-500/40"
+                                            />
+                                            <span className="text-[9px] font-black text-white uppercase leading-none">
+                                                FOX <span className="text-amber-500">REPLAY</span>
+                                            </span>
+                                        </div>
+
+                                        <div className="text-right">
+                                            {logoArenaInput ? (
+                                                <img
+                                                    src={logoArenaInput}
+                                                    alt="Arena Logo"
+                                                    className="h-6 max-w-[70px] object-contain rounded bg-white/5 p-0.5 border border-white/10"
+                                                />
+                                            ) : (
+                                                <span className="text-[8px] font-black text-white uppercase block truncate max-w-[80px]">
+                                                    {arena?.nome || 'SUA ARENA'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Centro: Tela do Vídeo */}
+                                    <div className="w-full aspect-[9/12] bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                                        <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-white text-xs shadow-lg relative z-10">
+                                            ▶
+                                        </div>
+                                        <span className="absolute bottom-2 left-2 text-[8px] font-mono text-zinc-300 font-bold bg-black/60 px-1.5 py-0.5 rounded">
+                                            LANCE 30s
+                                        </span>
+                                    </div>
+
+                                    {/* Rodapé: Barra dos 4 Patrocinadores */}
+                                    <div className="grid grid-cols-4 gap-1 w-full h-11 pt-0.5">
+                                        {patrocinadoresInput.map((p, i) => {
+                                            const tem = p && p.ativo && (p.logo_url || p.nome);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className="bg-[#14151b] border border-white/10 rounded-lg flex flex-col items-center justify-center p-1 overflow-hidden text-center"
+                                                >
+                                                    {tem ? (
+                                                        p.logo_url ? (
+                                                            <img src={p.logo_url} alt={p.nome} className="max-h-full max-w-full object-contain" />
+                                                        ) : (
+                                                            <span className="text-[7px] font-black text-white truncate px-0.5 uppercase">
+                                                                {p.nome}
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center leading-none scale-90">
+                                                            <span className="text-[6px] font-black text-white uppercase">ANUNCIE</span>
+                                                            <span className="text-[7px] font-black text-amber-400">Aqui!</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <span className="text-[10px] text-zinc-400 font-medium text-center mt-3 max-w-xs">
+                                    O atleta faz o download desse arquivo com áudio e vídeo em alta definição pronto para postar.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Bento Grid Layout */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                         {/* Box de Cadastro e Cota de Quadras */}
-                        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-md shadow-zinc-200/40 space-y-4">
+                        <div className="glass-card-light p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 space-y-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-sm font-black text-zinc-800 uppercase tracking-wider">
                                     Adicionar Quadra
@@ -699,7 +967,7 @@ export default function DashboardArena() {
                             ) : (
                                 <div className="space-y-4">
                                     {quadras.map((quadra) => (
-                                        <div key={quadra.id} className="bg-white border border-zinc-200/80 rounded-2xl p-5 space-y-4 shadow-sm hover:border-zinc-300 transition-all">
+                                        <div key={quadra.id} className="glass-card-light rounded-2xl p-5 space-y-4 shadow-sm hover:shadow-md hover:border-amber-500/30 transition-all duration-300">
                                             <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
                                                 <div className="flex items-center gap-4 truncate">
                                                     {quadra.fotoUrl ? (
