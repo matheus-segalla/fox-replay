@@ -41,6 +41,69 @@ export default function PortalArenaUnificado() {
     const [dataFiltro, setDataFiltro] = useState(hojeStr);
     const [periodoFiltro, setPeriodoFiltro] = useState('todos'); // 'todos', 'manha', 'tarde', 'noite', ou hora exata '18', '19', etc.
     const [toastMensagem, setToastMensagem] = useState(null);
+    const [calendarioAberto, setCalendarioAberto] = useState(false);
+    const [dataVisualizacaoMes, setDataVisualizacaoMes] = useState(() => new Date());
+
+    // Janela de retenção de 14 dias (hoje + 13 dias passados)
+    const dataLimite14Dias = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 13);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
+
+    const formatarDataAmigavel = (dataYmd) => {
+        if (!dataYmd) return '';
+        if (dataYmd === hojeStr) return 'Hoje';
+        if (dataYmd === ontemStr) return 'Ontem';
+        const partes = dataYmd.split('-');
+        if (partes.length === 3) {
+            return `${partes[2]}/${partes[1]}`;
+        }
+        return dataYmd;
+    };
+
+    const diasCalendario = useMemo(() => {
+        const ano = dataVisualizacaoMes.getFullYear();
+        const mes = dataVisualizacaoMes.getMonth();
+        const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
+        const totalDiasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+        const dias = [];
+        for (let i = 0; i < primeiroDiaSemana; i++) {
+            dias.push(null);
+        }
+
+        const hojeLimite = new Date();
+        hojeLimite.setHours(23, 59, 59, 999);
+
+        for (let dia = 1; dia <= totalDiasNoMes; dia++) {
+            const dataObj = new Date(ano, mes, dia, 12, 0, 0);
+            const ymd = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+            const dentroDos14Dias = dataObj >= dataLimite14Dias && dataObj <= hojeLimite;
+            dias.push({
+                numero: dia,
+                dataStr: ymd,
+                disponivel: dentroDos14Dias,
+                selecionado: dataFiltro === ymd,
+                ehHoje: ymd === hojeStr
+            });
+        }
+        return dias;
+    }, [dataVisualizacaoMes, dataLimite14Dias, dataFiltro, hojeStr]);
+
+    const mesesNomes = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const mudarMes = (delta) => {
+        setDataVisualizacaoMes((prev) => {
+            const nova = new Date(prev);
+            nova.setMonth(nova.getMonth() + delta);
+            return nova;
+        });
+    };
 
     const exibirToast = (msg) => {
         setToastMensagem(msg);
@@ -268,121 +331,200 @@ export default function PortalArenaUnificado() {
             {/* CONTEÚDO PRINCIPAL */}
             <main className="w-full max-w-xl relative z-10 space-y-6">
 
-                {/* IDENTIFICAÇÃO DA ARENA */}
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase text-amber-700 tracking-wider">
-                            Complexo Parceiro Oficial
+                {/* HERO CARD DA ARENA REFINADO E MODERNO */}
+                <div className="bg-white border border-zinc-200/90 rounded-3xl p-5 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3">
+                        <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full w-fit">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase text-amber-700 tracking-wider">
+                                Complexo Parceiro Oficial
+                            </span>
+                        </div>
+
+                        {arena?.cidade && (
+                            <span className="text-xs font-bold text-zinc-400 flex items-center gap-1">
+                                📍 {arena.cidade} {arena.estado ? `• ${arena.estado}` : ''}
+                            </span>
+                        )}
+                    </div>
+
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 uppercase">
+                            {arena?.nome}
+                        </h1>
+                        <p className="text-xs text-zinc-400 font-medium">Replays gravados em alta definição prontos para download</p>
+                    </div>
+
+                    {/* Seletor de Quadras Integrado */}
+                    <div className="pt-1">
+                        <span className="block text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-1.5">
+                            Quadra Selecionada
+                        </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                            <button
+                                onClick={() => setQuadraAtiva('todas')}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all shadow-sm active:scale-95 ${
+                                    quadraAtiva === 'todas'
+                                        ? 'bg-zinc-900 text-white shadow-md'
+                                        : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
+                                }`}
+                            >
+                                🎾 Todas as Quadras
+                            </button>
+
+                            {quadras.map((q) => (
+                                <button
+                                    key={q.id}
+                                    onClick={() => setQuadraAtiva(q.id)}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all shadow-sm active:scale-95 flex items-center gap-1 ${
+                                        quadraAtiva === q.id
+                                            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                            : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
+                                    }`}
+                                >
+                                    <span>{q.nome}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ============================================================ */}
+                {/* 2. BARRA DE FILTROS COMPACTA COM CALENDÁRIO (14 DIAS)        */}
+                {/* ============================================================ */}
+                <div className="bg-white border border-zinc-200 rounded-3xl p-3.5 sm:p-4 shadow-sm space-y-3 relative">
+                    {/* Cabeçalho da barra de filtros */}
+                    <div className="flex justify-between items-center px-0.5">
+                        <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-1.5">
+                            <span>⚡</span>
+                            <span>Filtros do Replay</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-amber-700 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                            {replaysFiltrados.length} lance(s) encontrado(s)
                         </span>
                     </div>
 
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 uppercase">
-                        {arena?.nome}
-                    </h1>
-
-                    {arena?.cidade && (
-                        <p className="text-xs font-bold text-zinc-400">
-                            📍 {arena.cidade} {arena.estado ? `• ${arena.estado}` : ''}
-                        </p>
-                    )}
-                </div>
-
-                {/* ============================================================ */}
-                {/* 1. SELETOR DE QUADRAS (ABAS HORIZONTAIS ESTILO APP)          */}
-                {/* ============================================================ */}
-                <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black uppercase text-zinc-400 tracking-widest px-1">
-                        Selecione a Quadra
-                    </label>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {/* Linha 1: Filtro de Data (Hoje | Ontem | 📅 Calendário) */}
+                    <div className="grid grid-cols-3 gap-1.5">
                         <button
-                            onClick={() => setQuadraAtiva('todas')}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all shadow-sm active:scale-95 ${
-                                quadraAtiva === 'todas'
-                                    ? 'bg-zinc-900 text-white shadow-md'
-                                    : 'bg-white border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
+                            onClick={() => {
+                                setDataFiltro(hojeStr);
+                                setCalendarioAberto(false);
+                            }}
+                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center ${
+                                dataFiltro === hojeStr
+                                    ? 'bg-zinc-900 text-white shadow-sm font-black'
+                                    : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
                             }`}
                         >
-                            🎾 Todas as Quadras
+                            Hoje
                         </button>
 
-                        {quadras.map((q) => (
-                            <button
-                                key={q.id}
-                                onClick={() => setQuadraAtiva(q.id)}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all shadow-sm active:scale-95 flex items-center gap-1.5 ${
-                                    quadraAtiva === q.id
-                                        ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-                                        : 'bg-white border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
-                                }`}
-                            >
-                                <span>{q.nome}</span>
-                            </button>
-                        ))}
+                        <button
+                            onClick={() => {
+                                setDataFiltro(ontemStr);
+                                setCalendarioAberto(false);
+                            }}
+                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center ${
+                                dataFiltro === ontemStr
+                                    ? 'bg-zinc-900 text-white shadow-sm font-black'
+                                    : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                            }`}
+                        >
+                            Ontem
+                        </button>
+
+                        <button
+                            onClick={() => setCalendarioAberto(!calendarioAberto)}
+                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border text-center ${
+                                dataFiltro !== hojeStr && dataFiltro !== ontemStr
+                                    ? 'bg-amber-500 text-black border-amber-500 shadow-sm font-black'
+                                    : calendarioAberto
+                                    ? 'bg-amber-100 border-amber-300 text-amber-900 font-bold'
+                                    : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                            }`}
+                        >
+                            <span>📅</span>
+                            <span>{dataFiltro !== hojeStr && dataFiltro !== ontemStr ? formatarDataAmigavel(dataFiltro) : 'Outra Data'}</span>
+                        </button>
                     </div>
-                </div>
 
-                {/* ============================================================ */}
-                {/* 2. BARRA DE FILTROS: DATA & HORÁRIO                          */}
-                {/* ============================================================ */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm space-y-4">
-                    {/* Filtro de Data */}
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
-                                📅 Data da Partida
-                            </span>
-                            <span className="text-[11px] font-bold text-amber-600">
-                                {dataFiltro === hojeStr ? 'Hoje' : dataFiltro === ontemStr ? 'Ontem' : dataFiltro.split('-').reverse().join('/')}
-                            </span>
-                        </div>
+                    {/* POPUP / MODAL DE CALENDÁRIO COM RETENÇÃO DE 14 DIAS */}
+                    {calendarioAberto && (
+                        <div className="p-3.5 bg-zinc-950 text-white rounded-2xl shadow-2xl border border-zinc-800 space-y-3 animate-fadeIn">
+                            {/* Topo do calendário: Navegação de Mês */}
+                            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                                <span className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                                    {mesesNomes[dataVisualizacaoMes.getMonth()]} {dataVisualizacaoMes.getFullYear()}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => mudarMes(-1)}
+                                        className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold"
+                                    >
+                                        ◀
+                                    </button>
+                                    <button
+                                        onClick={() => mudarMes(1)}
+                                        className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold"
+                                    >
+                                        ▶
+                                    </button>
+                                    <button
+                                        onClick={() => setCalendarioAberto(false)}
+                                        className="ml-2 w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
 
-                        <div className="grid grid-cols-3 gap-2">
-                            <button
-                                onClick={() => setDataFiltro(hojeStr)}
-                                className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                                    dataFiltro === hojeStr
-                                        ? 'bg-zinc-900 text-white shadow-sm font-black'
-                                        : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                                }`}
-                            >
-                                Hoje
-                            </button>
-                            <button
-                                onClick={() => setDataFiltro(ontemStr)}
-                                className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                                    dataFiltro === ontemStr
-                                        ? 'bg-zinc-900 text-white shadow-sm font-black'
-                                        : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                                }`}
-                            >
-                                Ontem
-                            </button>
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    value={dataFiltro}
-                                    max={hojeStr}
-                                    onChange={(e) => setDataFiltro(e.target.value)}
-                                    className="w-full py-2 px-2 rounded-xl text-xs font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer"
-                                />
+                            {/* Aviso de retenção de 14 dias */}
+                            <p className="text-[10px] text-zinc-400 font-medium">
+                                ⚡ <strong className="text-amber-400">Dias disponíveis:</strong> Replays salvos na nuvem dos últimos 14 dias.
+                            </p>
+
+                            {/* Dias da semana */}
+                            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-zinc-500 uppercase">
+                                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                            </div>
+
+                            {/* Grid dos dias */}
+                            <div className="grid grid-cols-7 gap-1">
+                                {diasCalendario.map((item, idx) => {
+                                    if (!item) {
+                                        return <div key={`vazio-${idx}`} className="h-7 w-full" />;
+                                    }
+                                    return (
+                                        <button
+                                            key={item.dataStr}
+                                            disabled={!item.disponivel}
+                                            onClick={() => {
+                                                setDataFiltro(item.dataStr);
+                                                setCalendarioAberto(false);
+                                            }}
+                                            className={`h-7 w-full rounded-lg text-xs font-bold transition-all flex items-center justify-center relative ${
+                                                item.selecionado
+                                                    ? 'bg-amber-500 text-black font-black shadow-md'
+                                                    : item.disponivel
+                                                    ? 'bg-zinc-900 hover:bg-amber-500/20 hover:text-amber-300 text-white border border-zinc-800'
+                                                    : 'text-zinc-600 bg-transparent opacity-25 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <span>{item.numero}</span>
+                                            {item.ehHoje && !item.selecionado && (
+                                                <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-400" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Filtro de Horário / Turno */}
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-100">
-                        <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
-                                ⏰ Faixa de Horário
-                            </span>
-                            <span className="text-[10px] font-bold text-zinc-400">
-                                {replaysFiltrados.length} lance(s) encontrado(s)
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-1.5">
+                    {/* Linha 2: Faixa de Horário e Seletor Fino Compactos */}
+                    <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1">
                             {[
                                 { id: 'todos', label: 'Todos' },
                                 { id: 'manha', label: '06h-12h' },
@@ -392,9 +534,9 @@ export default function PortalArenaUnificado() {
                                 <button
                                     key={turno.id}
                                     onClick={() => setPeriodoFiltro(turno.id)}
-                                    className={`py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                                    className={`py-1 px-2.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
                                         periodoFiltro === turno.id
-                                            ? 'bg-amber-500 text-white shadow-sm font-black'
+                                            ? 'bg-amber-500 text-black font-black shadow-sm'
                                             : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
                                     }`}
                                 >
@@ -403,22 +545,19 @@ export default function PortalArenaUnificado() {
                             ))}
                         </div>
 
-                        {/* Seletor fino de horas extras (opcional) */}
-                        <div className="pt-2 flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold text-zinc-400">Refinar por hora:</span>
-                            <select
-                                value={['todos', 'manha', 'tarde', 'noite'].includes(periodoFiltro) ? '' : periodoFiltro}
-                                onChange={(e) => setPeriodoFiltro(e.target.value || 'todos')}
-                                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer"
-                            >
-                                <option value="">Qualquer hora</option>
-                                {Array.from({ length: 18 }, (_, i) => i + 6).map((h) => (
-                                    <option key={h} value={String(h)}>
-                                        Das {String(h).padStart(2, '0')}:00 às {String(h + 1).padStart(2, '0')}:00
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Dropdown compacto para hora exata */}
+                        <select
+                            value={['todos', 'manha', 'tarde', 'noite'].includes(periodoFiltro) ? '' : periodoFiltro}
+                            onChange={(e) => setPeriodoFiltro(e.target.value || 'todos')}
+                            className="py-1 px-2 rounded-lg text-[11px] font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer"
+                        >
+                            <option value="">Hora exata ▾</option>
+                            {Array.from({ length: 18 }, (_, i) => i + 6).map((h) => (
+                                <option key={h} value={String(h)}>
+                                    {String(h).padStart(2, '0')}:00 - {String(h + 1).padStart(2, '0')}:00
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -440,7 +579,7 @@ export default function PortalArenaUnificado() {
                                 Nenhum lance encontrado
                             </h4>
                             <p className="text-xs text-zinc-400 font-medium max-w-xs mx-auto leading-relaxed">
-                                Não encontramos vídeos nesta quadra com o filtro de horário selecionado. Tente selecionar "Todos" ou outra data.
+                                Não encontramos vídeos nesta quadra com o filtro de horário selecionado. Tente selecionar &quot;Todos&quot; ou outra data.
                             </p>
                             <button
                                 onClick={() => {
