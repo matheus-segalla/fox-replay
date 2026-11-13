@@ -309,13 +309,6 @@ export default function LandingPage() {
             </button>
           )}
 
-          <button
-            onClick={() => router.push('/para-arenas')}
-            className="text-xs font-semibold text-zinc-600 hover:text-amber-600 border border-zinc-200 hover:border-amber-400 bg-white px-3.5 py-2 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5"
-          >
-            <span>Para Arenas</span>
-          </button>
-
           {usuarioLogado ? (
             <button
               onClick={() => router.push('/perfil')}

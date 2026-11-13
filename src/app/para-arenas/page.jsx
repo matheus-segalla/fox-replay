@@ -144,12 +144,6 @@ export default function PaginaParaArenas() {
 
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/')}
-                            className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors hidden sm:inline-block"
-                        >
-                            Portal dos Atletas
-                        </button>
-                        <button
                             onClick={() => router.push('/login')}
                             className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
                         >
