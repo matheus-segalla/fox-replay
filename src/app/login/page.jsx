@@ -77,10 +77,11 @@ function ConteudoLogin() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 relative overflow-hidden">
             {/* LINHAS DE GRADE E AMBIÊNCIA */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-400/20 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-amber-400/20 rounded-full blur-[140px] pointer-events-none" />
+            <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full border border-amber-500/15 pointer-events-none opacity-50" />
 
-            <div className="w-full max-w-[420px] bg-white p-8 rounded-3xl border border-zinc-200 shadow-xl relative z-10 space-y-6">
+            <div className="w-full max-w-[420px] glass-card-light p-8 rounded-3xl shadow-lg relative z-10 space-y-6">
                 {/* BRAND LOGO */}
                 <div className="flex flex-col items-center justify-center gap-3 select-none">
                     <img

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { comporEBaixarVideoComPatrocinadores } from '../../lib/videoWatermark';
 
 // Componente interno que consome os parâmetros da URL e renderiza o player premium
 function ConteudoJogada() {
@@ -14,6 +15,9 @@ function ConteudoJogada() {
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState(null);
     const [baixando, setBaixando] = useState(false);
+    const [progressoDownload, setProgressoDownload] = useState(0);
+    const [statusDownload, setStatusDownload] = useState('');
+    const [modalDownloadAberto, setModalDownloadAberto] = useState(false);
     const [toastMensagem, setToastMensagem] = useState(null);
     const [salvoFavorito, setSalvoFavorito] = useState(false);
     const [modalPerfilAberto, setModalPerfilAberto] = useState(false);
@@ -112,7 +116,9 @@ function ConteudoJogada() {
                             arenas (
                                 id,
                                 nome,
-                                cidade
+                                cidade,
+                                logo_url,
+                                patrocinadores
                             )
                         )
                     `)
@@ -133,6 +139,19 @@ function ConteudoJogada() {
                     } catch (e) {}
                 }
 
+                // Recupera patrocinadores do banco ou fallback de cache
+                let listaPatrocinadores = [];
+                if (arenaObj?.patrocinadores && Array.isArray(arenaObj.patrocinadores) && arenaObj.patrocinadores.length > 0) {
+                    listaPatrocinadores = arenaObj.patrocinadores;
+                } else if (arenaObj?.id) {
+                    try {
+                        const local = localStorage.getItem('fox_patrocinadores_' + arenaObj.id);
+                        if (local) listaPatrocinadores = JSON.parse(local);
+                    } catch (e) {}
+                }
+
+                const logoArenaSalva = arenaObj?.logo_url || (arenaObj?.id ? localStorage.getItem('fox_logo_' + arenaObj.id) : null);
+
                 if (!cancelado) {
                     setDados({
                         id: data.id,
@@ -142,7 +161,9 @@ function ConteudoJogada() {
                         nomeQuadra: data.quadras?.nome || 'Quadra Monitorada',
                         arenaId: arenaObj?.id,
                         nomeArena: arenaObj?.nome || 'Arena Parceira',
-                        cidadeArena: arenaObj?.cidade || ''
+                        cidadeArena: arenaObj?.cidade || '',
+                        logoArena: logoArenaSalva,
+                        patrocinadores: listaPatrocinadores
                     });
                 }
 
@@ -164,38 +185,64 @@ function ConteudoJogada() {
         };
     }, [jogadaId]);
 
-    // Função de download seguro via Blob com fallback direto
+    // Função de download seguro com queima de patrocinadores e fallback direto
     const baixarVideo = async () => {
         if (!dados?.videoUrl) return;
         setBaixando(true);
-        exibirToast('Preparando download do vídeo... 📥');
+        setProgressoDownload(0);
+        setStatusDownload('Preparando renderização do vídeo...');
+        setModalDownloadAberto(true);
 
-        const nomeArquivo = `fox-replay-${jogadaId ? jogadaId.substring(0, 8) : 'lance'}.mp4`;
+        const arenaSanitizada = (dados.nomeArena || 'arena').toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const nomeArquivo = `fox-replay-${arenaSanitizada}-${jogadaId ? jogadaId.substring(0, 8) : 'lance'}.mp4`;
+
         try {
-            const resposta = await fetch(dados.videoUrl, { mode: 'cors' });
-            if (!resposta.ok) throw new Error('Falha na resposta HTTP');
-            const blob = await resposta.blob();
-            const urlBlob = window.URL.createObjectURL(blob);
+            // Tenta compor o vídeo no formato 9:16 com logos e 4 patrocinadores
+            await comporEBaixarVideoComPatrocinadores({
+                videoUrl: dados.videoUrl,
+                nomeArena: dados.nomeArena,
+                arenaLogoUrl: dados.logoArena,
+                foxLogoUrl: '/logo-fox.jpeg',
+                patrocinadores: dados.patrocinadores,
+                nomeArquivo,
+                onProgresso: (pct) => setProgressoDownload(pct),
+                onStatus: (st) => setStatusDownload(st)
+            });
 
-            const link = document.createElement('a');
-            link.href = urlBlob;
-            link.download = nomeArquivo;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(urlBlob);
             exibirToast('Download concluído com sucesso! 🎾');
+            setTimeout(() => setModalDownloadAberto(false), 800);
+
         } catch (err) {
-            console.warn('Fallback para download direto devido a CORS/rede:', err);
-            const link = document.createElement('a');
-            link.href = dados.videoUrl;
-            link.target = '_blank';
-            link.download = nomeArquivo;
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            console.warn('Fallback para download direto devido a restrições de mídia/canvas:', err);
+            setStatusDownload('Baixando vídeo original direto...');
+            setProgressoDownload(90);
+
+            try {
+                const resposta = await fetch(dados.videoUrl, { mode: 'cors' });
+                if (!resposta.ok) throw new Error('Falha na resposta HTTP');
+                const blob = await resposta.blob();
+                const urlBlob = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = urlBlob;
+                link.download = nomeArquivo;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(urlBlob);
+            } catch (errDireto) {
+                const link = document.createElement('a');
+                link.href = dados.videoUrl;
+                link.target = '_blank';
+                link.download = nomeArquivo;
+                link.rel = 'noopener noreferrer';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
             exibirToast('Vídeo aberto para download! 📥');
+            setTimeout(() => setModalDownloadAberto(false), 600);
         } finally {
             setBaixando(false);
         }
@@ -313,15 +360,56 @@ function ConteudoJogada() {
                 </div>
 
                 {/* ======================================================== */}
-                {/* CONTAINER PRINCIPAL: VÍDEO + ANÚNCIOS                     */}
+                {/* CONTAINER PRINCIPAL: FORMATO 9:16 COM BRANDING E MARCAS   */}
                 {/* ======================================================== */}
-                <div className="w-full bg-zinc-950/70 rounded-3xl p-2.5 border border-zinc-800 shadow-2xl backdrop-blur-sm flex flex-col gap-2.5">
+                <div className="w-full bg-[#070709] rounded-3xl p-3 sm:p-4 border border-zinc-800/80 shadow-2xl backdrop-blur-md flex flex-col gap-3 relative overflow-hidden">
 
-                    {/* 1. PLAYER DE VÍDEO */}
-                    <div className="w-full aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-zinc-900 shadow-inner">
+                    {/* 1. TOPO: LOGO FOX REPLAY (ESQUERDA) + LOGO DA ARENA (DIREITA) */}
+                    <div className="flex items-center justify-between px-1.5 pt-1 pb-2 border-b border-white/10">
+                        {/* Marca Fox Replay */}
+                        <div className="flex items-center gap-2 select-none">
+                            <img
+                                src="/logo-fox.jpeg"
+                                alt="Logo Fox Replay"
+                                className="h-10 w-10 object-cover rounded-xl border border-amber-500/50 shadow-sm bg-black"
+                            />
+                            <div>
+                                <span className="text-xs font-black tracking-wider text-white uppercase block leading-none">
+                                    FOX <span className="text-amber-500">REPLAY</span>
+                                </span>
+                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
+                                    {dados?.nomeQuadra}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Marca Oficial da Arena */}
+                        <div className="flex items-center gap-2 select-none text-right">
+                            {dados?.logoArena ? (
+                                <img
+                                    src={dados.logoArena}
+                                    alt={dados.nomeArena}
+                                    className="h-10 max-w-[130px] object-contain rounded-xl border border-white/10 bg-white/5 p-1"
+                                />
+                            ) : (
+                                <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-right">
+                                    <span className="text-[11px] font-black text-white uppercase block leading-tight">
+                                        {dados?.nomeArena}
+                                    </span>
+                                    <span className="text-[9px] font-mono text-amber-400 uppercase">
+                                        {dados?.cidadeArena || 'Arena Oficial'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 2. PLAYER CENTRAL DE VÍDEO (LANCE DA QUADRA) */}
+                    <div className="w-full aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-zinc-900 shadow-inner flex items-center justify-center">
                         <video
+                            id="video-lance-player"
                             src={dados?.videoUrl}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             controls
                             controlsList="nodownload"
                             playsInline
@@ -330,19 +418,52 @@ function ConteudoJogada() {
                         />
                     </div>
 
-                    {/* 2. ÁREA DOS PATROCINADORES DA ARENA (GRID DE 4 ITENS) */}
-                    <div className="grid grid-cols-4 gap-2 w-full h-14 sm:h-16">
-                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
-                            <span className="text-[9px] font-black text-zinc-500 tracking-wider">PATROCÍNIO 1</span>
+                    {/* 3. RODAPÉ: BARRA COM AS 4 POSIÇÕES DE PATROCINADORES */}
+                    <div className="pt-0.5">
+                        <div className="flex items-center justify-between mb-1.5 px-1">
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold">
+                                Patrocinadores Oficiais
+                            </span>
+                            <span className="text-[9px] font-mono text-amber-500/80 font-bold">
+                                4 Espaços
+                            </span>
                         </div>
-                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
-                            <span className="text-[9px] font-black text-zinc-500 tracking-wider">PATROCÍNIO 2</span>
-                        </div>
-                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
-                            <span className="text-[9px] font-black text-zinc-500 tracking-wider">PATROCÍNIO 3</span>
-                        </div>
-                        <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
-                            <span className="text-[9px] font-black text-zinc-500 tracking-wider">PATROCÍNIO 4</span>
+
+                        <div className="grid grid-cols-4 gap-2 w-full h-16 sm:h-20">
+                            {Array.from({ length: 4 }).map((_, idx) => {
+                                const pat = dados?.patrocinadores?.[idx];
+                                const temPat = pat && pat.ativo && (pat.logo_url || pat.nome);
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="bg-[#121318] hover:bg-[#181a22] transition-all rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 overflow-hidden text-center shadow-inner cursor-pointer group"
+                                        title={temPat ? (pat.nome || `Patrocinador ${idx + 1}`) : 'Espaço disponível para patrocínio'}
+                                    >
+                                        {temPat ? (
+                                            pat.logo_url ? (
+                                                <img
+                                                    src={pat.logo_url}
+                                                    alt={pat.nome || 'Patrocinador'}
+                                                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                                                />
+                                            ) : (
+                                                <span className="text-[10px] font-black text-white uppercase truncate px-1">
+                                                    {pat.nome}
+                                                </span>
+                                            )
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center leading-tight select-none">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-wider">
+                                                    ANUNCIE
+                                                </span>
+                                                <span className="text-[11px] font-black text-amber-400">
+                                                    Aqui!
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -514,6 +635,39 @@ function ConteudoJogada() {
                             >
                                 Fechar
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE RENDERIZAÇÃO DO VÍDEO COM PATROCINADORES */}
+            {modalDownloadAberto && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
+                    <div className="bg-[#121318] border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-xl font-bold animate-pulse">
+                            📥
+                        </div>
+                        <div>
+                            <h3 className="text-base font-black text-white uppercase tracking-wide">
+                                Gerando seu Replay
+                            </h3>
+                            <p className="text-zinc-400 text-xs mt-1">
+                                {statusDownload || 'Aplicando marcas e patrocinadores no vídeo...'}
+                            </p>
+                        </div>
+
+                        {/* Barra de Progresso */}
+                        <div className="space-y-1.5">
+                            <div className="w-full bg-zinc-800 rounded-full h-3 overflow-hidden p-0.5 border border-zinc-700">
+                                <div
+                                    className="bg-gradient-to-r from-amber-500 to-amber-400 h-full rounded-full transition-all duration-300"
+                                    style={{ width: `${progressoDownload}%` }}
+                                />
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                                <span>Exportando MP4</span>
+                                <span className="text-amber-400 font-bold">{progressoDownload}%</span>
+                            </div>
                         </div>
                     </div>
                 </div>

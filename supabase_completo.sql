@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS arenas (
     cidade TEXT,
     estado VARCHAR(2),
     foto_url TEXT,
+    logo_url TEXT,
+    patrocinadores JSONB DEFAULT '[]'::jsonb,
+    limite_quadras INTEGER DEFAULT 2,
+    plano_nome TEXT DEFAULT 'Plano Básico',
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
