@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS dispositivos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quadra_id UUID REFERENCES quadras(id) ON DELETE CASCADE,
     token_autenticacao TEXT NOT NULL UNIQUE,
+    camera_url TEXT,
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -62,9 +63,14 @@ CREATE TABLE IF NOT EXISTS pareamentos (
     status VARCHAR(20) DEFAULT 'pendente', -- 'pendente', 'vinculado', 'expirado'
     token_gerado TEXT,
     quadra_id UUID REFERENCES quadras(id) ON DELETE CASCADE,
+    camera_url TEXT,
     criado_em TIMESTAMPTZ DEFAULT NOW(),
     expira_em TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '1 hour')
 );
+
+-- Migrações seguras caso as tabelas já existam
+ALTER TABLE pareamentos ADD COLUMN IF NOT EXISTS camera_url TEXT;
+ALTER TABLE dispositivos ADD COLUMN IF NOT EXISTS camera_url TEXT;
 
 -- ==============================================================================
 -- 3. ÍNDICES DE ALTA PERFORMANCE

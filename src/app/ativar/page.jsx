@@ -15,6 +15,7 @@ function ConteudoAtivar() {
     const [quadras, setQuadras] = useState([]);
     const [quadraSelecionada, setQuadraSelecionada] = useState('');
     const [codigo, setCodigo] = useState(codigoUrl);
+    const [cameraUrl, setCameraUrl] = useState('');
 
     const [carregando, setCarregando] = useState(true);
     const [ativando, setAtivando] = useState(false);
@@ -138,20 +139,31 @@ function ConteudoAtivar() {
             const tokenGerado = `fox_tok_${Math.random().toString(36).substr(2, 9)}_${Date.now().toString(36)}`;
 
             // Cria o dispositivo
+            const dadosDispositivo = {
+                quadra_id: quadraSelecionada,
+                token_autenticacao: tokenGerado
+            };
+            if (cameraUrl.trim()) {
+                dadosDispositivo.camera_url = cameraUrl.trim();
+            }
             const { error: errD } = await supabase
                 .from('dispositivos')
-                .insert([{ quadra_id: quadraSelecionada, token_autenticacao: tokenGerado }]);
+                .insert([dadosDispositivo]);
 
             if (errD) throw errD;
 
             // Atualiza status do pareamento para o totem receber e começar a gravar
+            const dadosPareamento = {
+                status: 'vinculado',
+                token_gerado: tokenGerado,
+                quadra_id: quadraSelecionada
+            };
+            if (cameraUrl.trim()) {
+                dadosPareamento.camera_url = cameraUrl.trim();
+            }
             const { error: errU } = await supabase
                 .from('pareamentos')
-                .update({
-                    status: 'vinculado',
-                    token_gerado: tokenGerado,
-                    quadra_id: quadraSelecionada
-                })
+                .update(dadosPareamento)
                 .eq('id', pareamento.id);
 
             if (errU) throw errU;
@@ -253,6 +265,26 @@ function ConteudoAtivar() {
                             placeholder="Ex: 852-149"
                             className="w-full px-4 py-3.5 rounded-xl bg-zinc-950 border-2 border-zinc-800 text-amber-400 text-center text-xl font-black tracking-widest uppercase focus:outline-none focus:border-amber-500"
                         />
+                    </div>
+
+                    {/* URL da Câmera IP (Opcional) */}
+                    <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                Câmera IP / RTSP (Opcional)
+                            </label>
+                            <span className="text-[9px] text-zinc-500 font-medium">Padrão Hikvision</span>
+                        </div>
+                        <input
+                            type="text"
+                            value={cameraUrl}
+                            onChange={(e) => setCameraUrl(e.target.value)}
+                            placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
+                            className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono focus:outline-none focus:border-amber-500"
+                        />
+                        <p className="text-[10px] text-zinc-500 mt-1">
+                            Deixe em branco para manter o IP padrão pré-configurado no totem.
+                        </p>
                     </div>
 
                     {mensagem.texto && (

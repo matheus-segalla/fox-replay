@@ -66,6 +66,7 @@ export default function DashboardArena() {
     const [modalParearAberto, setModalParearAberto] = useState(false);
     const [codigoTotemInput, setCodigoTotemInput] = useState('');
     const [quadraIdPareamento, setQuadraIdPareamento] = useState('');
+    const [cameraUrlPareamento, setCameraUrlPareamento] = useState('');
     const [salvandoPareamento, setSalvandoPareamento] = useState(false);
 
     // Estados para Configuração de Logos e Patrocinadores do Vídeo
@@ -464,20 +465,31 @@ export default function DashboardArena() {
             const tokenGerado = `fox_tok_${Math.random().toString(36).substr(2, 9)}_${Date.now().toString(36)}`;
 
             // 3. Cadastra o dispositivo
+            const dadosDispositivo = {
+                quadra_id: quadraIdPareamento,
+                token_autenticacao: tokenGerado
+            };
+            if (cameraUrlPareamento.trim()) {
+                dadosDispositivo.camera_url = cameraUrlPareamento.trim();
+            }
             const { error: erroDisp } = await supabase
                 .from('dispositivos')
-                .insert([{ quadra_id: quadraIdPareamento, token_autenticacao: tokenGerado }]);
+                .insert([dadosDispositivo]);
 
             if (erroDisp) throw erroDisp;
 
             // 4. Marca o pareamento como vinculado
+            const dadosPareamento = {
+                status: 'vinculado',
+                token_gerado: tokenGerado,
+                quadra_id: quadraIdPareamento
+            };
+            if (cameraUrlPareamento.trim()) {
+                dadosPareamento.camera_url = cameraUrlPareamento.trim();
+            }
             const { error: erroUp } = await supabase
                 .from('pareamentos')
-                .update({
-                    status: 'vinculado',
-                    token_gerado: tokenGerado,
-                    quadra_id: quadraIdPareamento
-                })
+                .update(dadosPareamento)
                 .eq('id', pareamento.id);
 
             if (erroUp) throw erroUp;
@@ -486,6 +498,7 @@ export default function DashboardArena() {
             setModalParearAberto(false);
             setCodigoTotemInput('');
             setQuadraIdPareamento('');
+            setCameraUrlPareamento('');
             carregarDados(arena.id);
 
         } catch (err) {
@@ -1449,6 +1462,25 @@ export default function DashboardArena() {
                                     placeholder="Ex: 852-149"
                                     className="w-full px-4 py-3 rounded-xl bg-zinc-50 border-2 border-zinc-200 text-zinc-900 placeholder-zinc-400 text-center text-lg font-black tracking-widest focus:outline-none focus:border-amber-500 uppercase"
                                 />
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                                        3. Câmera IP / RTSP (Opcional)
+                                    </label>
+                                    <span className="text-[9px] text-zinc-400 font-medium">Padrão Hikvision</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={cameraUrlPareamento}
+                                    onChange={(e) => setCameraUrlPareamento(e.target.value)}
+                                    placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
+                                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs font-mono focus:outline-none focus:border-amber-500"
+                                />
+                                <p className="text-[10px] text-zinc-400 mt-1">
+                                    Deixe em branco para manter o IP padrão pré-configurado no totem.
+                                </p>
                             </div>
 
                             <button
