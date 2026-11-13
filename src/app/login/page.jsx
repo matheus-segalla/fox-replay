@@ -34,7 +34,18 @@ function ConteudoLogin() {
                 .select('id')
                 .eq('usuario_id', usuarioLogado.id);
 
-            if (arenaError || !arenasData || arenasData.length === 0) {
+            let arenasUsuario = arenasData || [];
+            if (arenasUsuario.length === 0) {
+                const isSuperAdmin = usuarioLogado.email?.includes('admin') || usuarioLogado.user_metadata?.role === 'super_admin';
+                if (isSuperAdmin) {
+                    const { data: todasArenas } = await supabase.from('arenas').select('id').order('nome').limit(1);
+                    if (todasArenas && todasArenas.length > 0) {
+                        arenasUsuario = todasArenas;
+                    }
+                }
+            }
+
+            if (arenaError || arenasUsuario.length === 0) {
                 // Se for atleta, redireciona silenciosamente para o perfil
                 if (usuarioLogado.user_metadata?.tipo_usuario === 'atleta') {
                     router.replace('/perfil');
@@ -46,10 +57,10 @@ function ConteudoLogin() {
             setMensagem({ tipo: 'sucesso', texto: 'Acesso autorizado! Entrando no painel...' });
 
             const idSalvo = localStorage.getItem('fox_arena_id');
-            const idValido = arenasData.find(a => a.id === idSalvo);
+            const idValido = arenasUsuario.find(a => a.id === idSalvo);
 
             if (!idValido) {
-                localStorage.setItem('fox_arena_id', arenasData[0].id);
+                localStorage.setItem('fox_arena_id', arenasUsuario[0].id);
             }
 
             setTimeout(() => {
@@ -102,11 +113,11 @@ function ConteudoLogin() {
                             E-mail Administrativo
                         </label>
                         <input
-                            type="email"
+                            type="text"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="gestor@suaarena.com"
+                            placeholder="admin@admin ou gestor@suaarena.com"
                             className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
                         />
                     </div>

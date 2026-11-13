@@ -118,7 +118,18 @@ export default function DashboardArena() {
                     .eq('usuario_id', session.user.id)
                     .order('nome', { ascending: true });
 
-                if (arenasError || !arenasData || arenasData.length === 0) {
+                let arenasCarregadas = arenasData || [];
+                if (arenasCarregadas.length === 0) {
+                    const isSuperAdmin = session.user.email?.includes('admin') || session.user.user_metadata?.role === 'super_admin';
+                    if (isSuperAdmin) {
+                        const { data: todasArenas } = await supabase.from('arenas').select('*').order('nome', { ascending: true });
+                        if (todasArenas && todasArenas.length > 0) {
+                            arenasCarregadas = todasArenas;
+                        }
+                    }
+                }
+
+                if (arenasCarregadas.length === 0) {
                     // 🔒 BLOQUEIO: Se o usuário for um atleta ou não possuir arena cadastrada,
                     // faz o redirecionamento silencioso direto para o perfil de atleta.
                     if (session.user.user_metadata?.tipo_usuario === 'atleta') {
@@ -129,13 +140,13 @@ export default function DashboardArena() {
                     return;
                 }
 
-                setMinhasArenas(arenasData);
+                setMinhasArenas(arenasCarregadas);
 
                 let idAtivo = localStorage.getItem('fox_arena_id');
-                const arenaExiste = arenasData.find(a => a.id === idAtivo);
+                const arenaExiste = arenasCarregadas.find(a => a.id === idAtivo);
 
                 if (!idAtivo || !arenaExiste) {
-                    idAtivo = arenasData[0].id;
+                    idAtivo = arenasCarregadas[0].id;
                     localStorage.setItem('fox_arena_id', idAtivo);
                 }
 
