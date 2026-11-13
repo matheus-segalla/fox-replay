@@ -43,8 +43,14 @@ DURACAO_REPLAY_SEGUNDOS = 30
 COOLDOWN_SEGUNDOS = 20
 
 # Carregar variáveis de ambiente ou arquivo local
-SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://SEU_PROJETO.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""))
+SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://nswtefxjndzmwdxqqunu.supabase.co")
+SUPABASE_KEY = os.environ.get(
+    "SUPABASE_SERVICE_ROLE_KEY",
+    os.environ.get(
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zd3RlZnhqbmR6bXdkeHFxdW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjQ3MDIsImV4cCI6MjA5NTUwMDcwMn0.72DuRKnVO1-4MjCDc9y818OSVUaL6KNDu9rlkdERHN8"
+    )
+)
 BASE_WEB_URL = os.environ.get("FOX_WEB_URL", "https://fox-replay.vercel.app")
 
 class TotemFox:

@@ -40,8 +40,8 @@ WorkingDirectory=/opt/foxreplay
 ExecStart=/usr/bin/python3 /opt/foxreplay/totem_fox.py
 Restart=always
 RestartSec=5
-Environment=NEXT_PUBLIC_SUPABASE_URL=https://xsqkrtxocvkvkquhymxm.supabase.co
-Environment=SUPABASE_SERVICE_ROLE_KEY=SUA_SERVICE_ROLE_KEY_AQUI
+Environment=NEXT_PUBLIC_SUPABASE_URL=https://nswtefxjndzmwdxqqunu.supabase.co
+Environment=NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zd3RlZnhqbmR6bXdkeHFxdW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjQ3MDIsImV4cCI6MjA5NTUwMDcwMn0.72DuRKnVO1-4MjCDc9y818OSVUaL6KNDu9rlkdERHN8
 Environment=FOX_WEB_URL=https://fox-replay.vercel.app
 
 [Install]
