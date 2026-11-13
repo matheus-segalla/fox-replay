@@ -125,17 +125,17 @@ export default function PaginaParaArenas() {
     };
 
     return (
-        <div className="min-h-screen bg-[#070709] text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between overflow-x-hidden">
+        <div className="min-h-screen bg-[#14151c] text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between overflow-x-hidden">
 
             {/* ANÉIS 3D METÁLICOS E ILUMINAÇÃO VOLUMÉTRICA ÂMBAR (Estilo Ai.Now) */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Glow Radial Âmbar Central */}
-                <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[900px] h-[650px] bg-gradient-to-b from-amber-500/20 via-amber-600/5 to-transparent rounded-full blur-[160px]" />
-                <div className="absolute top-[28%] right-[-10%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[180px]" />
-                <div className="absolute top-[65%] left-[-15%] w-[700px] h-[700px] bg-amber-600/10 rounded-full blur-[200px]" />
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] bg-gradient-to-b from-amber-500/20 via-amber-600/10 to-transparent rounded-full blur-[160px]" />
+                <div className="absolute top-[28%] right-[-10%] w-[600px] h-[600px] bg-amber-500/15 rounded-full blur-[180px]" />
+                <div className="absolute top-[65%] left-[-15%] w-[700px] h-[700px] bg-amber-600/15 rounded-full blur-[200px]" />
 
                 {/* Linhas de Grade e Textura Fina de Profundidade */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,#000_70%,transparent_100%)] opacity-80" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,#000_70%,transparent_100%)] opacity-90" />
 
                 {/* Composição Geométrica 3D (Anéis Translúcidos com Reflexos Dourados) */}
                 <svg className="absolute -top-12 -right-24 w-[600px] h-[600px] opacity-35 md:opacity-50 select-none animate-pulse duration-1000" viewBox="0 0 500 500" fill="none">
@@ -169,7 +169,7 @@ export default function PaginaParaArenas() {
             </div>
 
             {/* HEADER INSTITUCIONAL (Padronizado h-16 com Glass Dark) */}
-            <header className="sticky top-0 z-50 w-full border-b border-white/5 backdrop-blur-xl bg-[#070709]/85 shadow-2xl">
+            <header className="sticky top-0 z-50 w-full border-b border-white/10 backdrop-blur-xl bg-[#14151c]/85 shadow-2xl">
                 <div className="w-full max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
                     <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
                         <img
@@ -659,7 +659,7 @@ export default function PaginaParaArenas() {
             </main>
 
             {/* FOOTER INSTITUCIONAL */}
-            <footer className="w-full border-t border-white/5 py-8 text-center z-10 bg-[#070709]/90 backdrop-blur-md">
+            <footer className="w-full border-t border-white/10 py-8 text-center z-10 bg-[#14151c]/90 backdrop-blur-md">
                 <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-semibold">
                     © {new Date().getFullYear()} FOX REPLAY &bull; TECNOLOGIA DE MONITORAMENTO E REPLAY ESPORTIVO
                 </p>
