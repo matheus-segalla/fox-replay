@@ -81,11 +81,9 @@ class TotemFox:
     def registrar_pareamento_pendente(self):
         """Cria o código de pareamento zero-touch no Supabase e atualiza o display da TV"""
         self.codigo_pareamento = self.gerar_codigo_pareamento()
-        token_hw = "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
         payload = {
             "codigo": self.codigo_pareamento,
-            "token_hardware": token_hw,
             "status": "pendente"
         }
         headers = {
@@ -96,7 +94,7 @@ class TotemFox:
         }
 
         try:
-            res = requests.post(f"{SUPABASE_URL}/rest/v1/pareamentos_totem", json=payload, headers=headers, timeout=10)
+            res = requests.post(f"{SUPABASE_URL}/rest/v1/pareamentos", json=payload, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 print(f"=== TOTEM AGUARDANDO ATIVAÇÃO ===")
                 print(f"Código na tela: {self.codigo_pareamento}")
@@ -119,17 +117,18 @@ class TotemFox:
         while not self.quadra_id:
             try:
                 res = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/pareamentos_totem?codigo=eq.{self.codigo_pareamento}&select=status,quadra_id,quadras(nome,arena_id)",
+                    f"{SUPABASE_URL}/rest/v1/pareamentos?codigo=eq.{self.codigo_pareamento}&select=status,quadra_id,token_gerado,quadras(nome,arena_id)",
                     headers=headers,
                     timeout=5
                 )
                 if res.status_code == 200:
                     dados = res.json()
-                    if dados and dados[0].get("status") == "ativado":
+                    if dados and dados[0].get("status") == "vinculado":
                         item = dados[0]
                         self.quadra_id = item.get("quadra_id")
                         self.salvar_config({
                             "quadra_id": self.quadra_id,
+                            "token_autenticacao": item.get("token_gerado"),
                             "nome_quadra": item.get("quadras", {}).get("nome", "Quadra Ativada")
                         })
                         print(f"✅ Totem vinculado à Quadra ID: {self.quadra_id}")
