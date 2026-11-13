@@ -83,6 +83,12 @@ const IconShield = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const IconUser = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
 export default function LandingPage() {
   const router = useRouter();
   const [modalAberto, setModalAberto] = useState(false);
@@ -93,6 +99,28 @@ export default function LandingPage() {
   const [ultimaArena, setUltimaArena] = useState(null);
   const [lancesFavoritos, setLancesFavoritos] = useState([]);
   const [modalFavoritosAberto, setModalFavoritosAberto] = useState(false);
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
+
+  // Monitora sessão do usuário autenticado
+  useEffect(() => {
+    async function checarSessao() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUsuarioLogado(session.user);
+        }
+      } catch (e) {}
+    }
+    checarSessao();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUsuarioLogado(session?.user || null);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Estados para o funil por cidades (modal secundário)
   const [cidadesDisponiveis, setCidadesDisponiveis] = useState([]);
@@ -270,8 +298,8 @@ export default function LandingPage() {
         <div className="flex items-center gap-2.5">
           {lancesFavoritos.length > 0 && (
             <button
-              onClick={() => setModalFavoritosAberto(true)}
-              className="text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+              onClick={() => router.push('/perfil')}
+              className="text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-3 py-2 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5"
             >
               <IconStar className="w-3.5 h-3.5 text-amber-600 fill-amber-500/30" />
               <span>Meus Lances</span>
@@ -283,17 +311,30 @@ export default function LandingPage() {
 
           <button
             onClick={() => router.push('/para-arenas')}
-            className="text-xs font-semibold text-zinc-600 hover:text-amber-600 border border-zinc-200 hover:border-amber-400 bg-white px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+            className="text-xs font-semibold text-zinc-600 hover:text-amber-600 border border-zinc-200 hover:border-amber-400 bg-white px-3.5 py-2 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5"
           >
             <span>Para Arenas</span>
           </button>
 
-          <button
-            onClick={() => router.push('/login')}
-            className="text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 hidden sm:inline-block"
-          >
-            Painel do Gestor
-          </button>
+          {usuarioLogado ? (
+            <button
+              onClick={() => router.push('/perfil')}
+              className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-2"
+            >
+              <span className="w-5 h-5 rounded-md bg-zinc-700 text-amber-400 text-[10px] font-black flex items-center justify-center">
+                {getIniciais(usuarioLogado.user_metadata?.nome_completo || usuarioLogado.email)}
+              </span>
+              <span>Meu Perfil</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push('/entrar')}
+              className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-1.5"
+            >
+              <IconUser className="w-3.5 h-3.5 text-zinc-300" />
+              <span>Entrar</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -512,10 +553,25 @@ export default function LandingPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-zinc-200 py-5 text-center z-10 bg-white">
+      <footer className="w-full border-t border-zinc-200 py-6 text-center z-10 bg-white space-y-2">
         <p className="text-[11px] text-zinc-500 tracking-wider uppercase font-semibold">
           © {new Date().getFullYear()} FOX REPLAY • TECNOLOGIA DE MONITORAMENTO ESPORTIVO
         </p>
+        <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-400">
+          <button
+            onClick={() => router.push('/login')}
+            className="hover:text-zinc-700 transition-colors underline font-medium"
+          >
+            Acesso da Arena • Painel do Gestor
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => router.push('/para-arenas')}
+            className="hover:text-zinc-700 transition-colors"
+          >
+            Seja uma Arena Parceira
+          </button>
+        </div>
       </footer>
 
       {/* MODAL DE SELEÇÃO POR CIDADE */}

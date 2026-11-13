@@ -27,20 +27,34 @@ function ConteudoJogada() {
     // Verifica se já está nos favoritos
     useEffect(() => {
         if (!jogadaId) return;
-        try {
-            const salvos = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
-            const jaSalvo = salvos.some(item => item.id === jogadaId);
-            setSalvoFavorito(jaSalvo);
-        } catch (e) {}
+        const timer = setTimeout(() => {
+            try {
+                const salvos = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
+                const jaSalvo = salvos.some(item => item.id === jogadaId);
+                setSalvoFavorito(jaSalvo);
+            } catch (e) {}
+        }, 0);
+        return () => clearTimeout(timer);
     }, [jogadaId]);
 
     const alternarFavorito = async () => {
         if (!dados) return;
         try {
             let salvos = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
+            const { data: { session } } = await supabase.auth.getSession();
+
             if (salvoFavorito) {
                 salvos = salvos.filter(item => item.id !== jogadaId);
                 setSalvoFavorito(false);
+                if (session?.user) {
+                    try {
+                        await supabase
+                            .from('favoritos')
+                            .delete()
+                            .eq('usuario_id', session.user.id)
+                            .eq('replay_id', jogadaId);
+                    } catch (e) {}
+                }
                 exibirToast('Lance removido do seu perfil.');
             } else {
                 salvos.unshift({
@@ -51,15 +65,21 @@ function ConteudoJogada() {
                     criadoEm: dados.criadoEm
                 });
                 setSalvoFavorito(true);
-                exibirToast('Lance salvo no seu perfil! ⭐');
 
-                // Se o usuário ainda não tiver conta/sessão, convida de forma sutil
-                try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session?.user) {
-                        setTimeout(() => setModalPerfilAberto(true), 600);
-                    }
-                } catch (e) {}
+                if (session?.user) {
+                    try {
+                        await supabase
+                            .from('favoritos')
+                            .upsert(
+                                { usuario_id: session.user.id, replay_id: dados.id },
+                                { onConflict: 'usuario_id,replay_id' }
+                            );
+                    } catch (e) {}
+                    exibirToast('Lance salvo permanente no seu perfil!');
+                } else {
+                    exibirToast('Lance salvo no seu perfil!');
+                    setTimeout(() => setModalPerfilAberto(true), 600);
+                }
             }
             localStorage.setItem('fox_lances_salvos', JSON.stringify(salvos));
         } catch (e) {
@@ -68,13 +88,16 @@ function ConteudoJogada() {
     };
 
     useEffect(() => {
-        if (!jogadaId) {
-            setErro('Nenhuma jogada foi identificada neste link.');
-            setCarregando(false);
-            return;
-        }
-
+        let cancelado = false;
         async function buscarDadosJogada() {
+            if (!jogadaId) {
+                if (!cancelado) {
+                    setErro('Nenhuma jogada foi identificada neste link.');
+                    setCarregando(false);
+                }
+                return;
+            }
+
             try {
                 // Busca o replay fazendo JOIN relacional completo com quadras e arenas
                 const { data, error } = await supabase
@@ -110,26 +133,35 @@ function ConteudoJogada() {
                     } catch (e) {}
                 }
 
-                setDados({
-                    id: data.id,
-                    videoUrl: data.video_url,
-                    criadoEm: data.criado_em,
-                    quadraId: data.quadras?.id,
-                    nomeQuadra: data.quadras?.nome || 'Quadra Monitorada',
-                    arenaId: arenaObj?.id,
-                    nomeArena: arenaObj?.nome || 'Arena Parceira',
-                    cidadeArena: arenaObj?.cidade || ''
-                });
+                if (!cancelado) {
+                    setDados({
+                        id: data.id,
+                        videoUrl: data.video_url,
+                        criadoEm: data.criado_em,
+                        quadraId: data.quadras?.id,
+                        nomeQuadra: data.quadras?.nome || 'Quadra Monitorada',
+                        arenaId: arenaObj?.id,
+                        nomeArena: arenaObj?.nome || 'Arena Parceira',
+                        cidadeArena: arenaObj?.cidade || ''
+                    });
+                }
 
             } catch (err) {
                 console.error(err);
-                setErro('Não foi possível carregar este replay. O vídeo pode ter sido removido ou o link expirou.');
+                if (!cancelado) {
+                    setErro('Não foi possível carregar este replay. O vídeo pode ter sido removido ou o link expirou.');
+                }
             } finally {
-                setCarregando(false);
+                if (!cancelado) {
+                    setCarregando(false);
+                }
             }
         }
 
         buscarDadosJogada();
+        return () => {
+            cancelado = true;
+        };
     }, [jogadaId]);
 
     // Função de download seguro via Blob com fallback direto
@@ -405,29 +437,31 @@ function ConteudoJogada() {
 
             {/* MODAL DE CONVITE SUTIL PARA CRIAR PERFIL */}
             {modalPerfilAberto && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
                     <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative text-center">
-                        <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-2xl mx-auto border border-amber-500/30">
-                            ⭐
+                        <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
+                            <svg className="w-6 h-6 fill-amber-400 text-amber-400" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-base font-black text-white uppercase tracking-wide">Lance Salvo no seu Perfil!</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                                Esse replay já está guardado no seu histórico local. Quer criar uma conta gratuita para não perder se trocar de celular?
+                        <div className="space-y-1.5">
+                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Lance Salvo no seu Perfil</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                As jogadas da quadra expiram em 14 dias. Salve com seu perfil gratuito para manter este vídeo permanente na sua galeria.
                             </p>
                         </div>
                         <div className="space-y-2 pt-2">
                             <button
-                                onClick={() => router.push('/login')}
-                                className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg active:scale-95 transition-all"
+                                onClick={() => router.push(`/entrar?redirect=/jogada?id=${jogadaId}`)}
+                                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-95 transition-all"
                             >
-                                Criar Conta / Entrar ➔
+                                Salvar Permanente na Minha Conta
                             </button>
                             <button
                                 onClick={() => setModalPerfilAberto(false)}
-                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-semibold text-xs rounded-xl transition-all"
                             >
-                                Continuar sem login
+                                Manter salvo apenas neste celular
                             </button>
                         </div>
                     </div>
