@@ -123,20 +123,20 @@ export default function PaginaParaArenas() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[400px] bg-zinc-800/20 rounded-full blur-[130px]" />
             </div>
 
-            {/* HEADER INSTITUCIONAL (Sticky com z-50 para sobrepor o scroll perfeitamente) */}
-            <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 backdrop-blur-md bg-zinc-950/90">
-                <div className="w-full max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            {/* HEADER INSTITUCIONAL */}
+            <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 backdrop-blur-md bg-zinc-950/90 shadow-xs">
+                <div className="w-full max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
                     <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
                         <img
                             src="/logo-fox.jpeg"
                             alt="Logo Fox Replay"
-                            className="h-8 w-8 object-cover rounded-xl border border-zinc-800 shadow-sm bg-zinc-900"
+                            className="h-9 w-9 object-cover rounded-xl border border-zinc-800 shadow-xs bg-zinc-900"
                         />
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-black tracking-widest uppercase text-white">
+                            <span className="text-lg font-black tracking-widest uppercase text-white leading-none">
                                 FOX <span className="text-amber-500">REPLAY</span>
                             </span>
-                            <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800 uppercase tracking-wider">
+                            <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
                                 Complexos
                             </span>
                         </div>

@@ -283,19 +283,20 @@ export default function LandingPage() {
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[340px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
 
       {/* NAVBAR */}
-      <header className="w-full max-w-6xl mx-auto px-6 py-4 flex justify-between items-center z-10 border-b border-zinc-200/80 backdrop-blur-md bg-white/70 sticky top-0 shadow-sm">
-        <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
-          <img
-            src="/logo-fox.jpeg"
-            alt="Logo Fox Replay"
-            className="h-9 w-9 object-cover rounded-xl border border-zinc-200 shadow-sm bg-white"
-          />
-          <h1 className="text-lg font-black tracking-widest uppercase text-zinc-900">
-            FOX <span className="text-amber-500">REPLAY</span>
-          </h1>
-        </div>
+      <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 backdrop-blur-md bg-white/80 shadow-xs">
+        <div className="w-full max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
+          <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
+            <img
+              src="/logo-fox.jpeg"
+              alt="Logo Fox Replay"
+              className="h-9 w-9 object-cover rounded-xl border border-zinc-200 shadow-xs bg-white"
+            />
+            <h1 className="text-lg font-black tracking-widest uppercase text-zinc-900 leading-none">
+              FOX <span className="text-amber-500">REPLAY</span>
+            </h1>
+          </div>
 
-        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
           {lancesFavoritos.length > 0 && (
             <button
               onClick={() => router.push('/perfil')}
@@ -328,6 +329,7 @@ export default function LandingPage() {
               <span>Entrar</span>
             </button>
           )}
+        </div>
         </div>
       </header>
 
