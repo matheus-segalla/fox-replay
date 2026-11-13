@@ -152,6 +152,11 @@ function ConteudoJogada() {
 
                 const logoArenaSalva = arenaObj?.logo_url || (arenaObj?.id ? localStorage.getItem('fox_logo_' + arenaObj.id) : null);
 
+                // Registra visualização do replay e dos patrocinadores no banco
+                try {
+                    supabase.rpc('incrementar_visualizacao', { replay_id: data.id }).then(() => {}).catch(() => {});
+                } catch (e) {}
+
                 if (!cancelado) {
                     setDados({
                         id: data.id,
@@ -211,6 +216,11 @@ function ConteudoJogada() {
 
             exibirToast('Download concluído com sucesso! 🎾');
             setTimeout(() => setModalDownloadAberto(false), 800);
+
+            // Registra download das marcas no banco
+            try {
+                supabase.rpc('incrementar_download', { replay_id: dados.id }).then(() => {}).catch(() => {});
+            } catch (e) {}
 
         } catch (err) {
             console.warn('Fallback para download direto devido a restrições de mídia/canvas:', err);

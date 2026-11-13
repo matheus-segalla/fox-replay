@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS replays (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quadra_id UUID REFERENCES quadras(id) ON DELETE CASCADE,
     video_url TEXT NOT NULL,
+    visualizacoes INTEGER DEFAULT 0,
+    downloads INTEGER DEFAULT 0,
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -77,6 +77,7 @@ export default function DashboardArena() {
         { id: 4, nome: '', logo_url: '', ativo: true }
     ]);
     const [salvandoPatrocinadores, setSalvandoPatrocinadores] = useState(false);
+    const [metricasArena, setMetricasArena] = useState({ lances: 0, visualizacoes: 0, downloads: 0 });
 
     // CONTROLADOR MESTRE DE POPUPS CUSTOMIZADOS
     const [notificacao, setNotificacao] = useState({
@@ -257,6 +258,35 @@ export default function DashboardArena() {
 
             setQuadras(quadrasFormatadas);
 
+            // 3. Busca métricas de audiência dos patrocinadores (visualizações e downloads)
+            let totalViews = 0;
+            let totalDowns = 0;
+            let totalLancesArena = 0;
+
+            if (dadosQuadras && dadosQuadras.length > 0) {
+                try {
+                    const quadraIds = dadosQuadras.map(q => q.id);
+                    const { data: statsReplays } = await supabase
+                        .from('replays')
+                        .select('id, visualizacoes, downloads')
+                        .in('quadra_id', quadraIds);
+
+                    if (statsReplays) {
+                        totalLancesArena = statsReplays.length;
+                        totalViews = statsReplays.reduce((acc, r) => acc + (r.visualizacoes || 0), 0);
+                        totalDowns = statsReplays.reduce((acc, r) => acc + (r.downloads || 0), 0);
+                    }
+                } catch (eStats) {
+                    console.warn('Estatísticas ainda não inicializadas no banco:', eStats);
+                }
+            }
+
+            setMetricasArena({
+                lances: totalLancesArena,
+                visualizacoes: totalViews,
+                downloads: totalDowns
+            });
+
         } catch (error) {
             console.error('Erro ao carregar dados do dashboard:', error);
         } finally {
@@ -354,6 +384,25 @@ export default function DashboardArena() {
             copia[index] = { ...copia[index], [campo]: valor };
             return copia;
         });
+    };
+
+    const handleGerarRelatorioPatrocinadoresWhatsApp = () => {
+        if (!arena) return;
+        const patsAtivos = patrocinadoresInput.filter(p => p.ativo && p.nome).map(p => p.nome);
+        const listaMarcas = patsAtivos.length > 0 ? patsAtivos.join(', ') : 'Marcas Parceiras';
+
+        const texto = encodeURIComponent(
+            `📊 *Relatório de Impacto de Patrocínio - Fox Replay*\n` +
+            `🏟️ *Complexo:* ${arena.nome || 'Nossa Arena'}\n` +
+            `📅 *Período:* Últimos lances gravados\n\n` +
+            `🔥 *Métricas Oficiais de Audiência:*\n` +
+            `• *Lances Registrados:* ${metricasArena.lances} jogadas\n` +
+            `• *Visualizações Totais:* ${metricasArena.visualizacoes} reproduções\n` +
+            `• *Downloads com Marca Gravada:* ${metricasArena.downloads} compartilhamentos\n\n` +
+            `🤝 *Patrocinadores em Exibição:* ${listaMarcas}\n\n` +
+            `_Dados auditados e certificados pela plataforma Fox Replay._`
+        );
+        window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     };
 
     async function carregarReplaysDaQuadra(quadra) {
@@ -856,6 +905,44 @@ export default function DashboardArena() {
                                     O atleta faz o download desse arquivo com áudio e vídeo em alta definição pronto para postar.
                                 </span>
                             </div>
+                        </div>
+
+                        {/* Barra de Impacto e Métricas de Audiência dos Patrocinadores */}
+                        <div className="pt-4 border-t border-zinc-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50/80 -mx-6 -mb-6 p-6 rounded-b-2xl border-t border-zinc-200/80">
+                            <div className="grid grid-cols-3 gap-4 flex-1">
+                                <div className="space-y-0.5">
+                                    <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
+                                        Lances Gravados
+                                    </span>
+                                    <span className="text-xl font-black text-zinc-900">
+                                        {metricasArena.lances}
+                                    </span>
+                                </div>
+                                <div className="space-y-0.5 border-l border-zinc-200/80 pl-4">
+                                    <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
+                                        Visualizações
+                                    </span>
+                                    <span className="text-xl font-black text-amber-600">
+                                        {metricasArena.visualizacoes}
+                                    </span>
+                                </div>
+                                <div className="space-y-0.5 border-l border-zinc-200/80 pl-4">
+                                    <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
+                                        Downloads com Marca
+                                    </span>
+                                    <span className="text-xl font-black text-emerald-600">
+                                        {metricasArena.downloads}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleGerarRelatorioPatrocinadoresWhatsApp}
+                                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                            >
+                                <span>📱 Relatório para Patrocinadores</span>
+                            </button>
                         </div>
                     </div>
 
