@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fox Replay TV Kiosk</title>
+    <!-- Tailwind CSS CDN para renderização no display HDMI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode.js para geração de QR Codes dinâmicos na tela -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            background-color: #070709;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        .glow-amber {
+            filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.45));
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between p-12 relative overflow-hidden bg-[#070709]">
+    
+    <!-- Efeitos de iluminação de fundo -->
+    <div class="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+    <!-- TOPO: HEADER OFICIAL -->
+    <header class="flex items-center justify-between z-10">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center font-black text-2xl text-black shadow-lg">
+                🦊
+            </div>
+            <div>
+                <h1 class="text-3xl font-black uppercase tracking-wider leading-none">
+                    FOX <span class="text-amber-500">REPLAY</span>
+                </h1>
+                <span class="text-xs font-mono uppercase tracking-widest text-zinc-400 mt-1 block">
+                    Sistema Autônomo de Quadra &bull; 4K Edge
+                </span>
+            </div>
+        </div>
+
+        <div id="status-chip" class="flex items-center gap-3 bg-zinc-900 border border-zinc-800 px-5 py-2.5 rounded-full">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="status-texto" class="text-xs font-mono font-bold tracking-widest text-zinc-300 uppercase">
+                SISTEMA OPERACIONAL
+            </span>
+        </div>
+    </header>
+
+    <!-- CENTRO: CONTEÚDO DINÂMICO (PAREAMENTO OU REPLAY) -->
+    <main class="flex-1 flex items-center justify-center z-10">
+        <!-- 1. MODO: AGUARDANDO ATIVAÇÃO / PAREAMENTO -->
+        <div id="painel-pareamento" class="flex flex-col md:flex-row items-center gap-16 max-w-4xl text-center md:text-left">
+            <div class="space-y-6 flex-1">
+                <span class="text-xs font-mono uppercase font-bold text-amber-500 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+                    Novo Totem Detectado
+                </span>
+                <h2 class="text-5xl font-black uppercase tracking-tight leading-tight">
+                    Conecte esta quadra à sua Arena
+                </h2>
+                <p class="text-zinc-400 text-lg leading-relaxed">
+                    Aponte a câmera do seu celular para o QR Code ao lado ou acesse o endereço abaixo e digite o código de ativação:
+                </p>
+                <div class="bg-zinc-900/90 border border-amber-500/40 p-6 rounded-2xl inline-block shadow-2xl">
+                    <span class="text-xs uppercase font-mono tracking-widest text-zinc-400 block mb-1">Código de Ativação</span>
+                    <span id="codigo-ativacao" class="text-5xl font-mono font-black text-amber-400 tracking-wider">
+                        Carregando...
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center">
+                <div id="qrcode-pareamento" class="w-[200px] h-[200px] flex items-center justify-center"></div>
+                <span class="text-[11px] font-bold text-zinc-800 mt-3 uppercase tracking-wider font-mono">
+                    Escaneie para Ativar
+                </span>
+            </div>
+        </div>
+
+        <!-- 2. MODO: REPLAY DISPONÍVEL (APÓS APERTAR O BOTÃO NA QUADRA) -->
+        <div id="painel-replay" class="hidden flex flex-col md:flex-row items-center gap-16 max-w-4xl text-center md:text-left">
+            <div class="space-y-6 flex-1">
+                <div class="flex items-center gap-3 justify-center md:justify-start">
+                    <span class="text-xs font-mono uppercase font-black text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20 animate-pulse">
+                        ⚡ Lance Gravado com Sucesso!
+                    </span>
+                </div>
+                <h2 class="text-6xl font-black uppercase tracking-tight leading-tight">
+                    Seu Replay <br/><span class="text-amber-500">está Pronto!</span>
+                </h2>
+                <p class="text-zinc-300 text-xl leading-relaxed">
+                    Aponte seu celular agora para rever seu lance e salvar direto na sua galeria com os patrocinadores da arena.
+                </p>
+                <span class="text-sm font-mono text-zinc-500 block">
+                    O link permanecerá disponível por 14 dias para você compartilhar nas redes sociais.
+                </span>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center glow-amber scale-110">
+                <div id="qrcode-replay" class="w-[220px] h-[220px] flex items-center justify-center"></div>
+                <span class="text-xs font-black text-zinc-950 mt-3 uppercase tracking-wider font-mono">
+                    Acesse seu Lance Agora
+                </span>
+            </div>
+        </div>
+    </main>
+
+    <!-- RODAPÉ: INSTRUÇÕES FIXAS -->
+    <footer class="flex items-center justify-between border-t border-zinc-800/80 pt-6 text-zinc-500 text-xs font-mono z-10">
+        <div>
+            🎾 <strong>BOTÃO NA GRADE:</strong> Aperte imediatamente após um belo ponto para salvar os últimos 30 segundos.
+        </div>
+        <div>
+            FOX REPLAY &bull; TECNOLOGIA ESPORTIVA AUTÔNOMA
+        </div>
+    </footer>
+
+    <!-- SCRIPT DE LEITURA DO STATUS LOCAL (/dev/shm/totem_status.json) -->
+    <script>
+        let qrPareamento = null;
+        let qrReplay = null;
+        let ultimoModo = null;
+
+        async function atualizarTela() {
+            try {
+                // Tenta ler o status escrito pelo daemon python em /dev/shm
+                const res = await fetch('/dev/shm/totem_status.json?t=' + Date.now());
+                if (!res.ok) return;
+                const status = await res.json();
+
+                if (status.modo !== ultimoModo) {
+                    ultimoModo = status.modo;
+
+                    if (status.modo === 'pareamento') {
+                        document.getElementById('painel-pareamento').classList.remove('hidden');
+                        document.getElementById('painel-replay').classList.add('hidden');
+                        document.getElementById('codigo-ativacao').innerText = status.codigo || '---';
+
+                        if (!qrPareamento) {
+                            const urlAtivacao = status.url_ativacao || 'https://fox-replay.vercel.app/ativar';
+                            document.getElementById('qrcode-pareamento').innerHTML = '';
+                            qrPareamento = new QRCode(document.getElementById('qrcode-pareamento'), {
+                                text: urlAtivacao,
+                                width: 200,
+                                height: 200,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.M
+                            });
+                        }
+                    } else if (status.modo === 'replay_pronto') {
+                        document.getElementById('painel-pareamento').classList.add('hidden');
+                        document.getElementById('painel-replay').classList.remove('hidden');
+
+                        document.getElementById('qrcode-replay').innerHTML = '';
+                        qrReplay = new QRCode(document.getElementById('qrcode-replay'), {
+                            text: status.url_jogada,
+                            width: 220,
+                            height: 220,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+
+                        // Retorna à tela padrão após 90 segundos
+                        setTimeout(() => {
+                            document.getElementById('painel-replay').classList.add('hidden');
+                            document.getElementById('painel-pareamento').classList.remove('hidden');
+                        }, 90000);
+                    }
+                }
+            } catch (e) {
+                // Polling contínuo
+            }
+        }
+
+        setInterval(atualizarTela, 2000);
+        atualizarTela();
+    </script>
+</body>
+</html>
