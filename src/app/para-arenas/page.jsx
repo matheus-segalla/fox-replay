@@ -116,48 +116,52 @@ export default function PaginaParaArenas() {
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-amber-500 selection:text-black relative overflow-hidden flex flex-col justify-between">
-            {/* Iluminação de fundo sutil */}
-            <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-amber-500/5 rounded-full blur-[150px] pointer-events-none" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[400px] bg-zinc-800/20 rounded-full blur-[130px] pointer-events-none" />
+        <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between">
+            {/* Iluminação de fundo sutil contida */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-amber-500/5 rounded-full blur-[150px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[400px] bg-zinc-800/20 rounded-full blur-[130px]" />
+            </div>
 
-            {/* HEADER INSTITUCIONAL */}
-            <header className="w-full max-w-6xl mx-auto px-6 py-4 flex justify-between items-center z-10 border-b border-zinc-800/80 backdrop-blur-md bg-zinc-950/80 sticky top-0">
-                <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
-                    <img
-                        src="/logo-fox.jpeg"
-                        alt="Logo Fox Replay"
-                        className="h-8 w-8 object-cover rounded-xl border border-zinc-800 shadow-sm bg-zinc-900"
-                    />
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-black tracking-widest uppercase text-white">
-                            FOX <span className="text-amber-500">REPLAY</span>
-                        </span>
-                        <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800 uppercase tracking-wider">
-                            Complexos
-                        </span>
+            {/* HEADER INSTITUCIONAL (Sticky com z-50 para sobrepor o scroll perfeitamente) */}
+            <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 backdrop-blur-md bg-zinc-950/90">
+                <div className="w-full max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
+                        <img
+                            src="/logo-fox.jpeg"
+                            alt="Logo Fox Replay"
+                            className="h-8 w-8 object-cover rounded-xl border border-zinc-800 shadow-sm bg-zinc-900"
+                        />
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-black tracking-widest uppercase text-white">
+                                FOX <span className="text-amber-500">REPLAY</span>
+                            </span>
+                            <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800 uppercase tracking-wider">
+                                Complexos
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => router.push('/')}
-                        className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors hidden sm:inline-block"
-                    >
-                        Portal dos Atletas
-                    </button>
-                    <button
-                        onClick={() => router.push('/login')}
-                        className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
-                    >
-                        <span>Painel da Arena</span>
-                        <IconArrowRight className="w-3 h-3 text-zinc-400" />
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors hidden sm:inline-block"
+                        >
+                            Portal dos Atletas
+                        </button>
+                        <button
+                            onClick={() => router.push('/login')}
+                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+                        >
+                            <span>Painel da Arena</span>
+                            <IconArrowRight className="w-3 h-3 text-zinc-400" />
+                        </button>
+                    </div>
                 </div>
             </header>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="w-full max-w-5xl mx-auto px-5 py-14 md:py-20 z-10 flex-1 flex flex-col space-y-24">
+            <main className="w-full max-w-5xl mx-auto px-5 py-14 md:py-20 relative z-10 flex-1 flex flex-col space-y-24">
 
                 {/* HERO SECTION SÓBRIA */}
                 <div className="text-center space-y-5 max-w-3xl mx-auto">
@@ -180,13 +184,13 @@ export default function PaginaParaArenas() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
                         <a
                             href="#contato"
-                            className="w-full sm:w-auto px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95"
+                            className="w-full sm:w-auto px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 text-center"
                         >
                             Consultar Implantação
                         </a>
                         <a
                             href="#arquitetura"
-                            className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs uppercase tracking-wider rounded-xl border border-zinc-800 transition-all"
+                            className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs uppercase tracking-wider rounded-xl border border-zinc-800 transition-all text-center"
                         >
                             Especificações Técnicas
                         </a>
@@ -196,7 +200,7 @@ export default function PaginaParaArenas() {
                 {/* ============================================================ */}
                 {/* 1. ARQUITETURA TÉCNICA (4 PILARES DE ENGENHARIA)             */}
                 {/* ============================================================ */}
-                <div id="arquitetura" className="space-y-8 scroll-mt-24">
+                <div id="arquitetura" className="space-y-8 scroll-mt-28">
                     <div className="text-center space-y-1.5">
                         <span className="text-[10px] font-bold uppercase text-amber-500 tracking-widest">
                             Engenharia e Conectividade
@@ -440,7 +444,7 @@ export default function PaginaParaArenas() {
                 {/* ============================================================ */}
                 {/* 4. FORMULÁRIO DE CONTATO / IMPLANTAÇÃO                       */}
                 {/* ============================================================ */}
-                <div id="contato" className="max-w-xl mx-auto w-full bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
+                <div id="contato" className="max-w-xl mx-auto w-full bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl scroll-mt-28">
                     <div className="text-center space-y-1.5">
                         <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider">
                             Contato com a Engenharia
