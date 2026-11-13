@@ -32,21 +32,9 @@ const IconCpu = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
-const IconPlus = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-  </svg>
-);
-
 const IconX = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-const IconCheck = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
   </svg>
 );
 
@@ -73,13 +61,6 @@ export default function SuperAdminPage() {
   const [codigoTotem, setCodigoTotem] = useState('');
   const [ativandoTotem, setAtivandoTotem] = useState(false);
 
-  const [modalNovaArenaAberto, setModalNovaArenaAberto] = useState(false);
-  const [novoNomeArena, setNovoNomeArena] = useState('');
-  const [novaCidadeArena, setNovaCidadeArena] = useState('');
-  const [novoEstadoArena, setNovoEstadoArena] = useState('SP');
-  const [emailGestorArena, setEmailGestorArena] = useState('');
-  const [salvandoNovaArena, setSalvandoNovaArena] = useState(false);
-
   const [toast, setToast] = useState(null);
 
   const exibirToast = (msg) => {
@@ -87,7 +68,7 @@ export default function SuperAdminPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // 1. Carga dos Dados de Toda a Infraestrutura (declarado antes do effect)
+  // 1. Carga dos Dados de Toda a Infraestrutura
   const recarregarDados = async () => {
     try {
       const { data: arenasData, error: errA } = await supabase
@@ -161,34 +142,37 @@ export default function SuperAdminPage() {
 
     setAtivandoTotem(true);
     try {
-      let codLimpo = codigoTotem.trim().toUpperCase();
-      if (codLimpo.length === 6 && !codLimpo.includes('-')) {
-        codLimpo = `${codLimpo.slice(0, 3)}-${codLimpo.slice(3, 6)}`;
+      let cod = codigoTotem.trim().toUpperCase();
+      if (cod.length === 6 && !cod.includes('-')) {
+        cod = `${cod.substring(0, 3)}-${cod.substring(3, 6)}`;
       }
 
-      // 1. Busca pareamento pendente
-      const { data: pareamento, error: errP } = await supabase
+      // 1. Busca código no banco de dados
+      const { data: par, error: errP } = await supabase
         .from('pareamentos')
         .select('*')
-        .eq('codigo', codLimpo)
+        .eq('codigo', cod)
         .eq('status', 'pendente')
         .single();
 
-      if (errP || !pareamento) {
-        throw new Error('Código do Totem inválido ou já expirado. Verifique o código exibido na TV da quadra.');
+      if (errP || !par) {
+        throw new Error('Código do Totem não localizado ou já vinculado. Verifique a TV da quadra.');
       }
 
-      // 2. Gera token oficial único
-      const tokenGerado = `fox_tok_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
+      // 2. Gera token oficial
+      const tokenGerado = `fox_tok_${Math.random().toString(36).substr(2, 9)}_${Date.now().toString(36)}`;
 
-      // 3. Cria o dispositivo vinculado à quadra selecionada
+      // 3. Cadastra o dispositivo
       const { error: errD } = await supabase
         .from('dispositivos')
-        .insert([{ quadra_id: quadraSelecionadaModal, token_autenticacao: tokenGerado }]);
+        .insert([{
+          quadra_id: quadraSelecionadaModal,
+          token_autenticacao: tokenGerado
+        }]);
 
       if (errD) throw errD;
 
-      // 4. Atualiza pareamento para que o Raspberry Pi na quadra receba o sinal e inicie a gravação
+      // 4. Marca pareamento como ativo
       const { error: errU } = await supabase
         .from('pareamentos')
         .update({
@@ -196,7 +180,7 @@ export default function SuperAdminPage() {
           token_gerado: tokenGerado,
           quadra_id: quadraSelecionadaModal
         })
-        .eq('id', pareamento.id);
+        .eq('id', par.id);
 
       if (errU) throw errU;
 
@@ -208,53 +192,6 @@ export default function SuperAdminPage() {
       exibirToast(err.message || 'Erro ao parear totem.');
     } finally {
       setAtivandoTotem(false);
-    }
-  };
-
-  // 4. Criação de Nova Arena pelo Administrador Master
-  const handleCriarArenaMaster = async (e) => {
-    e.preventDefault();
-    if (!novoNomeArena.trim()) return;
-
-    setSalvandoNovaArena(true);
-    try {
-      const slug = novoNomeArena
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_-]+/g, '-') + '-' + Math.floor(1000 + Math.random() * 9000);
-
-      const { data: novaArena, error: errA } = await supabase
-        .from('arenas')
-        .insert([{
-          nome: novoNomeArena.trim(),
-          slug,
-          cidade: novaCidadeArena.trim() || null,
-          estado: novoEstadoArena.trim().toUpperCase() || 'SP',
-          usuario_id: usuarioAdmin?.id
-        }])
-        .select()
-        .single();
-
-      if (errA) throw errA;
-
-      // Cria automaticamente a Quadra 1 padrão para a arena
-      if (novaArena?.id) {
-        await supabase
-          .from('quadras')
-          .insert([{ arena_id: novaArena.id, nome: 'Quadra 1' }]);
-      }
-
-      exibirToast('Nova arena criada com sucesso!');
-      setModalNovaArenaAberto(false);
-      setNovoNomeArena('');
-      setNovaCidadeArena('');
-      setEmailGestorArena('');
-      await recarregarDados();
-    } catch (err) {
-      exibirToast(err.message || 'Erro ao criar arena.');
-    } finally {
-      setSalvandoNovaArena(false);
     }
   };
 
@@ -281,25 +218,25 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-black">
-      {/* HEADER MASTER (NOC STYLE) */}
-      <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex justify-between items-center">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950 pb-20">
+      {/* HEADER TÉCNICO NOC (SUPER ADMIN) */}
+      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 text-zinc-950 flex items-center justify-center font-black text-xs shadow-xs">
-              <IconCpu className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <IconShield className="w-5 h-5 text-amber-500" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black tracking-widest uppercase text-white">
-                  FOX REPLAY <span className="text-amber-500">MASTER NOC</span>
-                </span>
-                <span className="text-[9px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.2 rounded-full">
+                <h1 className="font-black text-sm uppercase tracking-wider text-white">
+                  Fox Replay <span className="text-amber-500">NOC</span>
+                </h1>
+                <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
                   Super Admin
                 </span>
               </div>
               <p className="text-[10px] text-zinc-500 font-mono">
-                Torre de Controle Global • {usuarioAdmin?.email}
+                Torre de Controle Global &bull; {usuarioAdmin?.email}
               </p>
             </div>
           </div>
@@ -319,14 +256,6 @@ export default function SuperAdminPage() {
             >
               <IconRadio className="w-3.5 h-3.5" />
               <span>Vincular Totem na Quadra</span>
-            </button>
-
-            <button
-              onClick={() => setModalNovaArenaAberto(true)}
-              className="text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
-            >
-              <IconPlus className="w-3.5 h-3.5" />
-              <span>Cadastrar Arena</span>
             </button>
 
             <button
@@ -364,7 +293,7 @@ export default function SuperAdminPage() {
               Quadras Monitoradas
             </span>
             <span className="text-3xl font-black text-white">{totalQuadras}</span>
-            <p className="text-[11px] text-zinc-500">Em operação no sistema</p>
+            <p className="text-[11px] text-zinc-500">Criadas pelos complexos</p>
           </div>
 
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 space-y-1">
@@ -389,112 +318,142 @@ export default function SuperAdminPage() {
 
         {/* TABELA DE OPERAÇÃO DE HARDWARE */}
         <div className="bg-zinc-900/70 border border-zinc-800 rounded-3xl overflow-hidden shadow-xl">
-          <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
+          <div className="p-6 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
                 <IconBuilding className="w-4 h-4 text-amber-500" />
-                <span>Complexos Esportivos & Status de Quadras</span>
+                <span>Complexos Esportivos &bull; Validação e Pareamento</span>
               </h3>
               <p className="text-xs text-zinc-400 font-normal">
-                Gerencie todos os complexos e vincule totens sem precisar do login do dono da quadra.
+                Arenas cadastradas pelos clientes. Valide as quadras disponíveis e vincule os totens físicos.
               </p>
             </div>
-            <span className="text-xs font-mono text-zinc-500 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
+            <span className="text-xs font-mono text-zinc-400 bg-zinc-950 px-3 py-1.5 rounded-full border border-zinc-800">
               {arenas.length} complexos registrados
             </span>
           </div>
 
           <div className="divide-y divide-zinc-800/80">
-            {arenas.map((arena) => (
-              <div key={arena.id} className="p-6 space-y-4 hover:bg-zinc-900/40 transition-colors">
-                {/* CABEÇALHO DA ARENA */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2.5">
-                      <h4 className="text-base font-black text-white uppercase">{arena.nome}</h4>
-                      <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md">
-                        {arena.cidade || 'Sem cidade'} {arena.estado ? `• ${arena.estado}` : ''}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 font-mono">
-                      ID: {arena.id} • Slug: {arena.slug}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => router.push(`/arena/${arena.id}`)}
-                      className="text-xs font-semibold text-zinc-400 hover:text-amber-400 bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
-                    >
-                      <IconLink className="w-3.5 h-3.5" />
-                      <span>Abrir Feed</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* LISTA DE QUADRAS DA ARENA */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                  {(arena.quadras || []).map((quadra) => {
-                    const temDispositivo = quadra.dispositivos && quadra.dispositivos.length > 0;
-                    const disp = temDispositivo ? quadra.dispositivos[0] : null;
-
-                    return (
-                      <div
-                        key={quadra.id}
-                        className={`p-4 rounded-2xl border transition-all ${
-                          temDispositivo
-                            ? 'bg-zinc-950/80 border-emerald-500/20 hover:border-emerald-500/40'
-                            : 'bg-zinc-950/40 border-amber-500/20 hover:border-amber-500/40'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <span className="text-[10px] font-mono uppercase text-zinc-500 block">Quadra</span>
-                            <h5 className="text-xs font-black text-white uppercase">{quadra.nome}</h5>
-                          </div>
-                          {temDispositivo ? (
-                            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              <span>Totem Ativo</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                              <span>Sem Totem</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {temDispositivo ? (
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-mono text-zinc-400 block truncate">
-                              Token: <code className="text-zinc-300">{disp.token_autenticacao}</code>
-                            </span>
-                            <span className="text-[9px] text-zinc-500 block">
-                              Vinculado em: {new Date(disp.criado_em).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="pt-2">
-                            <button
-                              onClick={() => {
-                                setArenaSelecionadaModal(arena.id);
-                                setQuadraSelecionadaModal(quadra.id);
-                                setModalPareamentoAberto(true);
-                              }}
-                              className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
-                            >
-                              <IconRadio className="w-3 h-3" />
-                              <span>Vincular Totem da Quadra</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+            {arenas.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <IconCpu className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs font-bold uppercase text-zinc-400">Nenhum complexo esportivo registrado</p>
+                <p className="text-[11px] text-zinc-600 max-w-sm mx-auto">
+                  Assim que um dono de arena finalizar o registro no site, a arena e as quadras aparecerão aqui para vinculação.
+                </p>
               </div>
-            ))}
+            ) : (
+              arenas.map((arena) => {
+                const limiteQuadras = arena.limite_quadras || 2;
+                const totalQuadrasArena = arena.quadras?.length || 0;
+                const totalAtivas = arena.quadras?.filter(q => q.dispositivos && q.dispositivos.length > 0).length || 0;
+
+                return (
+                  <div key={arena.id} className="p-6 space-y-4 hover:bg-zinc-900/40 transition-colors">
+                    {/* CABEÇALHO DA ARENA */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h4 className="text-base font-black text-white uppercase">{arena.nome}</h4>
+                          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md">
+                            {arena.cidade || 'Sem cidade'} {arena.estado ? `• ${arena.estado}` : ''}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                            Cota: {totalQuadrasArena}/{limiteQuadras} quadras
+                          </span>
+                          <span className="text-[10px] font-mono text-zinc-400 bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800">
+                            {arena.plano_nome || 'Plano Padrão'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-mono">
+                          ID: {arena.id} &bull; Totens Ativos: {totalAtivas}/{totalQuadrasArena}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => router.push(`/arena/${arena.id}`)}
+                          className="text-xs font-semibold text-zinc-400 hover:text-amber-400 bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                        >
+                          <IconLink className="w-3.5 h-3.5" />
+                          <span>Abrir Feed</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* LISTA DE QUADRAS DA ARENA */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                      {(arena.quadras || []).length === 0 ? (
+                        <div className="col-span-full p-4 rounded-2xl bg-zinc-950/40 border border-dashed border-zinc-800 text-center">
+                          <p className="text-xs text-zinc-500">
+                            O proprietário ainda não cadastrou nenhuma quadra no painel dele.
+                          </p>
+                        </div>
+                      ) : (
+                        (arena.quadras || []).map((quadra) => {
+                          const temDispositivo = quadra.dispositivos && quadra.dispositivos.length > 0;
+                          const disp = temDispositivo ? quadra.dispositivos[0] : null;
+
+                          return (
+                            <div
+                              key={quadra.id}
+                              className={`p-4 rounded-2xl border transition-all ${
+                                temDispositivo
+                                  ? 'bg-zinc-950/80 border-emerald-500/20 hover:border-emerald-500/40'
+                                  : 'bg-zinc-950/40 border-amber-500/20 hover:border-amber-500/40'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Quadra</span>
+                                  <h5 className="text-xs font-black text-white uppercase">{quadra.nome}</h5>
+                                </div>
+                                {temDispositivo ? (
+                                  <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                    <span>Totem Ativo</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                    <span>Sem Totem</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {temDispositivo ? (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-mono text-zinc-400 block truncate">
+                                    Token: <code className="text-zinc-300">{disp.token_autenticacao}</code>
+                                  </span>
+                                  <span className="text-[9px] text-zinc-500 block">
+                                    Vinculado em: {new Date(disp.criado_em).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="pt-2">
+                                  <button
+                                    onClick={() => {
+                                      setArenaSelecionadaModal(arena.id);
+                                      setQuadraSelecionadaModal(quadra.id);
+                                      setModalPareamentoAberto(true);
+                                    }}
+                                    className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                                  >
+                                    <IconRadio className="w-3 h-3" />
+                                    <span>Vincular Totem da Quadra</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </main>
@@ -592,98 +551,6 @@ export default function SuperAdminPage() {
                 className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
               >
                 {ativandoTotem ? 'Ativando Totem...' : 'Ativar e Iniciar Gravação ➔'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE CADASTRO DE NOVA ARENA */}
-      {modalNovaArenaAberto && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl relative">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <IconBuilding className="w-4 h-4 text-amber-500" />
-                <h3 className="font-bold text-xs uppercase tracking-wider text-white">
-                  Cadastrar Novo Complexo Esportivo
-                </h3>
-              </div>
-              <button
-                onClick={() => setModalNovaArenaAberto(false)}
-                className="text-zinc-500 hover:text-white p-1 rounded-lg"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCriarArenaMaster} className="space-y-3">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                  Nome da Arena
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={novoNomeArena}
-                  onChange={(e) => setNovoNomeArena(e.target.value)}
-                  placeholder="Ex: Arena Sunset Beach"
-                  className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2 space-y-1">
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                    Cidade
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={novaCidadeArena}
-                    onChange={(e) => setNovaCidadeArena(e.target.value)}
-                    placeholder="Campinas"
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                    UF
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={2}
-                    value={novoEstadoArena}
-                    onChange={(e) => setNovoEstadoArena(e.target.value.toUpperCase())}
-                    placeholder="SP"
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-center text-xs font-bold uppercase focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                  E-mail do Proprietário da Arena (Opcional)
-                </label>
-                <input
-                  type="email"
-                  value={emailGestorArena}
-                  onChange={(e) => setEmailGestorArena(e.target.value)}
-                  placeholder="proprietario@arena.com"
-                  className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:outline-none focus:border-amber-500"
-                />
-                <span className="text-[10px] text-zinc-500 block">
-                  Ele poderá acessar o painel comercial `/dashboard` com este e-mail.
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={salvandoNovaArena}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2"
-              >
-                {salvandoNovaArena ? 'Salvando...' : 'Criar Arena e Gerar Quadra 1 ➔'}
               </button>
             </form>
           </div>
