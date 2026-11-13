@@ -20,7 +20,7 @@ function ConteudoAtivar() {
     const [ativando, setAtivando] = useState(false);
     const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
 
-    // 1. Verifica autenticação
+    // 1. Verifica autenticação e permissão de Gestor de Arena
     useEffect(() => {
         async function carregarUsuario() {
             try {
@@ -28,12 +28,12 @@ function ConteudoAtivar() {
                 if (!session?.user) {
                     // Guarda o código no sessionStorage para quando voltar do login
                     if (codigoUrl) sessionStorage.setItem('fox_codigo_ativacao', codigoUrl);
-                    router.push('/login');
+                    router.replace('/login?motivo=gestor');
                     return;
                 }
                 setUsuario(session.user);
 
-                // Carrega as arenas deste usuário
+                // Carrega as arenas deste usuário (verifica se é de fato gestor)
                 const { data: arenasData, error: errA } = await supabase
                     .from('arenas')
                     .select('id, nome')
@@ -41,21 +41,40 @@ function ConteudoAtivar() {
                     .order('nome');
 
                 if (errA) throw errA;
-                setArenas(arenasData || []);
 
-                if (arenasData && arenasData.length > 0) {
+                // 🔒 BLOQUEIO: Se o usuário não possui nenhuma arena (é atleta ou usuário comum),
+                // faz o redirecionamento silencioso direto para o seu perfil de atleta.
+                if (!arenasData || arenasData.length === 0) {
+                    router.replace('/perfil');
+                    return;
+                }
+
+                setArenas(arenasData);
+
+                // Pré-seleciona de forma inteligente uma arena que já possua quadras cadastradas
+                try {
+                    const { data: quadrasExistentes } = await supabase
+                        .from('quadras')
+                        .select('arena_id')
+                        .in('arena_id', arenasData.map(a => a.id));
+
+                    const idsComQuadra = new Set(quadrasExistentes?.map(q => q.arena_id) || []);
+                    const arenaPreferencia = arenasData.find(a => idsComQuadra.has(a.id)) || arenasData[0];
+                    setArenaSelecionada(arenaPreferencia.id);
+                } catch (e) {
                     setArenaSelecionada(arenasData[0].id);
                 }
 
                 // Recupera código salvo se veio do login
                 const salvo = sessionStorage.getItem('fox_codigo_ativacao');
-                if (salvo && !codigo) {
+                if (salvo) {
                     setCodigo(salvo);
                     sessionStorage.removeItem('fox_codigo_ativacao');
                 }
 
             } catch (err) {
                 console.error(err);
+                router.replace('/perfil');
             } finally {
                 setCarregando(false);
             }

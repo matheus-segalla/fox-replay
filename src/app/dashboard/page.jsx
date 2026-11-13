@@ -54,9 +54,12 @@ export default function DashboardArena() {
     const [urlBaseSistema, setUrlBaseSistema] = useState(process.env.NEXT_PUBLIC_APP_URL || 'https://fox-replay.vercel.app');
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setUrlBaseSistema(process.env.NEXT_PUBLIC_APP_URL || window.location.origin);
-        }
+        const timer = setTimeout(() => {
+            if (typeof window !== 'undefined') {
+                setUrlBaseSistema(process.env.NEXT_PUBLIC_APP_URL || window.location.origin);
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     const linkPortalPublico = arena ? `${urlBaseSistema}/arena/${arena.id}` : '';
@@ -116,6 +119,12 @@ export default function DashboardArena() {
                     .order('nome', { ascending: true });
 
                 if (arenasError || !arenasData || arenasData.length === 0) {
+                    // 🔒 BLOQUEIO: Se o usuário for um atleta ou não possuir arena cadastrada,
+                    // faz o redirecionamento silencioso direto para o perfil de atleta.
+                    if (session.user.user_metadata?.tipo_usuario === 'atleta') {
+                        router.replace('/perfil');
+                        return;
+                    }
                     router.push('/cadastro');
                     return;
                 }
