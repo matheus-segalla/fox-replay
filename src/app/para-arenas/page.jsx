@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Ícones SVG minimalistas
+// Ícones SVG minimalistas de alta precisão
 function IconCamera({ className = "w-5 h-5" }) {
     return (
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -48,7 +48,7 @@ function IconSmartphone({ className = "w-5 h-5" }) {
 
 function IconCheck({ className = "w-4 h-4" }) {
     return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
         </svg>
     );
@@ -56,9 +56,18 @@ function IconCheck({ className = "w-4 h-4" }) {
 
 function IconArrowRight({ className = "w-3.5 h-3.5" }) {
     return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12" />
             <polyline points="12 5 19 12 12 19" />
+        </svg>
+    );
+}
+
+function IconArrowUpRight({ className = "w-3.5 h-3.5" }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
         </svg>
     );
 }
@@ -116,15 +125,51 @@ export default function PaginaParaArenas() {
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between">
-            {/* Iluminação de fundo sutil contida */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-amber-500/5 rounded-full blur-[150px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[400px] bg-zinc-800/20 rounded-full blur-[130px]" />
+        <div className="min-h-screen bg-[#070709] text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between overflow-x-hidden">
+
+            {/* ANÉIS 3D METÁLICOS E ILUMINAÇÃO VOLUMÉTRICA ÂMBAR (Estilo Ai.Now) */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                {/* Glow Radial Âmbar Central */}
+                <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[900px] h-[650px] bg-gradient-to-b from-amber-500/20 via-amber-600/5 to-transparent rounded-full blur-[160px]" />
+                <div className="absolute top-[28%] right-[-10%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[180px]" />
+                <div className="absolute top-[65%] left-[-15%] w-[700px] h-[700px] bg-amber-600/10 rounded-full blur-[200px]" />
+
+                {/* Linhas de Grade e Textura Fina de Profundidade */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,#000_70%,transparent_100%)] opacity-80" />
+
+                {/* Composição Geométrica 3D (Anéis Translúcidos com Reflexos Dourados) */}
+                <svg className="absolute -top-12 -right-24 w-[600px] h-[600px] opacity-35 md:opacity-50 select-none animate-pulse duration-1000" viewBox="0 0 500 500" fill="none">
+                    <circle cx="250" cy="250" r="180" stroke="url(#goldGradient1)" strokeWidth="28" strokeLinecap="round" />
+                    <circle cx="250" cy="250" r="130" stroke="url(#goldGradient2)" strokeWidth="12" strokeDasharray="30 20" />
+                    <defs>
+                        <linearGradient id="goldGradient1" x1="50" y1="50" x2="450" y2="450" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                            <stop offset="40%" stopColor="#d97706" stopOpacity="0.2" />
+                            <stop offset="70%" stopColor="#fbbf24" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="goldGradient2" x1="100" y1="100" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                {/* Anel Flutuante na Lateral Esquerda */}
+                <svg className="absolute top-[850px] -left-36 w-[550px] h-[550px] opacity-25 md:opacity-40 select-none" viewBox="0 0 500 500" fill="none">
+                    <ellipse cx="250" cy="250" rx="200" ry="120" transform="rotate(-30 250 250)" stroke="url(#goldGradient3)" strokeWidth="22" />
+                    <defs>
+                        <linearGradient id="goldGradient3" x1="0" y1="0" x2="500" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.7" />
+                            <stop offset="50%" stopColor="#78350f" stopOpacity="0.1" />
+                            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.6" />
+                        </linearGradient>
+                    </defs>
+                </svg>
             </div>
 
-            {/* HEADER INSTITUCIONAL */}
-            <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 backdrop-blur-md bg-zinc-950/90 shadow-xs">
+            {/* HEADER INSTITUCIONAL (Padronizado h-16 com Glass Dark) */}
+            <header className="sticky top-0 z-50 w-full border-b border-white/5 backdrop-blur-xl bg-[#070709]/85 shadow-2xl">
                 <div className="w-full max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
                     <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
                         <img
@@ -136,298 +181,383 @@ export default function PaginaParaArenas() {
                             <span className="text-lg font-black tracking-widest uppercase text-white leading-none">
                                 FOX <span className="text-amber-500">REPLAY</span>
                             </span>
-                            <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                                 Complexos
                             </span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => router.push('/login')}
-                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+                            className="text-xs font-bold bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white border border-white/10 hover:border-amber-500/40 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-2 backdrop-blur-md"
                         >
                             <span>Painel da Arena</span>
-                            <IconArrowRight className="w-3 h-3 text-zinc-400" />
+                            <IconArrowRight className="w-3.5 h-3.5 text-amber-400" />
                         </button>
                     </div>
                 </div>
             </header>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="w-full max-w-5xl mx-auto px-5 py-14 md:py-20 relative z-10 flex-1 flex flex-col space-y-24">
+            <main className="w-full max-w-6xl mx-auto px-5 py-12 md:py-20 relative z-10 flex-1 flex flex-col space-y-28 md:space-y-36">
 
-                {/* HERO SECTION SÓBRIA */}
-                <div className="text-center space-y-5 max-w-3xl mx-auto">
-                    <div className="inline-flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-300">
-                            Infraestrutura para Complexos Esportivos
+                {/* ============================================================ */}
+                {/* 1. HERO SECTION FUTURISTA (Estilo Ai.Now Image 1 & 2)         */}
+                {/* ============================================================ */}
+                <div className="text-center space-y-7 max-w-4xl mx-auto pt-4 md:pt-8">
+                    {/* Cápsula Superior com Ícone Circular de Ação */}
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill border border-amber-500/30 text-zinc-300 text-xs font-medium shadow-xs">
+                        <span className="w-4 h-4 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-bold text-[10px]">
+                            ↗
                         </span>
+                        <span className="tracking-wide">Infraestrutura Autônoma de Replay para Arenas de Elite</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-white uppercase">
-                        Sistema Autônomo de Replay <br />
-                        <span className="text-zinc-400">para Quadras Esportivas</span>
+                    {/* Tipografia de Duplo Impacto: Sólido Branco + Contorno Dourado */}
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[0.92] select-none">
+                        <span className="block text-white">REPLAY BEYOND YOUR</span>
+                        <span className="block text-stroke-gold mt-2">ARENA LIMITS</span>
                     </h1>
 
                     <p className="text-zinc-400 text-sm md:text-base leading-relaxed font-normal max-w-2xl mx-auto">
-                        Captação sob demanda dos últimos 30 segundos de jogo, integrado diretamente às câmeras IP e à rede local da sua arena. Sem mensalidades abusivas e sem necessidade de operadores na quadra.
+                        Captação autônoma dos últimos 30 segundos, câmeras IP Full HD e acionamento anti-vandalismo direto na grade da quadra. Sem custos ocultos e sem necessidade de operadores no local.
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+                    {/* Botões Pílula Estilo Vidro Escuro com Brilho (Image 2) */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                         <a
                             href="#contato"
-                            className="w-full sm:w-auto px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 text-center"
+                            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-[0_0_30px_rgba(245,158,11,0.25)] hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] active:scale-95 text-center flex items-center justify-center gap-2"
                         >
-                            Consultar Implantação
+                            <span>Solicitar Totem e Avaliação</span>
+                            <IconArrowUpRight className="w-4 h-4" />
                         </a>
                         <a
-                            href="#arquitetura"
-                            className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs uppercase tracking-wider rounded-xl border border-zinc-800 transition-all text-center"
+                            href="#solucoes"
+                            className="w-full sm:w-auto px-7 py-4 glass-card-dark hover:bg-white/5 text-zinc-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-2xl border border-white/10 hover:border-white/20 transition-all text-center flex items-center justify-center gap-2"
                         >
-                            Especificações Técnicas
+                            <span>Explorar Soluções</span>
                         </a>
                     </div>
                 </div>
 
                 {/* ============================================================ */}
-                {/* 1. ARQUITETURA TÉCNICA (4 PILARES DE ENGENHARIA)             */}
+                {/* 2. SEÇÃO DE IMPACTO (Estilo Ai.Now Image 2)                   */}
                 {/* ============================================================ */}
-                <div id="arquitetura" className="space-y-8 scroll-mt-28">
-                    <div className="text-center space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase text-amber-500 tracking-widest">
-                            Engenharia e Conectividade
+                <div className="text-center space-y-4 max-w-2xl mx-auto">
+                    <span className="inline-block text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+                        Sobre a Tecnologia
+                    </span>
+                    <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
+                        Driven by Performance. <br />
+                        <span className="text-stroke-gold">Designed for Courts.</span>
+                    </h2>
+                    <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
+                        Eliminamos a complexidade de servidores locais caros. Nossa arquitetura edge opera 24/7 conectada às suas câmeras existentes com tolerância total a falhas de rede.
+                    </p>
+                </div>
+
+                {/* ============================================================ */}
+                {/* 3. SMART SOLUTIONS & ASYMMETRIC FLOATING CLUSTER (Image 3)   */}
+                {/* ============================================================ */}
+                <div id="solucoes" className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center scroll-mt-28">
+                    {/* Lado Esquerdo: Narrativa Executiva */}
+                    <div className="lg:col-span-5 space-y-6">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                            Smart Solutions
                         </span>
-                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
-                            Como o Sistema Opera na Quadra
-                        </h2>
-                        <p className="text-xs text-zinc-400 max-w-lg mx-auto">
-                            Instalação limpa que reaproveita a infraestrutura de rede já existente no seu complexo.
+                        <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight leading-none">
+                            Autonomia Total <br />
+                            <span className="text-zinc-400 font-bold text-2xl md:text-3xl">na Sua Quadra.</span>
+                        </h3>
+                        <p className="text-zinc-400 text-xs md:text-sm leading-relaxed font-normal">
+                            Na Fox Replay, acreditamos que a tecnologia de gravação e transmissão de alta performance não deve depender de operadores manuais na quadra.
                         </p>
+                        <p className="text-zinc-400 text-xs md:text-sm leading-relaxed font-normal">
+                            Nosso sistema conecta-se às suas câmeras IP via protocolo RTSP, mantendo buffer contínuo em memória RAM. Ao apertar o botão físico, o take dos últimos 30 segundos é processado em formato MP4 leve e disponibilizado instantaneamente aos atletas via QR Code.
+                        </p>
+                        <div className="pt-2">
+                            <a
+                                href="#contato"
+                                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl glass-pill text-white text-xs font-bold uppercase tracking-wider hover:border-amber-500/50 transition-all group"
+                            >
+                                <span>Falar com Especialista</span>
+                                <span className="w-5 h-5 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-bold text-xs group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                                    ↗
+                                </span>
+                            </a>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 space-y-3">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center">
-                                <IconCamera className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">1. Câmera IP Existente</h3>
+                    {/* Lado Direito: Cluster Flutuante de Cards em Vidro (Exatamente como na Imagem 3) */}
+                    <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
+                        {/* Card 1: Buffer Edge */}
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-2 hover:-translate-y-1 transition-all duration-300">
+                            <span className="text-[10px] font-mono font-bold uppercase text-amber-400 block tracking-wider">
+                                01 &bull; Buffer Contínuo
+                            </span>
+                            <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                                Processamento em RAM
+                            </h4>
                             <p className="text-xs text-zinc-400 leading-relaxed font-normal">
-                                Conexão via protocolo padrão RTSP com câmeras de mercado (Hikvision, Intelbras e modelos com suporte a streaming de rede).
+                                Grava os últimos 30 segundos em tempo real sem gravar horas de vídeo inútil no disco.
                             </p>
                         </div>
 
-                        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 space-y-3">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center">
-                                <IconWifi className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">2. Botão Físico ou Sem Fio</h3>
+                        {/* Card 2: Hardware Industrial */}
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-2 sm:translate-y-4 hover:-translate-y-0.5 transition-all duration-300">
+                            <span className="text-[10px] font-mono font-bold uppercase text-amber-400 block tracking-wider">
+                                02 &bull; Botão de Grade
+                            </span>
+                            <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                                433MHz Sem Fio
+                            </h4>
                             <p className="text-xs text-zinc-400 leading-relaxed font-normal">
-                                O atleta aciona o botão na grade ou via transmissor sem fio 433MHz com alcance total da quadra e contato de pulso imediato.
+                                Acionamento industrial reforçado com alcance total da quadra e contato de pulso imediato.
                             </p>
                         </div>
 
-                        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 space-y-3">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center">
-                                <IconCpu className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">3. Processamento Edge</h3>
+                        {/* Card 3: Workflow */}
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-2 hover:-translate-y-1 transition-all duration-300">
+                            <span className="text-[10px] font-mono font-bold uppercase text-amber-400 block tracking-wider">
+                                03 &bull; Workflow Viral
+                            </span>
+                            <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                                QR Code Instantâneo
+                            </h4>
                             <p className="text-xs text-zinc-400 leading-relaxed font-normal">
-                                O hardware local mantém buffer circular na memória e costura os últimos 30 segundos em formato MP4 leve e pronto para a web.
+                                O atleta não precisa baixar aplicativo. Escaneia a placa na quadra e baixa direto no rolo da câmera.
                             </p>
                         </div>
 
-                        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 space-y-3">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center">
-                                <IconSmartphone className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">4. Acesso Web Imediato</h3>
+                        {/* Card 4: Patrocínios */}
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-2 sm:translate-y-4 hover:-translate-y-0.5 transition-all duration-300">
+                            <span className="text-[10px] font-mono font-bold uppercase text-amber-400 block tracking-wider">
+                                04 &bull; Monetização
+                            </span>
+                            <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                                Marcas Parceiras
+                            </h4>
                             <p className="text-xs text-zinc-400 leading-relaxed font-normal">
-                                Visualização instantânea via QR Code ou feed público da quadra. O atleta assiste e salva direto na galeria sem instalar apps.
+                                Insira a logo dos patrocinadores da sua arena nos replays e gere receita publicitária recorrente.
+                            </p>
+                        </div>
+
+                        {/* Card 5: Full Width Card no Rodapé do Cluster */}
+                        <div className="sm:col-span-2 glass-card-dark rounded-2xl p-6 space-y-2 border-amber-500/20 hover:border-amber-500/40 transition-all">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono font-bold uppercase text-amber-400 tracking-wider">
+                                    05 &bull; Conexão Universal
+                                </span>
+                                <span className="text-[9px] font-mono bg-amber-500/10 text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-500/20 font-bold">
+                                    RTSP / IP ONVIF
+                                </span>
+                            </div>
+                            <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                                Compatível com Câmeras Hikvision, Intelbras e Cftv de Mercado
+                            </h4>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                Não exigimos que você compre câmeras proprietárias com preços inflacionados. Reaproveite sua infraestrutura de vigilância com total fluidez.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* ============================================================ */}
-                {/* 2. RECURSOS OPERACIONAIS DA ARENA                            */}
-                {/* ============================================================ */}
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 md:p-10 space-y-8">
-                    <div className="max-w-2xl space-y-2">
-                        <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                            Benefícios de Gestão
-                        </span>
-                        <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
-                            Estruturado para a Rotina do Complexo
-                        </h2>
-                        <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
-                            A tecnologia foi desenvolvida para operar com intervenção zero da equipe da recepção durante as partidas.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-2">
-                        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-2">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-zinc-300 flex items-center justify-center mb-3">
-                                <IconShield className="w-4 h-4 text-amber-500" />
-                            </div>
-                            <h3 className="text-sm font-bold text-white uppercase">Operação Autônoma</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">
-                                Inicialização automática ao ligar na tomada. Em caso de oscilação elétrica, o sistema reinicia e retoma a gravação sozinho.
-                            </p>
-                        </div>
-
-                        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-2">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-zinc-300 flex items-center justify-center mb-3">
-                                <IconLayers className="w-4 h-4 text-amber-500" />
-                            </div>
-                            <h3 className="text-sm font-bold text-white uppercase">Espaço para Patrocinadores</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">
-                                Painel integrado com 4 posições de exibição de marcas parceiras nos replays dos atletas, viabilizando cotas locais de publicidade.
-                            </p>
-                        </div>
-
-                        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-2">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-zinc-300 flex items-center justify-center mb-3">
-                                <IconSmartphone className="w-4 h-4 text-amber-500" />
-                            </div>
-                            <h3 className="text-sm font-bold text-white uppercase">Difusão Orgânica</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">
-                                Os atletas compartilham seus melhores lances diretamente no Instagram e WhatsApp, divulgando o nome do complexo com frequência.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ============================================================ */}
-                {/* 3. MODELOS DE ADOÇÃO                                         */}
+                {/* 4. ARQUITETURA TÉCNICA (4 PILARES EM VIDRO)                  */}
                 {/* ============================================================ */}
                 <div className="space-y-8">
-                    <div className="text-center space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase text-amber-500 tracking-widest">
-                            Flexibilidade de Implantação
+                    <div className="text-center space-y-2">
+                        <span className="text-[10px] font-mono font-bold uppercase text-amber-500 tracking-widest bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+                            Engenharia e Topologia
                         </span>
-                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
-                            Modelos para Cada Porte de Complexo
+                        <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-white">
+                            Ciclo Fechado de Operação
+                        </h2>
+                        <p className="text-xs text-zinc-400 max-w-lg mx-auto">
+                            Do clique do jogador ao download no smartphone em menos de 8 segundos.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                                <IconCamera className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">1. Câmera IP</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                Conexão via protocolo padrão RTSP com câmeras de mercado sem alterar a segurança do seu complexo.
+                            </p>
+                        </div>
+
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                                <IconWifi className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">2. Botão Físico</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                Acionador em aço ou transmissor wireless 433MHz com alcance total da quadra e contato de pulso rápido.
+                            </p>
+                        </div>
+
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                                <IconCpu className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">3. Edge Core</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                O hardware local mantém buffer circular na memória e costura os 30s em MP4 leve pronto para a web.
+                            </p>
+                        </div>
+
+                        <div className="glass-card-dark rounded-2xl p-6 space-y-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                                <IconSmartphone className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-sm text-white uppercase tracking-wide">4. Entrega Web</h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+                                Visualização instantânea via QR Code da quadra. O atleta assiste e salva direto na galeria sem instalar apps.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ============================================================ */}
+                {/* 5. MODELOS DE ADOÇÃO (DARK GLASS PRICING)                    */}
+                {/* ============================================================ */}
+                <div className="space-y-8">
+                    <div className="text-center space-y-2">
+                        <span className="text-[10px] font-mono font-bold uppercase text-amber-500 tracking-widest bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+                            Modelos de Contratação
+                        </span>
+                        <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-white">
+                            Flexibilidade para Cada Complexo
                         </h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Modelo 1 */}
-                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between space-y-6">
+                        {/* Modelo 1: Software */}
+                        <div className="glass-card-dark rounded-3xl p-7 flex flex-col justify-between space-y-6">
                             <div className="space-y-4">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                                     Software Integrado
                                 </span>
                                 <div>
                                     <h3 className="text-lg font-bold text-white uppercase">Licença de Software</h3>
                                     <p className="text-xs text-zinc-400 mt-1">Para complexos que já possuem computadores ou microcontroladores compatíveis.</p>
                                 </div>
-                                <div className="text-2xl font-bold text-white">
+                                <div className="text-3xl font-black text-white">
                                     R$ 199 <span className="text-xs text-zinc-400 font-normal">/mês por quadra</span>
                                 </div>
-                                <ul className="text-xs text-zinc-300 space-y-2.5 pt-2">
+                                <ul className="text-xs text-zinc-300 space-y-3 pt-2">
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
                                         <span>Gravações ilimitadas em nuvem</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
                                         <span>Painel de gestão de quadras e feeds</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
                                         <span>4 posições para patrocinadores locais</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
-                                        <span>Retenção automática de 14 dias</span>
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
+                                        <span>Retenção permanente para lances salvos</span>
                                     </li>
                                 </ul>
                             </div>
                             <a
                                 href="#contato"
-                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
+                                className="w-full py-3 glass-pill hover:bg-white/10 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
                             >
                                 Consultar Detalhes
                             </a>
                         </div>
 
-                        {/* Modelo 2: Kit Completo */}
-                        <div className="bg-zinc-900 border border-amber-500/40 rounded-3xl p-6 flex flex-col justify-between space-y-6 relative shadow-lg">
-                            <div className="space-y-4">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                        {/* Modelo 2: Kit Completo (Com Destaque Dourado) */}
+                        <div className="glass-card-dark border-amber-500/50 rounded-3xl p-7 flex flex-col justify-between space-y-6 relative shadow-[0_0_40px_rgba(245,158,11,0.12)]">
+                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-950 bg-amber-500 px-3.5 py-1 rounded-full shadow-md">
+                                    Mais Escolhido
+                                </span>
+                            </div>
+
+                            <div className="space-y-4 pt-1">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30">
                                     Hardware + Software
                                 </span>
                                 <div>
                                     <h3 className="text-lg font-bold text-white uppercase">Kit Totem Completo</h3>
                                     <p className="text-xs text-zinc-400 mt-1">Hardware pronto para uso, botão de acionamento e suporte técnico de campo.</p>
                                 </div>
-                                <div className="text-2xl font-bold text-amber-400">
+                                <div className="text-3xl font-black text-amber-400">
                                     R$ 399 <span className="text-xs text-zinc-400 font-normal">/mês por quadra</span>
                                 </div>
-                                <ul className="text-xs text-zinc-300 space-y-2.5 pt-2">
+                                <ul className="text-xs text-zinc-300 space-y-3 pt-2">
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-400" />
+                                        <IconCheck className="w-4 h-4 text-amber-400" />
                                         <span><strong>Totem edge configurado em comodato</strong></span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-400" />
+                                        <IconCheck className="w-4 h-4 text-amber-400" />
                                         <span>Botão industrial com proteção contra intempéries</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-400" />
+                                        <IconCheck className="w-4 h-4 text-amber-400" />
                                         <span>Pareamento rápido por código na quadra</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-400" />
+                                        <IconCheck className="w-4 h-4 text-amber-400" />
                                         <span>Suporte técnico prioritário para a equipe</span>
                                     </li>
                                 </ul>
                             </div>
                             <a
                                 href="#contato"
-                                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm text-center"
+                                className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md text-center"
                             >
-                                Solicitar Implantação
+                                Solicitar Implantação ➔
                             </a>
                         </div>
 
                         {/* Modelo 3: Multi-Quadras */}
-                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between space-y-6">
+                        <div className="glass-card-dark rounded-3xl p-7 flex flex-col justify-between space-y-6">
                             <div className="space-y-4">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                                     Redes & Franquias
                                 </span>
                                 <div>
                                     <h3 className="text-lg font-bold text-white uppercase">Multi-Quadras</h3>
                                     <p className="text-xs text-zinc-400 mt-1">Para complexos a partir de 4 quadras ou operações com múltiplas unidades.</p>
                                 </div>
-                                <div className="text-2xl font-bold text-white">
-                                    Sob Consulta
+                                <div className="text-3xl font-black text-white">
+                                    Sob Medida
                                 </div>
-                                <ul className="text-xs text-zinc-300 space-y-2.5 pt-2">
+                                <ul className="text-xs text-zinc-300 space-y-3 pt-2">
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
                                         <span>Condições personalizadas por volume</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
                                         <span>Possibilidade de domínio institucional próprio</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
-                                        <span>Alinhamento de infraestrutura de rede assistida</span>
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
+                                        <span>Alinhamento de rede assistida pelo suporte</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <IconCheck className="w-3.5 h-3.5 text-amber-500" />
-                                        <span>Atendimento direto para a gerência</span>
+                                        <IconCheck className="w-4 h-4 text-amber-500" />
+                                        <span>Gerente de contas dedicado</span>
                                     </li>
                                 </ul>
                             </div>
                             <a
                                 href="#contato"
-                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
+                                className="w-full py-3 glass-pill hover:bg-white/10 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
                             >
                                 Falar com a Equipe
                             </a>
@@ -436,18 +566,18 @@ export default function PaginaParaArenas() {
                 </div>
 
                 {/* ============================================================ */}
-                {/* 4. FORMULÁRIO DE CONTATO / IMPLANTAÇÃO                       */}
+                {/* 6. FORMULÁRIO DE CONTATO EM VIDRO DARK (Scroll Target)        */}
                 {/* ============================================================ */}
-                <div id="contato" className="max-w-xl mx-auto w-full bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl scroll-mt-28">
-                    <div className="text-center space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider">
-                            Contato com a Engenharia
+                <div id="contato" className="max-w-xl mx-auto w-full glass-card-dark rounded-3xl p-7 md:p-10 space-y-6 shadow-2xl border-white/10 scroll-mt-28">
+                    <div className="text-center space-y-2">
+                        <span className="text-[10px] font-mono font-bold uppercase text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+                            Contato Direto
                         </span>
-                        <h2 className="text-xl md:text-2xl font-black text-white uppercase">
+                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight">
                             Consultar Viabilidade Técnica
                         </h2>
                         <p className="text-xs text-zinc-400 font-normal">
-                            Envie os dados do seu complexo esportivo para alinharmos os requisitos de câmeras e instalação.
+                            Preencha os dados da sua arena para receber a proposta técnica de câmeras e hardware.
                         </p>
                     </div>
 
@@ -461,8 +591,8 @@ export default function PaginaParaArenas() {
                                 required
                                 value={nomeArena}
                                 onChange={(e) => setNomeArena(e.target.value)}
-                                placeholder="Ex: Arena Nascer do Sol"
-                                className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                placeholder="Ex: Arena Sunset Beach"
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
                             />
                         </div>
 
@@ -477,7 +607,7 @@ export default function PaginaParaArenas() {
                                     value={nomeContato}
                                     onChange={(e) => setNomeContato(e.target.value)}
                                     placeholder="Seu nome"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
                                 />
                             </div>
 
@@ -491,7 +621,7 @@ export default function PaginaParaArenas() {
                                     value={cidade}
                                     onChange={(e) => setCidade(e.target.value)}
                                     placeholder="Ex: Campinas - SP"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
                                 />
                             </div>
                         </div>
@@ -504,10 +634,10 @@ export default function PaginaParaArenas() {
                                 <select
                                     value={qtdQuadras}
                                     onChange={(e) => setQtdQuadras(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-medium focus:outline-none focus:border-amber-500 cursor-pointer"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-amber-500 cursor-pointer"
                                 >
-                                    <option value="1">1 Quadra</option>
-                                    <option value="2">2 Quadras</option>
+                                    <option value="1">1 Quadra (Solo)</option>
+                                    <option value="2">2 Quadras (Recomendado)</option>
                                     <option value="3 a 5">3 a 5 Quadras</option>
                                     <option value="Mais de 5">Mais de 5 Quadras</option>
                                 </select>
@@ -523,28 +653,28 @@ export default function PaginaParaArenas() {
                                     value={whatsapp}
                                     onChange={(e) => setWhatsapp(e.target.value)}
                                     placeholder="(11) 99999-9999"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
                                 />
                             </div>
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[0_0_25px_rgba(245,158,11,0.25)] active:scale-[0.99] flex items-center justify-center gap-2 mt-2"
                         >
-                            <span>Enviar Solicitação Técnica</span>
+                            <span>Enviar Solicitação de Viabilidade</span>
                             <IconSend className="w-3.5 h-3.5" />
                         </button>
                     </form>
 
-                    <div className="text-center pt-2 border-t border-zinc-800/80">
+                    <div className="text-center pt-2 border-t border-white/5">
                         <p className="text-[11px] text-zinc-500 font-normal">
-                            Já possui credenciais de acesso?{' '}
+                            Já fechou seu contrato?{' '}
                             <button
                                 onClick={() => router.push('/cadastro')}
                                 className="text-amber-400 font-bold hover:underline"
                             >
-                                Ativar sua conta de gestor
+                                Credenciar sua arena e quadras ➔
                             </button>
                         </p>
                     </div>
@@ -553,9 +683,9 @@ export default function PaginaParaArenas() {
             </main>
 
             {/* FOOTER INSTITUCIONAL */}
-            <footer className="w-full border-t border-zinc-800/80 py-6 text-center z-10 bg-zinc-950">
+            <footer className="w-full border-t border-white/5 py-8 text-center z-10 bg-[#070709]/90 backdrop-blur-md">
                 <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-semibold">
-                    © {new Date().getFullYear()} FOX REPLAY • Tecnologia de Monitoramento e Replay Esportivo
+                    © {new Date().getFullYear()} FOX REPLAY &bull; TECNOLOGIA DE MONITORAMENTO E REPLAY ESPORTIVO
                 </p>
             </footer>
         </div>

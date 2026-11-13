@@ -37,3 +37,43 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gold);
 }
+
+/* 🚀 DESIGN SYSTEM FUTURISTA DARK GLASS FOX REPLAY */
+.text-stroke-gold {
+  -webkit-text-stroke: 1.5px #f59e0b;
+  color: transparent;
+}
+
+.text-stroke-white {
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.85);
+  color: transparent;
+}
+
+@media (min-width: 768px) {
+  .text-stroke-gold {
+    -webkit-text-stroke: 2px #f59e0b;
+  }
+  .text-stroke-white {
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.85);
+  }
+}
+
+.glass-card-dark {
+  background: rgba(18, 18, 22, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+}
+
+.glass-card-dark:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 20px 40px -15px rgba(245, 158, 11, 0.12);
+}
+
+.glass-pill {
+  background: rgba(24, 24, 27, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
