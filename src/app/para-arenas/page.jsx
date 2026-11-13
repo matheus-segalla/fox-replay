@@ -200,32 +200,24 @@ export default function PaginaParaArenas() {
             </header>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="w-full max-w-6xl mx-auto px-5 py-12 md:py-20 relative z-10 flex-1 flex flex-col space-y-28 md:space-y-36">
+            <main className="w-full max-w-6xl mx-auto px-5 pt-4 pb-16 md:pt-6 md:pb-24 relative z-10 flex-1 flex flex-col space-y-20 md:space-y-28">
 
                 {/* ============================================================ */}
-                {/* 1. HERO SECTION FUTURISTA (Estilo Ai.Now Image 1 & 2)         */}
+                {/* 1. HERO SECTION FUTURISTA (Estilo Ai.Now)                    */}
                 {/* ============================================================ */}
-                <div className="text-center space-y-7 max-w-4xl mx-auto pt-4 md:pt-8">
-                    {/* Cápsula Superior com Ícone Circular de Ação */}
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill border border-amber-500/30 text-zinc-300 text-xs font-medium shadow-xs">
-                        <span className="w-4 h-4 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-bold text-[10px]">
-                            ↗
-                        </span>
-                        <span className="tracking-wide">Infraestrutura Autônoma de Replay para Arenas de Elite</span>
-                    </div>
-
+                <div className="text-center space-y-6 max-w-4xl mx-auto">
                     {/* Tipografia de Duplo Impacto: Sólido Branco + Contorno Dourado */}
                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[0.92] select-none">
-                        <span className="block text-white">REPLAY BEYOND YOUR</span>
-                        <span className="block text-stroke-gold mt-2">ARENA LIMITS</span>
+                        <span className="block text-white">CAPTURE OS MELHORES LANCES</span>
+                        <span className="block text-stroke-gold mt-2">EM UM CLIQUE</span>
                     </h1>
 
                     <p className="text-zinc-400 text-sm md:text-base leading-relaxed font-normal max-w-2xl mx-auto">
                         Captação autônoma dos últimos 30 segundos, câmeras IP Full HD e acionamento anti-vandalismo direto na grade da quadra. Sem custos ocultos e sem necessidade de operadores no local.
                     </p>
 
-                    {/* Botões Pílula Estilo Vidro Escuro com Brilho (Image 2) */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                    {/* Botões Pílula Estilo Vidro Escuro com Brilho */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
                         <a
                             href="#contato"
                             className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-[0_0_30px_rgba(245,158,11,0.25)] hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] active:scale-95 text-center flex items-center justify-center gap-2"
@@ -243,23 +235,7 @@ export default function PaginaParaArenas() {
                 </div>
 
                 {/* ============================================================ */}
-                {/* 2. SEÇÃO DE IMPACTO (Estilo Ai.Now Image 2)                   */}
-                {/* ============================================================ */}
-                <div className="text-center space-y-4 max-w-2xl mx-auto">
-                    <span className="inline-block text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
-                        Sobre a Tecnologia
-                    </span>
-                    <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
-                        Driven by Performance. <br />
-                        <span className="text-stroke-gold">Designed for Courts.</span>
-                    </h2>
-                    <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
-                        Eliminamos a complexidade de servidores locais caros. Nossa arquitetura edge opera 24/7 conectada às suas câmeras existentes com tolerância total a falhas de rede.
-                    </p>
-                </div>
-
-                {/* ============================================================ */}
-                {/* 3. SMART SOLUTIONS & ASYMMETRIC FLOATING CLUSTER (Image 3)   */}
+                {/* 2. SMART SOLUTIONS & ASYMMETRIC FLOATING CLUSTER             */}
                 {/* ============================================================ */}
                 <div id="solucoes" className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center scroll-mt-28">
                     {/* Lado Esquerdo: Narrativa Executiva */}
