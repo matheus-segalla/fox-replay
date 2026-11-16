@@ -99,29 +99,43 @@ function IconSend({ className = "w-3.5 h-3.5" }) {
     );
 }
 
+const OPCOES_QUADRAS = [
+    { quantidade: 1, label: '1 Quadra', descricao: 'Totem Solo' },
+    { quantidade: 2, label: '2 Quadras', descricao: 'Recomendado' },
+    { quantidade: 3, label: '3 Quadras', descricao: 'Média Arena' },
+    { quantidade: 4, label: '4 Quadras', descricao: 'Complexo' },
+    { quantidade: 6, label: '6+ Quadras', descricao: 'Rede / Franquia' }
+];
+
 export default function PaginaParaArenas() {
     const router = useRouter();
 
-    // Formulário de contato para implantação técnica
+    // Formulário de credenciamento e contratação
+    const [quantidadeQuadras, setQuantidadeQuadras] = useState(2);
     const [nomeArena, setNomeArena] = useState('');
-    const [nomeContato, setNomeContato] = useState('');
     const [cidade, setCidade] = useState('');
-    const [qtdQuadras, setQtdQuadras] = useState('2');
+    const [estado, setEstado] = useState('SP');
+    const [nomeContato, setNomeContato] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
+    const [email, setEmail] = useState('');
 
     const enviarInteresseWhatsApp = (e) => {
         e.preventDefault();
+        const opcaoSel = OPCOES_QUADRAS.find(o => o.quantidade === quantidadeQuadras);
+        const quadrasTexto = opcaoSel ? `${opcaoSel.label} (${opcaoSel.descricao})` : `${quantidadeQuadras} Quadras`;
+
         const texto = encodeURIComponent(
-            `Olá equipe Fox Replay. Gostaria de informações técnicas e comerciais para implantação no meu complexo esportivo:\n\n` +
-            `Complexo: ${nomeArena}\n` +
-            `Responsável: ${nomeContato}\n` +
-            `Cidade/UF: ${cidade}\n` +
-            `Quantidade de Quadras: ${qtdQuadras}\n` +
-            `Contato WhatsApp: ${whatsapp}\n\n` +
-            `Aguardo retorno para alinhamento de infraestrutura.`
+            `🎾 *SOLICITAÇÃO DE CONTRATAÇÃO - FOX REPLAY*\n\n` +
+            `🏟️ *Complexo Esportivo:* ${nomeArena}\n` +
+            `📍 *Localização:* ${cidade} - ${estado.toUpperCase()}\n` +
+            `🔢 *Quadras Desejadas:* ${quadrasTexto}\n` +
+            `👤 *Responsável:* ${nomeContato}\n` +
+            `📱 *WhatsApp:* ${whatsapp}\n` +
+            (email ? `✉️ *E-mail:* ${email}\n\n` : `\n`) +
+            `Olá equipe Fox Replay! Preenchi as definições do meu complexo e gostaria de finalizar a contratação do sistema.`
         );
 
-        window.open(`https://api.whatsapp.com/send?phone=5511999999999&text=${texto}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?phone=5511997771152&text=${texto}`, '_blank');
     };
 
     return (
@@ -542,85 +556,118 @@ export default function PaginaParaArenas() {
                 </div>
 
                 {/* ============================================================ */}
-                {/* 6. FORMULÁRIO DE CONTATO EM VIDRO DARK (Scroll Target)        */}
+                {/* 6. FORMULÁRIO DE CREDENCIAMENTO / CONTRATAÇÃO (Scroll Target) */}
                 {/* ============================================================ */}
-                <div id="contato" className="max-w-xl mx-auto w-full glass-card-dark rounded-3xl p-7 md:p-10 space-y-6 shadow-2xl border-white/10 scroll-mt-28">
-                    <div className="text-center space-y-2">
-                        <span className="text-[10px] font-mono font-bold uppercase text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
-                            Contato Direto
+                <div id="contato" className="max-w-[540px] mx-auto w-full bg-white text-zinc-900 rounded-3xl p-7 sm:p-10 space-y-6 shadow-2xl border border-zinc-200 scroll-mt-28 relative z-10">
+                    {/* CABEÇALHO IDÊNTICO À IMAGEM 2 */}
+                    <div className="flex flex-col items-center justify-center text-center">
+                        <img
+                            src="/logo-fox.jpeg"
+                            alt="Logo Fox Replay"
+                            className="h-11 w-11 object-cover rounded-xl border border-zinc-200 shadow-xs bg-white mb-2"
+                        />
+                        <span className="text-[10px] font-mono tracking-widest text-amber-600 uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 font-bold mb-2">
+                            B2B &bull; Onboarding de Complexo
                         </span>
-                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight">
-                            Consultar Viabilidade Técnica
+                        <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-wider uppercase">
+                            CREDENCIAR <span className="text-amber-500">SUA ARENA</span>
                         </h2>
-                        <p className="text-xs text-zinc-400 font-normal">
-                            Preencha os dados da sua arena para receber a proposta técnica de câmeras e hardware.
+                        <p className="text-zinc-500 text-xs mt-1 leading-relaxed max-w-sm">
+                            Escolha a quantidade de quadras, configure sua arena e envie para finalizar a contratação com nosso time.
                         </p>
                     </div>
 
                     <form onSubmit={enviarInteresseWhatsApp} className="space-y-4">
+                        {/* 1. SELETOR DE COTA / QUANTIDADE DE QUADRAS */}
                         <div>
-                            <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                                Nome do Complexo / Arena
+                            <label className="block text-[10px] font-bold text-zinc-500 mb-2 uppercase tracking-wider">
+                                1. Quantidade de Quadras Contratadas
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                {OPCOES_QUADRAS.map((opcao) => {
+                                    const selecionado = quantidadeQuadras === opcao.quantidade;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={opcao.quantidade}
+                                            onClick={() => setQuantidadeQuadras(opcao.quantidade)}
+                                            className={`p-2.5 rounded-xl border text-center transition-all ${
+                                                selecionado
+                                                    ? 'bg-amber-500/15 border-amber-500 text-zinc-950 font-bold shadow-xs'
+                                                    : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                                            }`}
+                                        >
+                                            <span className="block text-xs font-black">{opcao.label}</span>
+                                            <span className="block text-[9px] text-zinc-400 mt-0.5 truncate">{opcao.descricao}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* 2. DADOS DO COMPLEXO ESPORTIVO */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
+                                2. Nome do Complexo Esportivo
                             </label>
                             <input
                                 type="text"
                                 required
                                 value={nomeArena}
                                 onChange={(e) => setNomeArena(e.target.value)}
-                                placeholder="Ex: Arena Sunset Beach"
-                                className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                placeholder="Ex: Arena Sunset Beach Tennis"
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                                    Responsável
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={nomeContato}
-                                    onChange={(e) => setNomeContato(e.target.value)}
-                                    placeholder="Seu nome"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                                    Cidade / Estado
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="col-span-2">
+                                <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
+                                    Cidade
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     value={cidade}
                                     onChange={(e) => setCidade(e.target.value)}
-                                    placeholder="Ex: Campinas - SP"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                    placeholder="Ex: Campinas"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
+                                    UF
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={2}
+                                    value={estado}
+                                    onChange={(e) => setEstado(e.target.value.toUpperCase())}
+                                    placeholder="SP"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-center uppercase placeholder-zinc-400 text-xs font-bold transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
                                 />
                             </div>
                         </div>
 
+                        {/* 3. DADOS DO GESTOR / CONTATO */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
+                                3. Responsável pelo Complexo
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={nomeContato}
+                                onChange={(e) => setNomeContato(e.target.value)}
+                                placeholder="Seu nome completo"
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
+                            />
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                                    Número de Quadras
-                                </label>
-                                <select
-                                    value={qtdQuadras}
-                                    onChange={(e) => setQtdQuadras(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-amber-500 cursor-pointer"
-                                >
-                                    <option value="1">1 Quadra (Solo)</option>
-                                    <option value="2">2 Quadras (Recomendado)</option>
-                                    <option value="3 a 5">3 a 5 Quadras</option>
-                                    <option value="Mais de 5">Mais de 5 Quadras</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                                <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
                                     WhatsApp para Contato
                                 </label>
                                 <input
@@ -629,28 +676,40 @@ export default function PaginaParaArenas() {
                                     value={whatsapp}
                                     onChange={(e) => setWhatsapp(e.target.value)}
                                     placeholder="(11) 99999-9999"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-950/80 border border-white/10 text-white placeholder-zinc-600 text-xs font-medium focus:outline-none focus:border-amber-500 transition-colors"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">
+                                    E-mail Administrativo
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="gestor@suaarena.com"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs font-medium transition-all focus:outline-none focus:border-amber-500 focus:bg-white shadow-xs"
                                 />
                             </div>
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[0_0_25px_rgba(245,158,11,0.25)] active:scale-[0.99] flex items-center justify-center gap-2 mt-2"
+                            className="w-full py-4 mt-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[0_0_25px_rgba(245,158,11,0.25)] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                         >
-                            <span>Enviar Solicitação de Viabilidade</span>
+                            <span>Finalizar Contratação via WhatsApp</span>
                             <IconSend className="w-3.5 h-3.5" />
                         </button>
                     </form>
 
-                    <div className="text-center pt-2 border-t border-white/5">
-                        <p className="text-[11px] text-zinc-500 font-normal">
-                            Já fechou seu contrato?{' '}
+                    <div className="text-center pt-2 border-t border-zinc-100">
+                        <p className="text-[11px] text-zinc-400 font-normal">
+                            Já possui contrato assinado e conta ativa?{' '}
                             <button
-                                onClick={() => router.push('/cadastro')}
-                                className="text-amber-400 font-bold hover:underline"
+                                onClick={() => router.push('/login')}
+                                className="text-amber-600 font-bold hover:underline"
                             >
-                                Credenciar sua arena e quadras ➔
+                                Acessar painel da arena ➔
                             </button>
                         </p>
                     </div>
