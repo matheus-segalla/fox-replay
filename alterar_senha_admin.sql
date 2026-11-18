@@ -1,12 +1,8 @@
 -- ==============================================================================
--- FOX REPLAY — ALTERAÇÃO DE SENHA DO ADMINISTRADOR
--- Execute este comando no SQL Editor do seu Dashboard Supabase:
+-- FOX REPLAY — ALTERAÇÃO DE SENHA DE USUÁRIO (SUPABASE SQL EDITOR)
+-- Substitua os placeholders antes de executar. Nunca salve senhas reais no Git.
 -- ==============================================================================
 
 UPDATE auth.users
-SET encrypted_password = crypt('123456', gen_salt('bf'))
-WHERE email = 'matheussegalla469@hotmail.com';
-
--- Se você tiver outro e-mail cadastrado, pode alterar todos para 123456 com:
--- UPDATE auth.users
--- SET encrypted_password = crypt('123456', gen_salt('bf'));
+SET encrypted_password = crypt('NOVA_SENHA_FORTE_AQUI', gen_salt('bf'))
+WHERE email = 'EMAIL_DO_USUARIO_AQUI';

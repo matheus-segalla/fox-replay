@@ -1,21 +1,26 @@
 -- ==============================================================================
--- FOX REPLAY — CRIAÇÃO DO USUÁRIO ADMIN (admin@admin / 123456)
--- Execute este script no SQL Editor do seu Dashboard Supabase:
+-- FOX REPLAY — CRIAÇÃO / PROMOÇÃO DE USUÁRIO SUPER ADMIN
+-- Execute no SQL Editor do seu Dashboard Supabase substituindo os placeholders.
+-- NUNCA versionar senhas reais ou e-mails pessoais neste arquivo.
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 DO $$
 DECLARE
+    v_email TEXT := 'SEU_EMAIL_ADMIN_AQUI';
+    v_senha TEXT := 'DEFINA_UMA_SENHA_FORTE_AQUI';
     v_user_id uuid;
 BEGIN
-    -- 1. Verifica se já existe um usuário com esse e-mail
-    SELECT id INTO v_user_id FROM auth.users WHERE email IN ('admin@admin', 'admin@admin.com') LIMIT 1;
+    IF v_email = 'SEU_EMAIL_ADMIN_AQUI' OR v_senha = 'DEFINA_UMA_SENHA_FORTE_AQUI' THEN
+        RAISE EXCEPTION 'Substitua v_email e v_senha antes de executar este script.';
+    END IF;
+
+    SELECT id INTO v_user_id FROM auth.users WHERE email = v_email LIMIT 1;
 
     IF v_user_id IS NULL THEN
         v_user_id := gen_random_uuid();
-        
-        -- Insere novo usuário na tabela auth.users do Supabase
+
         INSERT INTO auth.users (
             instance_id,
             id,
@@ -33,16 +38,15 @@ BEGIN
             v_user_id,
             'authenticated',
             'authenticated',
-            'admin@admin',
-            crypt('123456', gen_salt('bf')),
+            v_email,
+            crypt(v_senha, gen_salt('bf')),
             NOW(),
-            '{"provider":"email","providers":["email"]}',
-            '{"role":"super_admin","tipo_usuario":"admin"}',
+            '{"provider":"email","providers":["email"],"role":"super_admin"}'::jsonb,
+            '{"tipo_usuario":"admin"}'::jsonb,
             NOW(),
             NOW()
         );
 
-        -- Cria também identidade de e-mail na tabela auth.identities
         INSERT INTO auth.identities (
             id,
             user_id,
@@ -55,7 +59,7 @@ BEGIN
         ) VALUES (
             gen_random_uuid(),
             v_user_id,
-            json_build_object('sub', v_user_id::text, 'email', 'admin@admin'),
+            json_build_object('sub', v_user_id::text, 'email', v_email),
             'email',
             v_user_id::text,
             NOW(),
@@ -63,18 +67,13 @@ BEGIN
             NOW()
         );
     ELSE
-        -- Atualiza senha existente para 123456
+        -- Promove usuário existente gravando role em raw_app_meta_data (imutável pelo cliente)
         UPDATE auth.users
-        SET email = 'admin@admin',
-            encrypted_password = crypt('123456', gen_salt('bf')),
-            email_confirmed_at = NOW(),
-            raw_user_meta_data = '{"role":"super_admin","tipo_usuario":"admin"}'
+        SET encrypted_password = crypt(v_senha, gen_salt('bf')),
+            email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+            raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || '{"role":"super_admin"}'::jsonb
         WHERE id = v_user_id;
     END IF;
 
-    -- 2. Vincula as arenas existentes para este admin ter acesso imediato no Dashboard
-    UPDATE arenas 
-    SET usuario_id = v_user_id;
-
-    RAISE NOTICE 'Usuário admin@admin criado/atualizado com sucesso! ID: %', v_user_id;
+    RAISE NOTICE 'Super Admin configurado com sucesso! ID: %', v_user_id;
 END $$;

@@ -4,181 +4,495 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fox Replay TV Kiosk</title>
-    <!-- Tailwind CSS CDN para renderização no display HDMI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- QRCode.js para geração de QR Codes dinâmicos na tela -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Carrega qrcode.min.js local (100% funcional offline), com fallback CDN opcional -->
+    <script src="/qrcode.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';document.head.appendChild(s);"></script>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #070709;
+            background: #070709;
             color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 44px 56px;
+            position: relative;
         }
-        .glow-amber {
-            filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.45));
+        .glow-top {
+            position: absolute;
+            top: -22%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%);
+            pointer-events: none;
+        }
+        .glow-bottom {
+            position: absolute;
+            bottom: -22%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(217,119,6,0.14), transparent 70%);
+            pointer-events: none;
+        }
+        header, main, footer { position: relative; z-index: 10; }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 16px; }
+        .brand-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: #f59e0b;
+            color: #09090b;
+            font-weight: 900;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.04em;
+        }
+        .brand-title {
+            font-size: 30px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            line-height: 1;
+        }
+        .brand-title span { color: #f59e0b; }
+        .brand-sub {
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: #a1a1aa;
+            margin-top: 6px;
+            display: block;
+        }
+        .status-chip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #141418;
+            border: 1px solid #27272a;
+            padding: 10px 20px;
+            border-radius: 9999px;
+        }
+        .status-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 9999px;
+            background: #10b981;
+            animation: pulse 1.8s infinite;
+        }
+        .status-dot.amber { background: #f59e0b; }
+        .status-dot.red { background: #ef4444; }
+        .status-text {
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: #d4d4d8;
+            text-transform: uppercase;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 64px;
+            max-width: 1040px;
+            width: 100%;
+        }
+        .panel.centered {
+            flex-direction: column;
+            text-align: center;
+            gap: 24px;
+            max-width: 760px;
+        }
+        .hidden { display: none !important; }
+        .col-text { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .badge {
+            display: inline-block;
+            align-self: flex-start;
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 7px 16px;
+            border-radius: 9999px;
+            color: #fbbf24;
+            background: rgba(245,158,11,0.12);
+            border: 1px solid rgba(245,158,11,0.28);
+        }
+        .badge.green {
+            color: #34d399;
+            background: rgba(16,185,129,0.12);
+            border-color: rgba(16,185,129,0.28);
+        }
+        .badge.red {
+            color: #f87171;
+            background: rgba(239,68,68,0.12);
+            border-color: rgba(239,68,68,0.28);
+        }
+        h2 {
+            font-size: 52px;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+        }
+        h2 span { color: #f59e0b; }
+        p.lead {
+            font-size: 19px;
+            line-height: 1.5;
+            color: #d4d4d8;
+        }
+        .code-box {
+            background: #121216;
+            border: 1px solid rgba(245,158,11,0.45);
+            padding: 20px 28px;
+            border-radius: 18px;
+            align-self: flex-start;
+        }
+        .code-label {
+            display: block;
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #a1a1aa;
+            margin-bottom: 6px;
+        }
+        .code-value {
+            font-size: 48px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 900;
+            color: #fbbf24;
+            letter-spacing: 0.12em;
+        }
+        .qr-card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 26px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+        }
+        .qr-card.glow {
+            filter: drop-shadow(0 0 28px rgba(245,158,11,0.42));
+        }
+        .qr-box {
+            width: 220px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #18181b;
+            font-size: 12px;
+            text-align: center;
+        }
+        .qr-caption {
+            margin-top: 14px;
+            font-size: 12px;
+            font-weight: 900;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #18181b;
+        }
+        .spinner {
+            width: 72px;
+            height: 72px;
+            border: 6px solid rgba(245,158,11,0.2);
+            border-top-color: #f59e0b;
+            border-radius: 9999px;
+            animation: spin 0.9s linear infinite;
+        }
+        .progress-track {
+            width: 100%;
+            max-width: 460px;
+            height: 8px;
+            border-radius: 9999px;
+            background: #1f1f25;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transform-origin: left center;
+        }
+        .meta-hint {
+            font-size: 13px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: #71717a;
+        }
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #27272a;
+            padding-top: 20px;
+            color: #71717a;
+            font-size: 13px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        footer strong { color: #e4e4e7; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.92); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col justify-between p-12 relative overflow-hidden bg-[#070709]">
-    
-    <!-- Efeitos de iluminação de fundo -->
-    <div class="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
-    <div class="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+<body>
+    <div class="glow-top"></div>
+    <div class="glow-bottom"></div>
 
-    <!-- TOPO: HEADER OFICIAL -->
-    <header class="flex items-center justify-between z-10">
-        <div class="flex items-center gap-4">
-            <div class="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center font-black text-2xl text-black shadow-lg">
-                🦊
-            </div>
+    <header>
+        <div class="brand">
+            <div class="brand-icon">FR</div>
             <div>
-                <h1 class="text-3xl font-black uppercase tracking-wider leading-none">
-                    FOX <span class="text-amber-500">REPLAY</span>
-                </h1>
-                <span class="text-xs font-mono uppercase tracking-widest text-zinc-400 mt-1 block">
-                    Sistema Autônomo de Quadra &bull; 4K Edge
-                </span>
+                <h1 class="brand-title">FOX <span>REPLAY</span></h1>
+                <span id="subtitulo-quadra" class="brand-sub">Sistema Autônomo de Quadra &bull; Edge Core</span>
             </div>
         </div>
 
-        <div id="status-chip" class="flex items-center gap-3 bg-zinc-900 border border-zinc-800 px-5 py-2.5 rounded-full">
-            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="status-texto" class="text-xs font-mono font-bold tracking-widest text-zinc-300 uppercase">
-                SISTEMA OPERACIONAL
-            </span>
+        <div class="status-chip">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-texto" class="status-text">SISTEMA OPERACIONAL</span>
         </div>
     </header>
 
-    <!-- CENTRO: CONTEÚDO DINÂMICO (PAREAMENTO OU REPLAY) -->
-    <main class="flex-1 flex items-center justify-center z-10">
-        <!-- 1. MODO: AGUARDANDO ATIVAÇÃO / PAREAMENTO -->
-        <div id="painel-pareamento" class="flex flex-col md:flex-row items-center gap-16 max-w-4xl text-center md:text-left">
-            <div class="space-y-6 flex-1">
-                <span class="text-xs font-mono uppercase font-bold text-amber-500 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
-                    Novo Totem Detectado
-                </span>
-                <h2 class="text-5xl font-black uppercase tracking-tight leading-tight">
-                    Conecte esta quadra à sua Arena
-                </h2>
-                <p class="text-zinc-400 text-lg leading-relaxed">
-                    Aponte a câmera do seu celular para o QR Code ao lado ou acesse o endereço abaixo e digite o código de ativação:
+    <main>
+        <!-- 1. PAREAMENTO -->
+        <section id="painel-pareamento" class="panel hidden">
+            <div class="col-text">
+                <span class="badge">Novo Totem Detectado</span>
+                <h2>Conecte esta quadra à sua <span>Arena</span></h2>
+                <p class="lead">
+                    Aponte a câmera do celular para o QR Code ao lado ou acesse o painel administrativo e informe o código abaixo:
                 </p>
-                <div class="bg-zinc-900/90 border border-amber-500/40 p-6 rounded-2xl inline-block shadow-2xl">
-                    <span class="text-xs uppercase font-mono tracking-widest text-zinc-400 block mb-1">Código de Ativação</span>
-                    <span id="codigo-ativacao" class="text-5xl font-mono font-black text-amber-400 tracking-wider">
-                        Carregando...
-                    </span>
+                <div class="code-box">
+                    <span class="code-label">Código de Ativação</span>
+                    <span id="codigo-ativacao" class="code-value">---</span>
                 </div>
             </div>
-
-            <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center">
-                <div id="qrcode-pareamento" class="w-[200px] h-[200px] flex items-center justify-center"></div>
-                <span class="text-[11px] font-bold text-zinc-800 mt-3 uppercase tracking-wider font-mono">
-                    Escaneie para Ativar
-                </span>
+            <div class="qr-card">
+                <div id="qrcode-pareamento" class="qr-box"></div>
+                <span class="qr-caption">Escaneie para Ativar</span>
             </div>
-        </div>
+        </section>
 
-        <!-- 2. MODO: REPLAY DISPONÍVEL (APÓS APERTAR O BOTÃO NA QUADRA) -->
-        <div id="painel-replay" class="hidden flex flex-col md:flex-row items-center gap-16 max-w-4xl text-center md:text-left">
-            <div class="space-y-6 flex-1">
-                <div class="flex items-center gap-3 justify-center md:justify-start">
-                    <span class="text-xs font-mono uppercase font-black text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20 animate-pulse">
-                        ⚡ Lance Gravado com Sucesso!
-                    </span>
-                </div>
-                <h2 class="text-6xl font-black uppercase tracking-tight leading-tight">
-                    Seu Replay <br/><span class="text-amber-500">está Pronto!</span>
-                </h2>
-                <p class="text-zinc-300 text-xl leading-relaxed">
-                    Aponte seu celular agora para rever seu lance e salvar direto na sua galeria com os patrocinadores da arena.
+        <!-- 2. PRONTO / STANDBY -->
+        <section id="painel-pronto" class="panel">
+            <div class="col-text">
+                <span class="badge green">Gravação Contínua Ativa</span>
+                <h2>Fez um ponto incrível? <span>Aperte o botão!</span></h2>
+                <p id="mensagem-pronto" class="lead">
+                    Pressione o botão físico na grade logo após a jogada para salvar os últimos 30 segundos em alta definição.
                 </p>
-                <span class="text-sm font-mono text-zinc-500 block">
-                    O link permanecerá disponível por 14 dias para você compartilhar nas redes sociais.
-                </span>
+                <span class="meta-hint">Escaneie o QR Code ao lado para ver todos os lances desta arena hoje.</span>
             </div>
+            <div id="card-qr-arena" class="qr-card">
+                <div id="qrcode-arena" class="qr-box"></div>
+                <span class="qr-caption">Feed da Arena</span>
+            </div>
+        </section>
 
-            <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center glow-amber scale-110">
-                <div id="qrcode-replay" class="w-[220px] h-[220px] flex items-center justify-center"></div>
-                <span class="text-xs font-black text-zinc-950 mt-3 uppercase tracking-wider font-mono">
-                    Acesse seu Lance Agora
-                </span>
+        <!-- 3. GRAVANDO / PROCESSANDO -->
+        <section id="painel-gravando" class="panel centered hidden">
+            <div class="spinner"></div>
+            <span class="badge">Processando Replay</span>
+            <h2>Recortando os últimos <span>30 segundos</span></h2>
+            <p id="mensagem-gravando" class="lead">Aguarde alguns segundos enquanto o QR Code do seu lance é gerado...</p>
+        </section>
+
+        <!-- 4. REPLAY PRONTO -->
+        <section id="painel-replay" class="panel hidden">
+            <div class="col-text">
+                <span class="badge green">Lance Gravado com Sucesso!</span>
+                <h2>Seu Replay <span>está Pronto!</span></h2>
+                <p class="lead">
+                    Aponte a câmera do seu celular agora para assistir, baixar com as marcas da arena e compartilhar nos Stories.
+                </p>
+                <span class="meta-hint">Disponível na nuvem por 14 dias. Salve no seu perfil para guardar para sempre.</span>
+                <div class="progress-track">
+                    <div id="barra-retorno" class="progress-fill"></div>
+                </div>
             </div>
-        </div>
+            <div class="qr-card glow">
+                <div id="qrcode-replay" class="qr-box"></div>
+                <span class="qr-caption">Acesse seu Lance Agora</span>
+            </div>
+        </section>
+
+        <!-- 5. CÂMERA OFFLINE -->
+        <section id="painel-offline" class="panel centered hidden">
+            <span class="badge red">Atenção Técnica</span>
+            <h2>Reconectando <span>Câmera da Quadra</span></h2>
+            <p id="mensagem-offline" class="lead">Verificando conexão de rede com a câmera IP. O sistema retornará automaticamente.</p>
+        </section>
     </main>
 
-    <!-- RODAPÉ: INSTRUÇÕES FIXAS -->
-    <footer class="flex items-center justify-between border-t border-zinc-800/80 pt-6 text-zinc-500 text-xs font-mono z-10">
-        <div>
-            🎾 <strong>BOTÃO NA GRADE:</strong> Aperte imediatamente após um belo ponto para salvar os últimos 30 segundos.
-        </div>
-        <div>
-            FOX REPLAY &bull; TECNOLOGIA ESPORTIVA AUTÔNOMA
-        </div>
+    <footer>
+        <div><strong>BOTÃO NA GRADE:</strong> Aperte imediatamente após um grande ponto para gravar os últimos 30 segundos.</div>
+        <div>FOX REPLAY &bull; TECNOLOGIA ESPORTIVA AUTÔNOMA</div>
     </footer>
 
-    <!-- SCRIPT DE LEITURA DO STATUS LOCAL (/dev/shm/totem_status.json) -->
     <script>
-        let qrPareamento = null;
-        let qrReplay = null;
-        let ultimoModo = null;
+        var ultimaAssinatura = null;
+        var timerRetornoStandby = null;
+        var urlArenaRenderizada = null;
+
+        function esconderTodosPaineis() {
+            ['painel-pareamento', 'painel-pronto', 'painel-gravando', 'painel-replay', 'painel-offline']
+                .forEach(function (id) {
+                    document.getElementById(id).classList.add('hidden');
+                });
+        }
+
+        function renderizarQR(elementId, texto, tamanho) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            container.innerHTML = '';
+            if (typeof QRCode === 'undefined' || !texto) {
+                container.textContent = texto || 'Aguardando link...';
+                return;
+            }
+            new QRCode(container, {
+                text: texto,
+                width: tamanho,
+                height: tamanho,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function atualizarChip(texto, cor) {
+            var dot = document.getElementById('status-dot');
+            var label = document.getElementById('status-texto');
+            dot.className = 'status-dot' + (cor ? ' ' + cor : '');
+            label.textContent = texto;
+        }
+
+        function mostrarStandby(status) {
+            esconderTodosPaineis();
+            document.getElementById('painel-pronto').classList.remove('hidden');
+            atualizarChip('PRONTO PARA GRAVAR', '');
+            if (status && status.mensagem) {
+                document.getElementById('mensagem-pronto').textContent = status.mensagem;
+            }
+            var cardQr = document.getElementById('card-qr-arena');
+            if (status && status.url_arena) {
+                cardQr.classList.remove('hidden');
+                if (urlArenaRenderizada !== status.url_arena) {
+                    urlArenaRenderizada = status.url_arena;
+                    renderizarQR('qrcode-arena', status.url_arena, 200);
+                }
+            } else {
+                cardQr.classList.add('hidden');
+            }
+        }
 
         async function atualizarTela() {
             try {
-                // Tenta ler o status escrito pelo daemon python em /dev/shm
-                const res = await fetch('/dev/shm/totem_status.json?t=' + Date.now());
+                var res = await fetch('/status.json?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) return;
-                const status = await res.json();
+                var status = await res.json();
 
-                if (status.modo !== ultimoModo) {
-                    ultimoModo = status.modo;
+                if (status.nome_quadra) {
+                    document.getElementById('subtitulo-quadra').textContent =
+                        status.nome_quadra + ' • Sistema Autônomo de Quadra';
+                }
 
-                    if (status.modo === 'pareamento') {
-                        document.getElementById('painel-pareamento').classList.remove('hidden');
-                        document.getElementById('painel-replay').classList.add('hidden');
-                        document.getElementById('codigo-ativacao').innerText = status.codigo || '---';
+                var assinatura = [
+                    status.modo || '',
+                    status.id_replay || '',
+                    status.codigo || '',
+                    status.atualizado_em || ''
+                ].join('|');
 
-                        if (!qrPareamento) {
-                            const urlAtivacao = status.url_ativacao || 'https://fox-replay.vercel.app/ativar';
-                            document.getElementById('qrcode-pareamento').innerHTML = '';
-                            qrPareamento = new QRCode(document.getElementById('qrcode-pareamento'), {
-                                text: urlAtivacao,
-                                width: 200,
-                                height: 200,
-                                colorDark: "#000000",
-                                colorLight: "#ffffff",
-                                correctLevel: QRCode.CorrectLevel.M
-                            });
-                        }
-                    } else if (status.modo === 'replay_pronto') {
-                        document.getElementById('painel-pareamento').classList.add('hidden');
-                        document.getElementById('painel-replay').classList.remove('hidden');
+                if (assinatura === ultimaAssinatura) return;
+                ultimaAssinatura = assinatura;
 
-                        document.getElementById('qrcode-replay').innerHTML = '';
-                        qrReplay = new QRCode(document.getElementById('qrcode-replay'), {
-                            text: status.url_jogada,
-                            width: 220,
-                            height: 220,
-                            colorDark: "#000000",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
+                if (timerRetornoStandby) {
+                    clearTimeout(timerRetornoStandby);
+                    timerRetornoStandby = null;
+                }
 
-                        // Retorna à tela padrão após 90 segundos
-                        setTimeout(() => {
-                            document.getElementById('painel-replay').classList.add('hidden');
-                            document.getElementById('painel-pareamento').classList.remove('hidden');
-                        }, 90000);
+                if (status.modo === 'pareamento') {
+                    esconderTodosPaineis();
+                    document.getElementById('painel-pareamento').classList.remove('hidden');
+                    atualizarChip('AGUARDANDO PAREAMENTO', 'amber');
+                    document.getElementById('codigo-ativacao').textContent = status.codigo || '---';
+                    renderizarQR(
+                        'qrcode-pareamento',
+                        status.url_ativacao || 'https://fox-replay.vercel.app/ativar',
+                        210
+                    );
+                } else if (status.modo === 'gravando') {
+                    esconderTodosPaineis();
+                    document.getElementById('painel-gravando').classList.remove('hidden');
+                    atualizarChip('PROCESSANDO LANCE', 'amber');
+                    if (status.mensagem) {
+                        document.getElementById('mensagem-gravando').textContent = status.mensagem;
                     }
+                } else if (status.modo === 'replay_pronto') {
+                    esconderTodosPaineis();
+                    document.getElementById('painel-replay').classList.remove('hidden');
+                    atualizarChip('REPLAY DISPONÍVEL', '');
+                    renderizarQR('qrcode-replay', status.url_jogada, 220);
+
+                    var barra = document.getElementById('barra-retorno');
+                    barra.style.transition = 'none';
+                    barra.style.transform = 'scaleX(1)';
+                    void barra.offsetWidth;
+                    barra.style.transition = 'transform 90s linear';
+                    barra.style.transform = 'scaleX(0)';
+
+                    // Retorna para a tela de STANDBY (pronto) após 90s — nunca para pareamento!
+                    timerRetornoStandby = setTimeout(function () {
+                        mostrarStandby(status);
+                    }, 90000);
+                } else if (status.modo === 'camera_offline') {
+                    esconderTodosPaineis();
+                    document.getElementById('painel-offline').classList.remove('hidden');
+                    atualizarChip('RECONECTANDO CÂMERA', 'red');
+                    if (status.mensagem) {
+                        document.getElementById('mensagem-offline').textContent = status.mensagem;
+                    }
+                } else {
+                    mostrarStandby(status);
                 }
             } catch (e) {
                 // Polling contínuo
             }
         }
 
-        setInterval(atualizarTela, 2000);
+        setInterval(atualizarTela, 1500);
         atualizarTela();
     </script>
 </body>

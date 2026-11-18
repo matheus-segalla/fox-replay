@@ -1,15 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
-
-// Ícones SVG Minimalistas e Esportivos
-const IconUser = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
+import AppHeader from '@/components/AppHeader';
+import ReplayThumbnail from '@/components/ReplayThumbnail';
 
 const IconStar = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -63,6 +59,29 @@ const IconShield = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const IconPlay = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <polygon points="6 3 20 12 6 21 6 3" />
+  </svg>
+);
+
+const ESPORTES = [
+  'Beach Tennis',
+  'Futevôlei',
+  'Padel',
+  'Tênis',
+  'Vôlei de Praia',
+  'Futebol Society',
+  'Outro',
+];
+
+function getIniciais(nome) {
+  if (!nome) return 'AT';
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[1][0]).toUpperCase();
+}
+
 export default function PerfilPage() {
   const router = useRouter();
 
@@ -71,34 +90,59 @@ export default function PerfilPage() {
   const [lances, setLances] = useState([]);
   const [toast, setToast] = useState(null);
 
+  // Filtros da galeria do atleta
+  const [buscaTexto, setBuscaTexto] = useState('');
+  const [filtroArena, setFiltroArena] = useState('todas');
+
+  // Modal de edição do perfil & senha
+  const [modalEditarAberto, setModalEditarAberto] = useState(false);
+  const [editNome, setEditNome] = useState('');
+  const [editEsporte, setEditEsporte] = useState('Beach Tennis');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [erroPerfil, setErroPerfil] = useState('');
+
   const exibirToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3200);
   };
+
+  useEffect(() => {
+    if (!modalEditarAberto) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setModalEditarAberto(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [modalEditarAberto]);
 
   // Carrega usuário autenticado e lances salvos
   useEffect(() => {
     async function carregarDados() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user) {
           setUsuario(session.user);
+          setEditNome(session.user.user_metadata?.nome_completo || '');
+          setEditEsporte(session.user.user_metadata?.esporte_favorito || 'Beach Tennis');
         }
 
-        // Carrega lances do localStorage
         const lancesLocais = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
-        setLances(lancesLocais);
+        setLances(Array.isArray(lancesLocais) ? lancesLocais : []);
 
-        // Se o usuário estiver autenticado, tenta buscar também da tabela favoritos
         if (session?.user) {
           try {
-            const { data: favoritosData } = await supabase
+            let { data: favoritosData, error } = await supabase
               .from('favoritos')
               .select(`
                 replay_id,
                 replays (
                   id,
                   video_url,
+                  thumbnail_url,
                   criado_em,
                   quadras (
                     id,
@@ -113,6 +157,30 @@ export default function PerfilPage() {
               `)
               .eq('usuario_id', session.user.id);
 
+            if (error && (error.code === '42703' || String(error.message || '').includes('thumbnail_url'))) {
+              const fallback = await supabase
+                .from('favoritos')
+                .select(`
+                  replay_id,
+                  replays (
+                    id,
+                    video_url,
+                    criado_em,
+                    quadras (
+                      id,
+                      nome,
+                      arenas (
+                        id,
+                        nome,
+                        cidade
+                      )
+                    )
+                  )
+                `)
+                .eq('usuario_id', session.user.id);
+              favoritosData = fallback.data;
+            }
+
             if (favoritosData && favoritosData.length > 0) {
               const formatados = favoritosData
                 .map((f) => f.replays)
@@ -120,23 +188,21 @@ export default function PerfilPage() {
                 .map((r) => ({
                   id: r.id,
                   videoUrl: r.video_url,
+                  thumbnailUrl: r.thumbnail_url || null,
                   criadoEm: r.criado_em,
                   nomeQuadra: r.quadras?.nome || 'Quadra',
-                  nomeArena: r.quadras?.arenas?.nome || 'Arena Parceira'
+                  nomeArena: r.quadras?.arenas?.nome || 'Arena Parceira',
                 }));
 
-              // Mescla sem duplicados
               const mapa = new Map();
-              [...formatados, ...lancesLocais].forEach((item) => {
+              [...formatados, ...(Array.isArray(lancesLocais) ? lancesLocais : [])].forEach((item) => {
                 if (item?.id && !mapa.has(item.id)) {
                   mapa.set(item.id, item);
                 }
               });
               setLances(Array.from(mapa.values()));
             }
-          } catch (e) {
-            // Tabela favoritos opcional caso ainda não tenha sido rodada a migration
-          }
+          } catch {}
         }
       } catch (err) {
         console.error('Erro ao carregar perfil:', err);
@@ -148,7 +214,78 @@ export default function PerfilPage() {
     carregarDados();
   }, []);
 
-  // Remover lance salvo
+  // Lista única de arenas dos lances salvos
+  const arenasDosLances = useMemo(() => {
+    const unicas = new Set();
+    lances.forEach((l) => {
+      if (l.nomeArena) unicas.add(l.nomeArena);
+    });
+    return Array.from(unicas).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [lances]);
+
+  const lancesFiltrados = useMemo(() => {
+    const termo = buscaTexto.trim().toLowerCase();
+    return lances.filter((l) => {
+      if (filtroArena !== 'todas' && l.nomeArena !== filtroArena) return false;
+      if (!termo) return true;
+      return (
+        (l.nomeArena || '').toLowerCase().includes(termo) ||
+        (l.nomeQuadra || '').toLowerCase().includes(termo)
+      );
+    });
+  }, [lances, filtroArena, buscaTexto]);
+
+  const handleSalvarPerfil = async (e) => {
+    e.preventDefault();
+    if (!usuario) return;
+    setErroPerfil('');
+
+    if (!editNome.trim()) {
+      setErroPerfil('Informe seu nome completo.');
+      return;
+    }
+
+    if (novaSenha) {
+      if (novaSenha.length < 6) {
+        setErroPerfil('A nova senha precisa ter no mínimo 6 caracteres.');
+        return;
+      }
+      if (novaSenha !== confirmarSenha) {
+        setErroPerfil('As senhas digitadas não conferem.');
+        return;
+      }
+    }
+
+    setSalvandoPerfil(true);
+    try {
+      const payload = {
+        data: {
+          ...usuario.user_metadata,
+          nome_completo: editNome.trim(),
+          esporte_favorito: editEsporte,
+        },
+      };
+      if (novaSenha) {
+        payload.password = novaSenha;
+      }
+
+      const { data, error } = await supabase.auth.updateUser(payload);
+      if (error) throw error;
+
+      if (data?.user) {
+        setUsuario(data.user);
+      }
+      setNovaSenha('');
+      setConfirmarSenha('');
+      setModalEditarAberto(false);
+      exibirToast(novaSenha ? 'Perfil e senha atualizados com sucesso!' : 'Perfil atualizado com sucesso!');
+    } catch (err) {
+      setErroPerfil(err.message || 'Não foi possível atualizar seu perfil agora.');
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  };
+
   const removerLance = async (lanceId) => {
     const atualizados = lances.filter((l) => l.id !== lanceId);
     setLances(atualizados);
@@ -167,27 +304,11 @@ export default function PerfilPage() {
     }
   };
 
-  // Download do vídeo em alta definição
-  const baixarReplay = async (lance) => {
-    try {
-      exibirToast('Preparando download do vídeo...');
-      const resposta = await fetch(lance.videoUrl);
-      const blob = await resposta.blob();
-      const urlBlob = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = urlBlob;
-      link.download = `fox-replay-${lance.nomeArena.toLowerCase().replace(/\s+/g, '-')}-${lance.id.slice(0, 6)}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(urlBlob);
-      exibirToast('Download concluído!');
-    } catch (e) {
-      window.open(lance.videoUrl, '_blank');
-    }
+  // Todos os downloads passam pelo fluxo 9:16 com marca da arena e 4 patrocinadores
+  const abrirDownloadComMarcas = (lanceId) => {
+    router.push(`/jogada?id=${lanceId}&baixar=1`);
   };
 
-  // Copiar link do lance
   const compartilharLance = (lanceId) => {
     const url = `${window.location.origin}/jogada?id=${lanceId}`;
     if (navigator.clipboard) {
@@ -198,18 +319,12 @@ export default function PerfilPage() {
     }
   };
 
-  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    try {
+      localStorage.removeItem('fox_arena_id');
+    } catch {}
     router.push('/');
-  };
-
-  // Helper para iniciais
-  const getIniciais = (nome) => {
-    if (!nome) return 'AT';
-    const partes = nome.trim().split(/\s+/);
-    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
-    return (partes[0][0] + partes[1][0]).toUpperCase();
   };
 
   const nomeExibicao =
@@ -219,49 +334,16 @@ export default function PerfilPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between relative selection:bg-amber-500 selection:text-white">
-      {/* LINHAS DE GRADE E AMBIÊNCIA */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[340px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* NAVBAR */}
-      <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 backdrop-blur-md bg-white/80 shadow-xs">
-        <div className="w-full max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => router.push('/')}>
-            <img
-              src="/logo-fox.jpeg"
-              alt="Logo Fox Replay"
-              className="h-9 w-9 object-cover rounded-xl border border-zinc-200 shadow-xs bg-white"
-            />
-            <h1 className="text-lg font-black tracking-widest uppercase text-zinc-900 leading-none">
-              FOX <span className="text-amber-500">REPLAY</span>
-            </h1>
-          </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push('/')}
-            className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white shadow-xs transition-colors"
-          >
-            Explorar Arenas
-          </button>
-          {usuario ? (
-            <button
-              onClick={handleLogout}
-              className="text-xs font-semibold text-red-600 hover:text-red-700 px-3 py-1.5 rounded-xl border border-red-200 bg-white hover:bg-red-50 shadow-xs transition-colors"
-            >
-              Sair
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push('/entrar')}
-              className="text-xs font-bold text-zinc-950 bg-amber-500 hover:bg-amber-400 px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
-            >
-              Criar Conta Grátis
-            </button>
-          )}
-        </div>
-        </div>
-      </header>
+      {/* CABEÇALHO GLOBAL CONTEXTUAL */}
+      <AppHeader
+        theme="light"
+        activeRoute="perfil"
+        showLogout={Boolean(usuario)}
+        onLogout={handleLogout}
+      />
 
       {/* TOAST FLUTUANTE */}
       {toast && (
@@ -280,21 +362,33 @@ export default function PerfilPage() {
               {getIniciais(nomeExibicao)}
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black text-zinc-900 uppercase">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-black text-zinc-900 uppercase">
                   {nomeExibicao}
-                </h2>
+                </h1>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 border border-amber-500/20 px-2 py-0.5 rounded-full">
                   Atleta
                 </span>
               </div>
               <p className="text-xs text-zinc-500 font-medium">
-                {usuario?.email || 'Navegação local neste aparelho'} • {esporteExibicao}
+                {usuario?.email || 'Navegação local neste aparelho'} &bull; {esporteExibicao}
               </p>
+              {usuario && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErroPerfil('');
+                    setModalEditarAberto(true);
+                  }}
+                  className="text-[11px] font-bold text-amber-700 hover:text-amber-800 underline pt-0.5 cursor-pointer"
+                >
+                  Editar perfil e senha
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 sm:border-l sm:border-zinc-100 sm:pl-6 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-5 sm:border-l sm:border-zinc-100 sm:pl-6 w-full sm:w-auto justify-between sm:justify-start">
             <div className="text-left">
               <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider block">
                 Lances Salvos
@@ -303,17 +397,17 @@ export default function PerfilPage() {
             </div>
             <div className="text-left">
               <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider block">
-                Armazenamento
+                Retenção
               </span>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                 <IconShield className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Permanente</span>
+                <span>{usuario ? 'Permanente' : 'Local (14 dias)'}</span>
               </span>
             </div>
           </div>
         </div>
 
-        {/* ALERTA SE NÃO ESTIVER AUTENTICADO */}
+        {/* ALERTA SE VISITANTE */}
         {!usuario && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900">
             <div className="space-y-0.5">
@@ -322,32 +416,57 @@ export default function PerfilPage() {
                 <span>Proteja seus lances para sempre</span>
               </h4>
               <p className="text-[11px] text-amber-800/90 font-normal">
-                Você está navegando como visitante. Crie sua conta gratuita em 30 segundos para sincronizar seus vídeos na nuvem e nunca perdê-los.
+                Você está navegando como visitante. Crie sua conta gratuita em 30 segundos para manter seus favoritos salvos permanentemente.
               </p>
             </div>
-            <button
-              onClick={() => router.push('/entrar')}
+            <Link
+              href="/entrar"
               className="text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3.5 py-2 rounded-xl transition-all shadow-xs shrink-0"
             >
               Criar Conta Gratuita
-            </button>
+            </Link>
           </div>
         )}
 
-        {/* SEÇÃO DA GALERIA DE LANCES */}
+        {/* GALERIA DE LANCES + FILTROS */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm sm:text-base font-black text-zinc-900 uppercase tracking-tight">
+              <h2 className="text-sm sm:text-base font-black text-zinc-900 uppercase tracking-tight">
                 Minha Galeria de Lances
-              </h3>
+              </h2>
               <p className="text-xs text-zinc-500">
                 Seus melhores momentos gravados nas quadras parceiras Fox Replay.
               </p>
             </div>
-            <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-3 py-1 rounded-full">
-              {lances.length} {lances.length === 1 ? 'vídeo' : 'vídeos'}
-            </span>
+
+            {lances.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={buscaTexto}
+                  onChange={(e) => setBuscaTexto(e.target.value)}
+                  placeholder="Filtrar por arena ou quadra..."
+                  aria-label="Filtrar lances salvos"
+                  className="px-3 py-1.5 rounded-xl bg-white border border-zinc-200 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-amber-500 shadow-xs"
+                />
+                {arenasDosLances.length > 1 && (
+                  <select
+                    value={filtroArena}
+                    onChange={(e) => setFiltroArena(e.target.value)}
+                    aria-label="Filtrar por arena"
+                    className="px-3 py-1.5 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
+                  >
+                    <option value="todas">Todas as arenas</option>
+                    {arenasDosLances.map((nome) => (
+                      <option key={nome} value={nome}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
           </div>
 
           {carregando ? (
@@ -360,24 +479,36 @@ export default function PerfilPage() {
                 <IconStar className="w-6 h-6" />
               </div>
               <div className="space-y-1 max-w-sm mx-auto">
-                <h4 className="text-sm font-bold text-zinc-900 uppercase">
-                  Nenhum lance salvo ainda
-                </h4>
+                <h3 className="text-sm font-bold text-zinc-900 uppercase">Nenhum lance salvo ainda</h3>
                 <p className="text-xs text-zinc-500 font-normal">
                   Quando jogar em uma arena com totem Fox Replay, aperte o botão na quadra e salve o replay aqui no seu perfil.
                 </p>
               </div>
-              <button
-                onClick={() => router.push('/')}
+              <Link
+                href="/"
                 className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
               >
                 <span>Buscar uma Arena</span>
                 <IconArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : lancesFiltrados.length === 0 ? (
+            <div className="bg-white border border-zinc-200 rounded-2xl p-8 text-center space-y-2">
+              <p className="text-xs text-zinc-500">Nenhum lance salvo corresponde ao filtro selecionado.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setBuscaTexto('');
+                  setFiltroArena('todas');
+                }}
+                className="text-xs font-bold text-amber-700 hover:underline"
+              >
+                Limpar filtros
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {lances.map((lance) => {
+              {lancesFiltrados.map((lance) => {
                 const dataObj = lance.criadoEm ? new Date(lance.criadoEm) : null;
                 const dia = dataObj ? dataObj.toLocaleDateString('pt-BR') : '';
                 const hora = dataObj
@@ -387,22 +518,24 @@ export default function PerfilPage() {
                 return (
                   <div
                     key={lance.id}
-                    className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                    className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
                   >
-                    {/* PLAYER DE VÍDEO COMPACTO */}
-                    <div className="relative bg-zinc-950 aspect-video flex items-center justify-center overflow-hidden">
-                      {lance.videoUrl ? (
-                        <video
-                          src={lance.videoUrl}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <div className="text-zinc-500 text-xs font-medium">Replay gravado</div>
-                      )}
-                    </div>
+                    {/* THUMBNAIL LEVE -> ABRE PLAYER 9:16 */}
+                    <Link
+                      href={`/jogada?id=${lance.id}`}
+                      className="relative bg-zinc-950 aspect-video flex items-center justify-center overflow-hidden block"
+                    >
+                      <ReplayThumbnail
+                        thumbnailUrl={lance.thumbnailUrl}
+                        videoUrl={lance.videoUrl}
+                        alt={`Lance em ${lance.nomeArena || 'Arena'}`}
+                      />
+                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/10 transition-colors pointer-events-none">
+                        <div className="w-11 h-11 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center pl-0.5 shadow-lg group-hover:scale-110 transition-transform">
+                          <IconPlay className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </Link>
 
                     {/* INFORMAÇÕES DO LANCE */}
                     <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
@@ -412,17 +545,19 @@ export default function PerfilPage() {
                             {lance.nomeQuadra || 'Quadra'}
                           </span>
                           <span className="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                            Permanente
+                            {usuario ? 'Permanente' : 'Salvo'}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold text-zinc-900 uppercase">
+                        <h3 className="text-xs font-bold text-zinc-900 uppercase">
                           {lance.nomeArena || 'Complexo Esportivo'}
-                        </h4>
+                        </h3>
                         <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-medium">
-                          <span className="flex items-center gap-1">
-                            <IconCalendar className="w-3 h-3 text-zinc-400" />
-                            {dia}
-                          </span>
+                          {dia && (
+                            <span className="flex items-center gap-1">
+                              <IconCalendar className="w-3 h-3 text-zinc-400" />
+                              {dia}
+                            </span>
+                          )}
                           {hora && (
                             <span className="flex items-center gap-1">
                               <IconClock className="w-3 h-3 text-zinc-400" />
@@ -436,16 +571,19 @@ export default function PerfilPage() {
                       <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => baixarReplay(lance)}
-                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs flex items-center gap-1"
-                            title="Baixar vídeo em HD"
+                            type="button"
+                            onClick={() => abrirDownloadComMarcas(lance.id)}
+                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                            title="Baixar vídeo 9:16 com marca da arena e patrocinadores"
                           >
                             <IconDownload className="w-3.5 h-3.5" />
                             <span>Baixar</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => compartilharLance(lance.id)}
-                            className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded-xl transition-all"
+                            className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                            aria-label="Copiar link do lance"
                             title="Copiar link"
                           >
                             <IconShare className="w-3.5 h-3.5" />
@@ -453,8 +591,10 @@ export default function PerfilPage() {
                         </div>
 
                         <button
+                          type="button"
                           onClick={() => removerLance(lance.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1.5 rounded-lg transition-colors"
+                          className="text-zinc-400 hover:text-red-500 p-1.5 rounded-lg transition-colors cursor-pointer"
+                          aria-label="Remover dos salvos"
                           title="Remover dos salvos"
                         >
                           <IconTrash className="w-3.5 h-3.5" />
@@ -468,6 +608,103 @@ export default function PerfilPage() {
           )}
         </div>
       </main>
+
+      {/* MODAL DE EDIÇÃO DE PERFIL E SENHA */}
+      {modalEditarAberto && usuario && (
+        <div
+          className="fixed inset-0 bg-zinc-950/45 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setModalEditarAberto(false)}
+        >
+          <div
+            className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
+              <h3 className="text-sm font-black uppercase tracking-wider text-zinc-900">
+                Editar Perfil e Segurança
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalEditarAberto(false)}
+                aria-label="Fechar modal"
+                className="text-zinc-400 hover:text-zinc-700 w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {erroPerfil && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
+                {erroPerfil}
+              </div>
+            )}
+
+            <form onSubmit={handleSalvarPerfil} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1 tracking-wider">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editNome}
+                  onChange={(e) => setEditNome(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1 tracking-wider">
+                  Esporte Principal
+                </label>
+                <select
+                  value={editEsporte}
+                  onChange={(e) => setEditEsporte(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white cursor-pointer"
+                >
+                  {ESPORTES.map((esp) => (
+                    <option key={esp} value={esp}>
+                      {esp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-zinc-100 space-y-3">
+                <span className="block text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
+                  Alterar Senha (Opcional)
+                </span>
+                <input
+                  type="password"
+                  minLength={6}
+                  value={novaSenha}
+                  onChange={(e) => setNovaSenha(e.target.value)}
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                />
+                {novaSenha && (
+                  <input
+                    type="password"
+                    minLength={6}
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    placeholder="Confirme a nova senha"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                  />
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={salvandoPerfil}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {salvandoPerfil ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer className="w-full border-t border-zinc-200 py-5 text-center z-10 bg-white">

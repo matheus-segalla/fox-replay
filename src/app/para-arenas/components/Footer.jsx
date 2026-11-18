@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Footer() {
@@ -13,9 +14,11 @@ export default function Footer() {
                     className="flex items-center gap-2.5 cursor-pointer select-none"
                     onClick={() => router.push('/')}
                 >
-                    <img
+                    <Image
                         src="/logo-fox.jpeg"
                         alt="Logo Fox Replay"
+                        width={28}
+                        height={28}
                         className="h-7 w-7 object-cover rounded-lg border border-zinc-800 bg-zinc-900"
                     />
                     <span className="text-sm font-black tracking-widest uppercase text-white">

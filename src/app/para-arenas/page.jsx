@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
@@ -12,6 +10,18 @@ import BusinessOpportunities from './components/BusinessOpportunities';
 import FAQSection from './components/FAQSection';
 import LeadFormSection from './components/LeadFormSection';
 import Footer from './components/Footer';
+
+export const metadata = {
+    title: 'FOX REPLAY para Arenas — Tecnologia Autônoma de Replay Esportivo',
+    description:
+        'Transforme suas quadras de Beach Tennis, Futevôlei, Vôlei e Tênis em arenas conectadas. Replays de 30s via QR Code com monetização por patrocínio local.',
+    openGraph: {
+        title: 'FOX REPLAY para Arenas — Cada grande jogada merece ser revivida',
+        description:
+            'Infraestrutura autônoma de gravação de lances com botão na quadra, QR Code instantâneo e espaços para patrocinadores.',
+        type: 'website',
+    },
+};
 
 export default function PaginaParaArenas() {
     return (

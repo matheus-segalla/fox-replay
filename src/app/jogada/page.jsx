@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { montarUrlWhatsAppSuporte } from '../../lib/auth';
 import { comporEBaixarVideoComPatrocinadores } from '../../lib/videoWatermark';
 
 // Componente interno que consome os parâmetros da URL e renderiza o player premium
@@ -10,6 +12,7 @@ function ConteudoJogada() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const jogadaId = searchParams.get('id');
+    const querBaixar = searchParams.get('baixar') === '1';
 
     const [dados, setDados] = useState(null);
     const [carregando, setCarregando] = useState(true);
@@ -152,10 +155,14 @@ function ConteudoJogada() {
 
                 const logoArenaSalva = arenaObj?.logo_url || (arenaObj?.id ? localStorage.getItem('fox_logo_' + arenaObj.id) : null);
 
-                // Registra visualização do replay e dos patrocinadores no banco
+                // Registra visualização do replay apenas 1x por sessão (evita dupla contagem em StrictMode/F5)
                 try {
-                    supabase.rpc('incrementar_visualizacao', { replay_id: data.id }).then(() => {}).catch(() => {});
-                } catch (e) {}
+                    const chaveView = `fox_view_${data.id}`;
+                    if (!sessionStorage.getItem(chaveView)) {
+                        sessionStorage.setItem(chaveView, '1');
+                        supabase.rpc('incrementar_visualizacao', { replay_id: data.id }).then(() => {}).catch(() => {});
+                    }
+                } catch {}
 
                 if (!cancelado) {
                     setDados({
@@ -189,6 +196,18 @@ function ConteudoJogada() {
             cancelado = true;
         };
     }, [jogadaId]);
+
+    // Fecha modais ao pressionar Escape
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setModalPerfilAberto(false);
+                setModalPrivacidadeAberto(false);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     // Função de download seguro com queima de patrocinadores e fallback direto
     const baixarVideo = async () => {
@@ -252,6 +271,9 @@ function ConteudoJogada() {
             }
 
             exibirToast('Vídeo aberto para download! 📥');
+            try {
+                supabase.rpc('incrementar_download', { replay_id: dados.id }).then(() => {}).catch(() => {});
+            } catch {}
             setTimeout(() => setModalDownloadAberto(false), 600);
         } finally {
             setBaixando(false);
@@ -378,9 +400,12 @@ function ConteudoJogada() {
                     <div className="flex items-center justify-between px-1.5 pt-1 pb-2 border-b border-white/10">
                         {/* Marca Fox Replay */}
                         <div className="flex items-center gap-2 select-none">
-                            <img
+                            <Image
                                 src="/logo-fox.jpeg"
                                 alt="Logo Fox Replay"
+                                width={40}
+                                height={40}
+                                priority
                                 className="h-10 w-10 object-cover rounded-xl border border-amber-500/50 shadow-sm bg-black"
                             />
                             <div>
@@ -396,10 +421,13 @@ function ConteudoJogada() {
                         {/* Marca Oficial da Arena */}
                         <div className="flex items-center gap-2 select-none text-right">
                             {dados?.logoArena ? (
-                                <img
+                                <Image
                                     src={dados.logoArena}
-                                    alt={dados.nomeArena}
-                                    className="h-10 max-w-[130px] object-contain rounded-xl border border-white/10 bg-white/5 p-1"
+                                    alt={dados.nomeArena || 'Arena'}
+                                    width={130}
+                                    height={40}
+                                    unoptimized
+                                    className="h-10 w-auto max-w-[130px] object-contain rounded-xl border border-white/10 bg-white/5 p-1"
                                 />
                             ) : (
                                 <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-right">
@@ -451,10 +479,13 @@ function ConteudoJogada() {
                                     >
                                         {temPat ? (
                                             pat.logo_url ? (
-                                                <img
+                                                <Image
                                                     src={pat.logo_url}
                                                     alt={pat.nome || 'Patrocinador'}
-                                                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                                                    width={90}
+                                                    height={64}
+                                                    unoptimized
+                                                    className="max-h-full max-w-full w-auto h-auto object-contain group-hover:scale-105 transition-transform"
                                                 />
                                             ) : (
                                                 <span className="text-[10px] font-black text-white uppercase truncate px-1">
@@ -482,11 +513,18 @@ function ConteudoJogada() {
                 {/* BOTÕES DE AÇÃO: DOWNLOAD & COMPARTILHAMENTO               */}
                 {/* ======================================================== */}
                 <div className="w-full space-y-2.5 mt-5">
+                    {querBaixar && !baixando && (
+                        <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 text-[11px] font-semibold text-center animate-fadeIn">
+                            Toque no botão abaixo para gerar e salvar seu replay 9:16 com áudio e marcas da arena.
+                        </div>
+                    )}
                     {/* Botão Principal de Download */}
                     <button
                         onClick={baixarVideo}
                         disabled={baixando}
-                        className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl shadow-amber-500/10 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                        className={`w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl shadow-amber-500/10 active:scale-[0.99] transition-all flex items-center justify-center gap-2 ${
+                            querBaixar && !baixando ? 'ring-4 ring-amber-400/40' : ''
+                        }`}
                     >
                         {baixando ? (
                             <>
@@ -628,10 +666,9 @@ function ConteudoJogada() {
                         <div className="space-y-2 pt-2">
                             <button
                                 onClick={() => {
-                                    const texto = encodeURIComponent(
-                                        `Olá, solicito a exclusão imediata deste replay por questões de privacidade/imagem (LGPD):\n\nID do Replay: ${jogadaId}\nLink: ${window.location.href}`
-                                    );
-                                    window.open(`https://api.whatsapp.com/send?phone=5511999999999&text=${texto}`, '_blank');
+                                    const texto =
+                                        `Olá, solicito a exclusão imediata deste replay por questões de privacidade/imagem (LGPD):\n\nID do Replay: ${jogadaId}\nLink: ${window.location.href}`;
+                                    window.open(montarUrlWhatsAppSuporte(texto), '_blank', 'noopener,noreferrer');
                                 }}
                                 className="w-full py-3 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md"
                             >
@@ -675,9 +712,12 @@ function ConteudoJogada() {
                                 />
                             </div>
                             <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                                <span>Exportando MP4</span>
+                                <span>Exportando vídeo com áudio</span>
                                 <span className="text-amber-400 font-bold">{progressoDownload}%</span>
                             </div>
+                            <p className="text-[10px] text-zinc-500 pt-1">
+                                Mantenha esta aba aberta até o final para agilizar a exportação.
+                            </p>
                         </div>
                     </div>
                 </div>

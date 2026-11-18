@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export default function BusinessOpportunities() {
@@ -39,7 +37,7 @@ export default function BusinessOpportunities() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
                                 <span className="text-xs font-bold text-amber-400 uppercase">
-                                    01. Marca D'água no Vídeo
+                                    01. Marca D&apos;água no Vídeo
                                 </span>
                                 <p className="text-[11px] text-zinc-400">
                                     Logo do patrocinador aplicada discretamente no take exportado para as redes.

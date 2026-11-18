@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
+import ReplayThumbnail from '@/components/ReplayThumbnail';
+
+const TAMANHO_PAGINA = 24;
 
 // Ícones SVG minimalistas para substituir emojis e remover estética de IA
 function IconMapPin({ className = "w-3.5 h-3.5" }) {
@@ -108,7 +112,7 @@ function IconRefresh({ className = "w-3.5 h-3.5" }) {
     );
 }
 
-export default function PortalArenaUnificado() {
+function ConteudoPortalArena() {
     const params = useParams();
     const searchParams = useSearchParams();
     const arenaId = params.arenaId;
@@ -118,8 +122,11 @@ export default function PortalArenaUnificado() {
     const [arena, setArena] = useState(null);
     const [quadras, setQuadras] = useState([]);
     const [replays, setReplays] = useState([]);
+    const [totalReplays, setTotalReplays] = useState(0);
     const [carregando, setCarregando] = useState(true);
     const [carregandoReplays, setCarregandoReplays] = useState(false);
+    const [carregandoMais, setCarregandoMais] = useState(false);
+    const [erroArena, setErroArena] = useState(false);
 
     // Estados de Filtro
     const [quadraAtiva, setQuadraAtiva] = useState(searchParams.get('quadra') || 'todas');
@@ -264,6 +271,7 @@ export default function PortalArenaUnificado() {
 
             } catch (error) {
                 console.error('Erro ao carregar arena:', error);
+                setErroArena(true);
             } finally {
                 setCarregando(false);
             }
@@ -272,112 +280,133 @@ export default function PortalArenaUnificado() {
         if (arenaId) carregarArenaEQuadras();
     }, [arenaId]);
 
-    // 2. Carrega os replays da data selecionada
-    useEffect(() => {
-        async function carregarReplays() {
-            if (!quadras.length && !arenaId) return;
+    // 2. Helper puro de consulta paginada no SQL (data + faixa de horário)
+    const executarConsultaReplays = useCallback(async (offset = 0) => {
+        const idsDasQuadras = quadras.map(q => q.id);
+        if (idsDasQuadras.length === 0) {
+            return { lista: [], total: 0 };
+        }
 
-            setCarregandoReplays(true);
-            try {
-                // Monta o range do dia selecionado (00:00:00 até 23:59:59)
-                const [ano, mes, dia] = dataFiltro.split('-').map(Number);
-                const inicioDia = new Date(ano, mes - 1, dia, 0, 0, 0);
-                const fimDia = new Date(ano, mes - 1, dia, 23, 59, 59, 999);
+        const [ano, mes, dia] = dataFiltro.split('-').map(Number);
+        let horaInicio = 0;
+        let horaFim = 23;
 
-                const idsDasQuadras = quadras.map(q => q.id);
-                if (idsDasQuadras.length === 0) {
-                    setReplays([]);
-                    setCarregandoReplays(false);
-                    return;
-                }
-
-                let query = supabase
-                    .from('replays')
-                    .select(`
-                        id,
-                        quadra_id,
-                        video_url,
-                        criado_em,
-                        quadras (
-                            id,
-                            nome
-                        )
-                    `)
-                    .gte('criado_em', inicioDia.toISOString())
-                    .lte('criado_em', fimDia.toISOString())
-                    .order('criado_em', { ascending: false });
-
-                // Filtra por quadra se uma estiver selecionada
-                if (quadraAtiva !== 'todas') {
-                    query = query.eq('quadra_id', quadraAtiva);
-                } else {
-                    query = query.in('quadra_id', idsDasQuadras);
-                }
-
-                const { data, error } = await query.limit(60);
-                if (error) throw error;
-                setReplays(data || []);
-            } catch (err) {
-                console.error('Erro ao buscar replays:', err);
-            } finally {
-                setCarregandoReplays(false);
+        if (periodoFiltro === 'manha') {
+            horaInicio = 6;
+            horaFim = 11;
+        } else if (periodoFiltro === 'tarde') {
+            horaInicio = 12;
+            horaFim = 17;
+        } else if (periodoFiltro === 'noite') {
+            horaInicio = 18;
+            horaFim = 23;
+        } else if (periodoFiltro !== 'todos') {
+            const horaNum = parseInt(periodoFiltro, 10);
+            if (!Number.isNaN(horaNum)) {
+                horaInicio = horaNum;
+                horaFim = horaNum;
             }
         }
 
-        if (quadras.length > 0) {
-            carregarReplays();
+        const inicioRange = new Date(ano, mes - 1, dia, horaInicio, 0, 0, 0);
+        const fimRange = new Date(ano, mes - 1, dia, horaFim, 59, 59, 999);
+
+        const montarQuery = (incluirThumbnail) => {
+            const campos = incluirThumbnail
+                ? 'id, quadra_id, video_url, thumbnail_url, criado_em, quadras(id, nome)'
+                : 'id, quadra_id, video_url, criado_em, quadras(id, nome)';
+
+            let q = supabase
+                .from('replays')
+                .select(campos, { count: 'exact' })
+                .gte('criado_em', inicioRange.toISOString())
+                .lte('criado_em', fimRange.toISOString())
+                .order('criado_em', { ascending: false })
+                .range(offset, offset + TAMANHO_PAGINA - 1);
+
+            if (quadraAtiva !== 'todas') {
+                q = q.eq('quadra_id', quadraAtiva);
+            } else {
+                q = q.in('quadra_id', idsDasQuadras);
+            }
+            return q;
+        };
+
+        let { data, error, count } = await montarQuery(true);
+
+        // Fallback seguro caso a migração SQL (coluna thumbnail_url) ainda não tenha sido aplicada
+        if (error && (error.code === '42703' || String(error.message || '').includes('thumbnail_url'))) {
+            const fallback = await montarQuery(false);
+            data = fallback.data;
+            error = fallback.error;
+            count = fallback.count;
         }
-    }, [arenaId, quadras, dataFiltro, quadraAtiva]);
 
-    // 3. Filtro de Período / Horário em memória no fuso local
-    const replaysFiltrados = useMemo(() => {
-        if (periodoFiltro === 'todos') return replays;
+        if (error) throw error;
 
-        return replays.filter((replay) => {
-            if (!replay.criado_em) return true;
-            const dataLance = new Date(replay.criado_em);
-            const hora = dataLance.getHours();
+        const lista = data || [];
+        const total = typeof count === 'number' ? count : offset + lista.length;
+        return { lista, total };
+    }, [quadras, dataFiltro, periodoFiltro, quadraAtiva]);
 
-            if (periodoFiltro === 'manha') return hora >= 6 && hora < 12;
-            if (periodoFiltro === 'tarde') return hora >= 12 && hora < 18;
-            if (periodoFiltro === 'noite') return hora >= 18 || hora < 6;
+    useEffect(() => {
+        if (quadras.length === 0) return;
+        let cancelado = false;
 
-            // Se for hora exata (ex: '18')
-            const horaNum = parseInt(periodoFiltro, 10);
-            return hora === horaNum;
-        });
-    }, [replays, periodoFiltro]);
+        async function carregarPaginaInicial() {
+            setCarregandoReplays(true);
+            try {
+                const { lista, total } = await executarConsultaReplays(0);
+                if (!cancelado) {
+                    setReplays(lista);
+                    setTotalReplays(total);
+                }
+            } catch (err) {
+                console.error('Erro ao buscar replays:', err);
+            } finally {
+                if (!cancelado) setCarregandoReplays(false);
+            }
+        }
 
-    // Função de Download Seguro com Fallback
-    const baixarDireto = async (e, videoUrl, id) => {
-        e.stopPropagation();
-        const nomeArquivo = `fox-replay-${id ? id.substring(0, 8) : 'lance'}.mp4`;
-        exibirToast('Iniciando download do vídeo...');
+        carregarPaginaInicial();
+        return () => {
+            cancelado = true;
+        };
+    }, [quadras.length, executarConsultaReplays]);
+
+    const carregarMaisReplays = async () => {
+        setCarregandoMais(true);
         try {
-            const resposta = await fetch(videoUrl, { mode: 'cors' });
-            if (!resposta.ok) throw new Error('Falha HTTP');
-            const blob = await resposta.blob();
-            const urlBlob = window.URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = urlBlob;
-            link.download = nomeArquivo;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(urlBlob);
-            exibirToast('Download concluído com sucesso!');
+            const { lista, total } = await executarConsultaReplays(replays.length);
+            setReplays(prev => [...prev, ...lista]);
+            setTotalReplays(total);
         } catch (err) {
-            console.warn('Fallback download direto:', err);
-            const link = document.createElement('a');
-            link.href = videoUrl;
-            link.target = '_blank';
-            link.download = nomeArquivo;
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            console.error('Erro ao carregar mais replays:', err);
+        } finally {
+            setCarregandoMais(false);
         }
+    };
+
+    const replaysFiltrados = replays;
+    const temMaisReplays = replays.length < totalReplays;
+
+    // Fecha o calendário com Escape
+    useEffect(() => {
+        if (!calendarioAberto) return;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') setCalendarioAberto(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [calendarioAberto]);
+
+    const filtrosPersonalizadosAtivos =
+        quadraAtiva !== 'todas' || periodoFiltro !== 'todos' || dataFiltro !== hojeStr;
+
+    // Todos os downloads passam pela composição 9:16 com marca da Arena e 4 Patrocinadores
+    const abrirDownloadComMarcas = (e, id) => {
+        e.stopPropagation();
+        router.push(`/jogada?id=${id}&baixar=1`);
     };
 
     // Compartilhamento rápido
@@ -418,6 +447,26 @@ export default function PortalArenaUnificado() {
         );
     }
 
+    if (erroArena || !arena) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 p-6 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-zinc-900 text-amber-400 flex items-center justify-center font-black text-xl">
+                    FR
+                </div>
+                <h1 className="text-lg font-black text-zinc-900 uppercase">Arena não encontrada</h1>
+                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
+                    Não conseguimos localizar este complexo esportivo. Verifique o link ou pesquise a arena na página inicial.
+                </p>
+                <button
+                    onClick={() => router.push('/')}
+                    className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                >
+                    Voltar ao Início
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-4 pb-16 flex flex-col items-center relative overflow-hidden">
             {/* Linhas de fundo e glow */}
@@ -441,7 +490,7 @@ export default function PortalArenaUnificado() {
                     <span>Início</span>
                 </button>
                 <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => router.push('/')}>
-                    <img src="/logo-fox.jpeg" alt="Logo" className="h-6 w-6 object-cover rounded-md border border-zinc-200" />
+                    <Image src="/logo-fox.jpeg" alt="Logo Fox Replay" width={24} height={24} priority className="h-6 w-6 object-cover rounded-md border border-zinc-200" />
                     <h2 className="text-xs font-black tracking-widest text-zinc-900 uppercase">
                         FOX <span className="text-amber-500">REPLAY</span>
                     </h2>
@@ -457,7 +506,7 @@ export default function PortalArenaUnificado() {
                     {/* Fundo com efeito Fade da Logo da Arena */}
                     <div className="absolute right-[-20px] top-[-20px] bottom-[-20px] w-64 pointer-events-none select-none overflow-hidden opacity-[0.06] flex items-center justify-center">
                         {logoArena ? (
-                            <img src={logoArena} alt="" className="w-full h-full object-contain filter grayscale scale-125" />
+                            <Image src={logoArena} alt="" fill unoptimized className="object-contain filter grayscale scale-125" />
                         ) : (
                             <span className="text-[130px] font-black text-zinc-900 tracking-tighter">
                                 {iniciaisArena}
@@ -469,7 +518,7 @@ export default function PortalArenaUnificado() {
                     <div className="relative z-10 flex items-start gap-4">
                         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-lg sm:text-xl shrink-0 shadow-md border border-zinc-800 overflow-hidden relative">
                             {logoArena ? (
-                                <img src={logoArena} alt={arena?.nome} className="w-full h-full object-cover" />
+                                <Image src={logoArena} alt={arena?.nome || 'Arena'} fill unoptimized className="object-cover" />
                             ) : (
                                 <span className="text-amber-400 tracking-wider">{iniciaisArena}</span>
                             )}
@@ -552,14 +601,30 @@ export default function PortalArenaUnificado() {
                 {/* ============================================================ */}
                 <div className="bg-white border border-zinc-200 rounded-3xl p-3.5 sm:p-4 shadow-sm space-y-3 relative">
                     {/* Cabeçalho da barra de filtros */}
-                    <div className="flex justify-between items-center px-0.5">
+                    <div className="flex justify-between items-center px-0.5 gap-2">
                         <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider flex items-center gap-1.5">
                             <IconSliders className="w-3 h-3 text-zinc-400" />
                             <span>Filtro de Lances</span>
                         </span>
-                        <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
-                            {replaysFiltrados.length} lance{replaysFiltrados.length === 1 ? '' : 's'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            {filtrosPersonalizadosAtivos && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setQuadraAtiva('todas');
+                                        setPeriodoFiltro('todos');
+                                        setDataFiltro(hojeStr);
+                                        setCalendarioAberto(false);
+                                    }}
+                                    className="text-[10px] font-bold text-zinc-500 hover:text-amber-700 underline transition-colors"
+                                >
+                                    Limpar filtros
+                                </button>
+                            )}
+                            <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
+                                {totalReplays} lance{totalReplays === 1 ? '' : 's'}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Linha 1: Filtro de Data */}
@@ -780,16 +845,14 @@ export default function PortalArenaUnificado() {
                                             </span>
                                         </div>
 
-                                        {/* Thumbnail / Miniatura com Play */}
+                                        {/* Thumbnail / Miniatura leve com Lazy Loading */}
                                         <div className="w-full aspect-video bg-black relative overflow-hidden group">
-                                            <video
-                                                src={replay.video_url}
-                                                className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-300"
-                                                muted
-                                                preload="metadata"
-                                                playsInline
+                                            <ReplayThumbnail
+                                                thumbnailUrl={replay.thumbnail_url}
+                                                videoUrl={replay.video_url}
+                                                alt={`Lance na ${nomeQuadra} às ${horarioFormatado}`}
                                             />
-                                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/10">
+                                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/10 pointer-events-none">
                                                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black flex items-center justify-center pl-0.5 font-bold shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
                                                     <IconPlay className="w-5 h-5" />
                                                 </div>
@@ -799,7 +862,8 @@ export default function PortalArenaUnificado() {
                                         {/* Ações Rápidas do Card */}
                                         <div className="p-3 bg-white grid grid-cols-2 gap-2 border-t border-zinc-100">
                                             <button
-                                                onClick={(e) => baixarDireto(e, replay.video_url, replay.id)}
+                                                onClick={(e) => abrirDownloadComMarcas(e, replay.id)}
+                                                title="Baixar vídeo 9:16 com marca da arena e patrocinadores"
                                                 className="py-2.5 px-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
                                             >
                                                 <span>Baixar</span>
@@ -819,6 +883,30 @@ export default function PortalArenaUnificado() {
                             })}
                         </div>
                     )}
+
+                    {/* BOTÃO DE PAGINAÇÃO REAL */}
+                    {!carregandoReplays && temMaisReplays && (
+                        <div className="pt-2 text-center space-y-2">
+                            <p className="text-[11px] text-zinc-500 font-medium">
+                                Exibindo {replays.length} de {totalReplays} lances
+                            </p>
+                            <button
+                                type="button"
+                                disabled={carregandoMais}
+                                onClick={carregarMaisReplays}
+                                className="px-6 py-3 bg-white hover:bg-amber-50 border border-zinc-200 hover:border-amber-400 text-zinc-900 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 inline-flex items-center gap-2"
+                            >
+                                {carregandoMais ? (
+                                    <>
+                                        <span className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                        <span>Carregando mais lances...</span>
+                                    </>
+                                ) : (
+                                    <span>Carregar mais lances ({totalReplays - replays.length} restantes)</span>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <p className="text-[9px] text-zinc-400 text-center tracking-widest uppercase font-bold pt-8">
@@ -826,5 +914,24 @@ export default function PortalArenaUnificado() {
                 </p>
             </main>
         </div>
+    );
+}
+
+export default function PortalArenaUnificado() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex items-center justify-center min-h-screen bg-zinc-50">
+                    <div className="text-center space-y-3">
+                        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="animate-pulse text-zinc-500 font-bold tracking-widest text-xs uppercase">
+                            Conectando ao Complexo...
+                        </p>
+                    </div>
+                </div>
+            }
+        >
+            <ConteudoPortalArena />
+        </Suspense>
     );
 }

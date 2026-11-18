@@ -1,55 +1,92 @@
 #!/bin/bash
 # ==============================================================================
-# FOX REPLAY — Script de Instalação Automática para Raspberry Pi OS
+# FOX REPLAY — Script de Instalação Segura para Raspberry Pi OS (v2)
 # ==============================================================================
 
-set -e
+set -euo pipefail
 
-echo "🦊 Iniciando instalação do totem Fox Replay..."
+echo "🦊 Iniciando instalação do totem Fox Replay v2..."
 
-# 1. Atualização do Sistema e Instalação de Dependências de Vídeo e GPIO
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+FOX_WEB_URL="${FOX_WEB_URL:-https://fox-replay.vercel.app}"
+
+# 1. Dependências de Vídeo, Serial, GPIO e Kiosk
 sudo apt update
-sudo apt install -y python3 python3-pip python3-gpiozero ffmpeg chromium-browser unclutter git curl
+sudo apt install -y python3 python3-pip python3-serial python3-gpiozero ffmpeg chromium-browser unclutter curl
 
-# 2. Instalação de bibliotecas Python necessárias
-pip3 install requests --break-system-packages 2>/dev/null || pip3 install requests
+# 2. Bibliotecas Python
+pip3 install requests pyserial --break-system-packages 2>/dev/null || pip3 install requests pyserial
 
-# 3. Criação de pastas de trabalho
-sudo mkdir -p /etc/foxreplay
-sudo mkdir -p /opt/foxreplay
-sudo mkdir -p /dev/shm/fox_buffer
-sudo chmod 777 /dev/shm/fox_buffer
+# 3. Permissão para porta USB Serial (Arduino)
+sudo usermod -a -G dialout "$TARGET_USER" 2>/dev/null || true
 
-# 4. Copiar arquivos para /opt/foxreplay
+# 4. Pastas de trabalho com permissões restritas (sem chmod 777)
+sudo mkdir -p /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays/pendentes
+sudo chown -R "$TARGET_USER:$TARGET_USER" /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays
+sudo chmod 700 /etc/foxreplay
+sudo chmod 750 /dev/shm/fox_buffer /tmp/fox_replays
+
+# 5. Copiar daemon e display
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 sudo cp "$CURRENT_DIR/totem_fox.py" /opt/foxreplay/totem_fox.py
 sudo cp "$CURRENT_DIR/display.html" /opt/foxreplay/display.html
-sudo chmod +x /opt/foxreplay/totem_fox.py
+sudo chown "$TARGET_USER:$TARGET_USER" /opt/foxreplay/totem_fox.py /opt/foxreplay/display.html
+sudo chmod 750 /opt/foxreplay/totem_fox.py
 
-# 5. Criar serviço systemd para rodar em background na inicialização
-cat <<EOF | sudo tee /etc/systemd/system/foxreplay.service
+# 6. Baixar qrcode.min.js localmente para o display Kiosk funcionar 100% offline
+echo "📦 Baixando biblioteca QRCode local para operação offline..."
+curl -fsSL "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" -o /tmp/qrcode.min.js \
+  && sudo mv /tmp/qrcode.min.js /opt/foxreplay/qrcode.min.js \
+  && sudo chown "$TARGET_USER:$TARGET_USER" /opt/foxreplay/qrcode.min.js \
+  || echo "⚠️ Não foi possível baixar qrcode.min.js agora; o display tentará fallback online."
+
+# 7. Arquivo de ambiente protegido (sem chaves Supabase!)
+if [ ! -f /etc/foxreplay/totem.env ]; then
+  cat <<EOF | sudo tee /etc/foxreplay/totem.env >/dev/null
+FOX_WEB_URL=$FOX_WEB_URL
+FOX_KIOSK_PORT=8080
+EOF
+  sudo chown "$TARGET_USER:$TARGET_USER" /etc/foxreplay/totem.env
+  sudo chmod 600 /etc/foxreplay/totem.env
+fi
+
+# 8. Serviço systemd do daemon Edge
+cat <<EOF | sudo tee /etc/systemd/system/foxreplay.service >/dev/null
 [Unit]
-Description=Fox Replay Edge Totem Daemon
+Description=Fox Replay Edge Totem Daemon v2
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
+User=$TARGET_USER
 WorkingDirectory=/opt/foxreplay
-ExecStart=/usr/bin/python3 /opt/foxreplay/totem_fox.py
+EnvironmentFile=/etc/foxreplay/totem.env
+ExecStart=/usr/bin/python3 -u /opt/foxreplay/totem_fox.py
 Restart=always
 RestartSec=5
-Environment=NEXT_PUBLIC_SUPABASE_URL=https://nswtefxjndzmwdxqqunu.supabase.co
-Environment=NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zd3RlZnhqbmR6bXdkeHFxdW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjQ3MDIsImV4cCI6MjA5NTUwMDcwMn0.72DuRKnVO1-4MjCDc9y818OSVUaL6KNDu9rlkdERHN8
-Environment=FOX_WEB_URL=https://fox-replay.vercel.app
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# 9. Autostart do Chromium Kiosk apontando para o microservidor local 127.0.0.1:8080
+USER_HOME="$(eval echo "~$TARGET_USER")"
+AUTOSTART_DIR="$USER_HOME/.config/autostart"
+mkdir -p "$AUTOSTART_DIR"
+cat <<EOF > "$AUTOSTART_DIR/foxreplay-kiosk.desktop"
+[Desktop Entry]
+Type=Application
+Name=Fox Replay Kiosk
+Exec=chromium-browser --kiosk --noerrdialogs --disable-infobars --autoplay-policy=no-user-gesture-required http://127.0.0.1:8080/
+X-GNOME-Autostart-enabled=true
+EOF
+sudo chown -R "$TARGET_USER:$TARGET_USER" "$AUTOSTART_DIR"
+
 sudo systemctl daemon-reload
 sudo systemctl enable foxreplay.service
 
-echo "✅ Instalação concluída com sucesso!"
-echo "👉 Para iniciar agora o serviço: sudo systemctl start foxreplay"
+echo "✅ Instalação v2 concluída com sucesso para o usuário '$TARGET_USER'!"
+echo "👉 Inicie agora com: sudo systemctl restart foxreplay"
+echo "👉 Acompanhe logs com: sudo journalctl -u foxreplay -f"

@@ -1,74 +1,148 @@
 #!/usr/bin/env python3
 """
-FOX REPLAY — Daemon Autônomo de Gravação Edge e Totem de Quadra
+FOX REPLAY — Daemon Autônomo de Gravação Edge e Totem de Quadra (v2)
 Compatível com: Raspberry Pi 3B+, 4 e 5 (Raspberry Pi OS Lite / 64-bit)
 
-Funcionalidades:
-1. Pareamento Zero-Touch: gera código de 6 dígitos e exibe na TV caso não configurado.
-2. Buffer Contínuo em RAM (/dev/shm): grava fatias de 5s contínuas via RTSP.
-3. Botão Físico (GPIO 17 / Pino 11): contato seco com resistor pull-up interno.
-4. Processamento Instantâneo: gera corte dos últimos 30 segundos ao toque.
-5. Upload Automatizado para o Supabase Storage e registro no banco de dados.
-6. Notificação Imediata para o Display Kiosk HDMI com QR Code do lance.
+Melhorias v2:
+1. Autenticação segura via API do servidor (/api/totem/*) usando token_autenticacao (sem chaves Supabase no dispositivo).
+2. Pareamento Zero-Touch com pair_secret e persistência automática da camera_url (RTSP) com permissão 0600.
+3. Buffer circular em MPEG-TS (.ts) na RAM (/dev/shm) + exclusão do segmento aberto em escrita (zero corrupção).
+4. Watchdog contínuo do FFmpeg com reinício automático e backoff exponencial se a câmera cair.
+5. Geração de thumbnail JPEG leve no Edge para carregamento instantâneo no feed mobile.
+6. Limpeza automática de arquivos temporários + fila offline persistente com teto de disco (500MB FIFO) e retry a cada 30s.
+7. Microservidor HTTP local em 127.0.0.1:8080 para alimentar o Display Kiosk sem risco de CORS ou exposição do filesystem.
 """
 
 import os
 import sys
 import time
 import json
-import random
-import string
+import glob
+import shutil
 import threading
 import subprocess
-import requests
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
 from pathlib import Path
+import requests
 
-# Tentativa de carregar GPIO (simulação caso execute fora do Raspberry)
+# Tentativa de carregar Serial para comunicação com Arduino
+try:
+    import serial
+    import serial.tools.list_ports
+    TEM_SERIAL = True
+except ImportError:
+    TEM_SERIAL = False
+    print("Aviso: pyserial não encontrado. Instale com: pip3 install pyserial")
+
+# Tentativa de carregar GPIO (contingência / bancada)
 try:
     from gpiozero import Button
     TEM_GPIO = True
 except ImportError:
     TEM_GPIO = False
-    print("Aviso: gpiozero não encontrado. Modo de simulação ativado.")
+    print("Aviso: gpiozero não encontrado. Modo sem GPIO direto ativado.")
 
 # -------------------------------------------------------------
 # CONFIGURAÇÕES DO SISTEMA EDGE
 # -------------------------------------------------------------
-CONFIG_FILE = Path("/etc/foxreplay/config.json")
-BUFFER_DIR = Path("/dev/shm/fox_buffer") # Memória RAM para zero desgaste de microSD
-GRAVACOES_DIR = Path("/tmp/fox_replays")
-PINO_BOTAO_GPIO = 17 # Pino Físico 11 (BCM 17). Pino 09 é o Terra (GND)
+CONFIG_FILE = Path(os.environ.get("FOX_CONFIG_FILE", "/etc/foxreplay/config.json"))
+APP_DIR = Path(os.environ.get("FOX_APP_DIR", "/opt/foxreplay"))
+BUFFER_DIR = Path(os.environ.get("FOX_BUFFER_DIR", "/dev/shm/fox_buffer"))
+STATUS_FILE = Path(os.environ.get("FOX_STATUS_FILE", "/dev/shm/totem_status.json"))
+GRAVACOES_DIR = Path(os.environ.get("FOX_GRAVACOES_DIR", "/tmp/fox_replays"))
+FILA_OFFLINE_DIR = GRAVACOES_DIR / "pendentes"
+
+PINO_BOTAO_GPIO = 17
 DURACAO_REPLAY_SEGUNDOS = 30
 COOLDOWN_SEGUNDOS = 20
+LIMITE_FILA_BYTES = 500 * 1024 * 1024  # Teto de 500MB para fila offline
+KIOSK_HTTP_HOST = "127.0.0.1"
+KIOSK_HTTP_PORT = int(os.environ.get("FOX_KIOSK_PORT", "8080"))
 
-# Carregar variáveis de ambiente ou arquivo local
-SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://nswtefxjndzmwdxqqunu.supabase.co")
-SUPABASE_KEY = os.environ.get(
-    "SUPABASE_SERVICE_ROLE_KEY",
-    os.environ.get(
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zd3RlZnhqbmR6bXdkeHFxdW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjQ3MDIsImV4cCI6MjA5NTUwMDcwMn0.72DuRKnVO1-4MjCDc9y818OSVUaL6KNDu9rlkdERHN8"
-    )
-)
-BASE_WEB_URL = os.environ.get("FOX_WEB_URL", "https://fox-replay.vercel.app")
+BASE_WEB_URL = os.environ.get("FOX_WEB_URL", "https://fox-replay.vercel.app").rstrip("/")
+
+
+class KioskHTTPHandler(BaseHTTPRequestHandler):
+    """Serve exclusivamente display.html, qrcode.min.js local e status.json em localhost."""
+
+    def log_message(self, format, *args):
+        # Evita poluir o journald com polling de 2s do display
+        return
+
+    def _enviar(self, status_code, content_type, data_bytes):
+        self.send_response(status_code)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Content-Length", str(len(data_bytes)))
+        self.end_headers()
+        self.wfile.write(data_bytes)
+
+    def do_GET(self):
+        rota = self.path.split("?", 1)[0]
+
+        if rota in ("/", "/display.html"):
+            arquivo = APP_DIR / "display.html"
+            if not arquivo.exists():
+                arquivo = Path(__file__).resolve().parent / "display.html"
+            if arquivo.exists():
+                self._enviar(200, "text/html; charset=utf-8", arquivo.read_bytes())
+            else:
+                self._enviar(404, "text/plain; charset=utf-8", b"display.html nao encontrado")
+            return
+
+        if rota == "/qrcode.min.js":
+            arquivo = APP_DIR / "qrcode.min.js"
+            if arquivo.exists():
+                self._enviar(200, "application/javascript; charset=utf-8", arquivo.read_bytes())
+            else:
+                self._enviar(404, "text/plain; charset=utf-8", b"qrcode.min.js nao encontrado")
+            return
+
+        if rota == "/status.json":
+            if STATUS_FILE.exists():
+                try:
+                    self._enviar(200, "application/json; charset=utf-8", STATUS_FILE.read_bytes())
+                    return
+                except Exception:
+                    pass
+            self._enviar(200, "application/json; charset=utf-8", b'{"modo":"inicializando"}')
+            return
+
+        self._enviar(404, "text/plain; charset=utf-8", b"Not Found")
+
 
 class TotemFox:
     def __init__(self):
         self.config = self.carregar_config()
-        self.bloqueado_cooldown = False
+        self.lock_disparo = threading.Lock()
+        self.ultimo_disparo_ts = 0.0
+        self.lock_ffmpeg = threading.Lock()
         self.processo_ffmpeg_buffer = None
+        self.executando = True
+        self.camera_online = False
+        self.arena_ativa = True
+
         self.quadra_id = self.config.get("quadra_id")
+        self.arena_id = self.config.get("arena_id")
+        self.nome_quadra = self.config.get("nome_quadra", "Quadra Monitorada")
+        self.token_autenticacao = self.config.get("token_autenticacao")
         self.rtsp_url = self.config.get("rtsp_url")
+
         self.codigo_pareamento = None
+        self.pair_secret = None
 
         BUFFER_DIR.mkdir(parents=True, exist_ok=True)
         GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
+        FILA_OFFLINE_DIR.mkdir(parents=True, exist_ok=True)
 
+    # ---------------------------------------------------------
+    # CONFIGURAÇÃO SEGURA (chmod 0600)
+    # ---------------------------------------------------------
     def carregar_config(self):
         if CONFIG_FILE.exists():
             try:
-                with open(CONFIG_FILE, "r") as f:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Erro ao ler {CONFIG_FILE}: {e}")
@@ -77,234 +151,587 @@ class TotemFox:
     def salvar_config(self, dados):
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         self.config.update(dados)
-        with open(CONFIG_FILE, "w") as f:
+        tmp_path = CONFIG_FILE.with_suffix(".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=4)
-        print("Configuração salva em", CONFIG_FILE)
-
-    def gerar_codigo_pareamento(self):
-        return f"{random.randint(100, 999)}-{random.randint(100, 999)}"
-
-    def registrar_pareamento_pendente(self):
-        """Cria o código de pareamento zero-touch no Supabase e atualiza o display da TV"""
-        self.codigo_pareamento = self.gerar_codigo_pareamento()
-
-        payload = {
-            "codigo": self.codigo_pareamento,
-            "status": "pendente"
-        }
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "return=representation"
-        }
-
+        os.replace(tmp_path, CONFIG_FILE)
         try:
-            res = requests.post(f"{SUPABASE_URL}/rest/v1/pareamentos", json=payload, headers=headers, timeout=10)
-            if res.status_code in [200, 201]:
-                print(f"=== TOTEM AGUARDANDO ATIVAÇÃO ===")
-                print(f"Código na tela: {self.codigo_pareamento}")
-                self.atualizar_display_kiosk({
-                    "modo": "pareamento",
-                    "codigo": self.codigo_pareamento,
-                    "url_ativacao": f"{BASE_WEB_URL}/ativar"
-                })
-            else:
-                print("Erro ao registrar pareamento no Supabase:", res.text)
+            os.chmod(CONFIG_FILE, 0o600)
+        except Exception:
+            pass
+        print("Configuração salva com segurança em", CONFIG_FILE)
+
+    # ---------------------------------------------------------
+    # DISPLAY KIOSK (ESCRITA ATÔMICA + MICROSERVIDOR LOCAL)
+    # ---------------------------------------------------------
+    def atualizar_display_kiosk(self, dados):
+        """Grava estado de forma atômica para o display Kiosk nunca ler JSON truncado."""
+        payload = dict(dados)
+        payload["atualizado_em"] = int(time.time() * 1000)
+        payload.setdefault("nome_quadra", self.nome_quadra)
+        if self.arena_id:
+            payload.setdefault("url_arena", f"{BASE_WEB_URL}/arena/{self.arena_id}")
+
+        STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp_status = STATUS_FILE.with_suffix(".tmp")
+        try:
+            with open(tmp_status, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            os.replace(tmp_status, STATUS_FILE)
         except Exception as e:
-            print("Falha de conexão com Supabase:", e)
+            print(f"Erro ao atualizar status do display: {e}")
+
+    def iniciar_servidor_kiosk(self):
+        try:
+            servidor = ThreadingHTTPServer((KIOSK_HTTP_HOST, KIOSK_HTTP_PORT), KioskHTTPHandler)
+            t = threading.Thread(target=servidor.serve_forever, daemon=True)
+            t.start()
+            print(f"🖥️ Display Kiosk HTTP ativo em http://{KIOSK_HTTP_HOST}:{KIOSK_HTTP_PORT}/")
+        except Exception as e:
+            print(f"⚠️ Não foi possível iniciar microservidor Kiosk ({e})")
+
+    # ---------------------------------------------------------
+    # PAREAMENTO ZERO-TOUCH AUTENTICADO (/api/totem/pair)
+    # ---------------------------------------------------------
+    def registrar_pareamento_pendente(self):
+        """Solicita código de 6 dígitos + pair_secret ao backend."""
+        while self.executando:
+            try:
+                res = requests.post(f"{BASE_WEB_URL}/api/totem/pair", timeout=15)
+                if res.status_code in (200, 201):
+                    dados = res.json()
+                    self.codigo_pareamento = dados["codigo"]
+                    self.pair_secret = dados["pair_secret"]
+                    print("=== TOTEM AGUARDANDO ATIVAÇÃO ===")
+                    print(f"Código na tela: {self.codigo_pareamento}")
+                    self.atualizar_display_kiosk({
+                        "modo": "pareamento",
+                        "codigo": self.codigo_pareamento,
+                        "url_ativacao": f"{BASE_WEB_URL}/ativar?codigo={self.codigo_pareamento}"
+                    })
+                    return
+                print("Erro ao iniciar pareamento:", res.status_code, res.text)
+            except Exception as e:
+                print("Sem conexão para iniciar pareamento (tentando novamente em 5s):", e)
+            time.sleep(5)
 
     def aguardar_ativacao(self):
-        """Loop que escuta a ativação do totem pelo painel /ativar"""
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}"
-        }
-        while not self.quadra_id:
+        """Consulta o backend com X-Pair-Secret até o gestor ativar o totem."""
+        while self.executando and (not self.quadra_id or not self.token_autenticacao):
+            if not self.codigo_pareamento or not self.pair_secret:
+                self.registrar_pareamento_pendente()
+
             try:
                 res = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/pareamentos?codigo=eq.{self.codigo_pareamento}&select=status,quadra_id,token_gerado,quadras(nome,arena_id)",
-                    headers=headers,
-                    timeout=5
+                    f"{BASE_WEB_URL}/api/totem/pair",
+                    params={"codigo": self.codigo_pareamento},
+                    headers={"X-Pair-Secret": self.pair_secret},
+                    timeout=10,
                 )
+
+                if res.status_code == 410:
+                    print("⏱️ Código de pareamento expirado. Gerando novo código...")
+                    self.codigo_pareamento = None
+                    self.pair_secret = None
+                    continue
+
                 if res.status_code == 200:
                     dados = res.json()
-                    if dados and dados[0].get("status") == "vinculado":
-                        item = dados[0]
-                        self.quadra_id = item.get("quadra_id")
-                        self.salvar_config({
+                    if dados.get("status") == "vinculado":
+                        self.quadra_id = dados.get("quadra_id")
+                        self.arena_id = dados.get("arena_id")
+                        self.token_autenticacao = dados.get("token_gerado")
+                        self.nome_quadra = dados.get("nome_quadra") or "Quadra Ativada"
+                        camera_recebida = dados.get("camera_url")
+
+                        nova_config = {
                             "quadra_id": self.quadra_id,
-                            "token_autenticacao": item.get("token_gerado"),
-                            "nome_quadra": item.get("quadras", {}).get("nome", "Quadra Ativada")
+                            "arena_id": self.arena_id,
+                            "token_autenticacao": self.token_autenticacao,
+                            "nome_quadra": self.nome_quadra,
+                        }
+                        if camera_recebida:
+                            self.rtsp_url = camera_recebida
+                            nova_config["rtsp_url"] = camera_recebida
+
+                        self.salvar_config(nova_config)
+                        print(f"✅ Totem vinculado à {self.nome_quadra} ({self.quadra_id})")
+                        self.atualizar_display_kiosk({
+                            "modo": "pronto",
+                            "mensagem": "Totem ativado e pronto para gravar!"
                         })
-                        print(f"✅ Totem vinculado à Quadra ID: {self.quadra_id}")
-                        self.atualizar_display_kiosk({"modo": "pronto", "mensagem": "Totem Ativado com Sucesso!"})
-                        time.sleep(3)
-                        break
+                        return
             except Exception as e:
-                print("Verificando ativação...", e)
+                print("Aguardando ativação:", e)
             time.sleep(3)
 
-    def atualizar_display_kiosk(self, dados):
-        """Grava estado para ser lido pelo navegador em modo quiosque na TV"""
-        path_status = Path("/dev/shm/totem_status.json")
-        with open(path_status, "w") as f:
-            json.dump(dados, f)
+    # ---------------------------------------------------------
+    # BUFFER CIRCULAR MPEG-TS + WATCHDOG DE CÂMERA RTSP
+    # ---------------------------------------------------------
+    def _limpar_segmentos_antigos(self):
+        for arq in BUFFER_DIR.glob("seg_*.ts"):
+            try:
+                arq.unlink()
+            except Exception:
+                pass
 
     def iniciar_buffer_camera(self):
-        """Mantém gravação contínua dos últimos 70s na RAM dividida em fatias de 5s"""
+        """Inicia gravação contínua em MPEG-TS (.ts) na RAM (14 fatias de 5s = 70s)."""
         if not self.rtsp_url:
-            print("⚠️ Nenhuma URL RTSP cadastrada em config.json. Use câmeras RTSP locais.")
-            # Simulação caso não haja câmera IP configurada
+            print("⚠️ Nenhuma URL RTSP cadastrada em config.json. Operando sem captura RTSP.")
             return
 
-        cmd = [
-            "ffmpeg", "-y",
-            "-rtsp_transport", "tcp",
-            "-i", self.rtsp_url,
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-f", "segment",
-            "-segment_time", "5",
-            "-segment_wrap", "14", # Mantém 14 blocos de 5s = 70 segundos rotativos
-            "-reset_timestamps", "1",
-            str(BUFFER_DIR / "seg_%02d.mp4")
-        ]
+        with self.lock_ffmpeg:
+            if self.processo_ffmpeg_buffer and self.processo_ffmpeg_buffer.poll() is None:
+                return
 
-        print("Iniciando buffer circular de câmera RTSP...")
-        self.processo_ffmpeg_buffer = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+            self._limpar_segmentos_antigos()
 
+            cmd = [
+                "ffmpeg", "-y",
+                "-loglevel", "error",
+                "-rtsp_transport", "tcp",
+                "-i", self.rtsp_url,
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-ar", "44100",
+                "-b:a", "128k",
+                "-f", "segment",
+                "-segment_format", "mpegts",
+                "-segment_time", "5",
+                "-segment_wrap", "14",
+                "-reset_timestamps", "1",
+                str(BUFFER_DIR / "seg_%02d.ts"),
+            ]
+
+            print("🎥 Iniciando buffer circular MPEG-TS da câmera RTSP...")
+            self.processo_ffmpeg_buffer = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+            )
+
+    def _reiniciar_ffmpeg(self):
+        with self.lock_ffmpeg:
+            if self.processo_ffmpeg_buffer:
+                try:
+                    self.processo_ffmpeg_buffer.terminate()
+                    self.processo_ffmpeg_buffer.wait(timeout=4)
+                except Exception:
+                    try:
+                        self.processo_ffmpeg_buffer.kill()
+                    except Exception:
+                        pass
+                self.processo_ffmpeg_buffer = None
+        self.iniciar_buffer_camera()
+
+    def watchdog_buffer_camera(self):
+        """Monitora o processo FFmpeg e a atualização real dos segmentos .ts na RAM."""
+        if not self.rtsp_url:
+            return
+
+        backoff = 3
+        camera_estava_offline = False
+
+        while self.executando:
+            time.sleep(10)
+            processo_caiu = (
+                self.processo_ffmpeg_buffer is None
+                or self.processo_ffmpeg_buffer.poll() is not None
+            )
+
+            # Verifica também se o stream RTSP congelou (nenhum segmento atualizado há > 22s)
+            stream_congelado = False
+            segmentos = list(BUFFER_DIR.glob("seg_*.ts"))
+            if segmentos and not processo_caiu:
+                mais_recente = max(s.stat().st_mtime for s in segmentos)
+                if (time.time() - mais_recente) > 22:
+                    stream_congelado = True
+
+            if processo_caiu or stream_congelado:
+                self.camera_online = False
+                motivo = "processo encerrado" if processo_caiu else "stream RTSP congelado"
+                print(f"⚠️ [WATCHDOG] Falha na câmera ({motivo}). Reiniciando em {backoff}s...")
+                camera_estava_offline = True
+                self.atualizar_display_kiosk({
+                    "modo": "camera_offline",
+                    "mensagem": "Reconectando câmera da quadra..."
+                })
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30)
+                self._reiniciar_ffmpeg()
+            else:
+                backoff = 3
+                if segmentos:
+                    self.camera_online = True
+                if camera_estava_offline and segmentos:
+                    camera_estava_offline = False
+                    print("✅ [WATCHDOG] Câmera RTSP restabelecida!")
+                    self.atualizar_display_kiosk({
+                        "modo": "pronto",
+                        "mensagem": "Câmera conectada e pronta para gravar!"
+                    })
+
+    def enviar_heartbeat(self):
+        """Reporta saúde em tempo real ao NOC (/api/totem/heartbeat) e sincroniza RTSP/pausa."""
+        while self.executando:
+            if self.token_autenticacao:
+                try:
+                    fila_qtd = len(list(FILA_OFFLINE_DIR.glob("*.mp4")))
+                    res = requests.post(
+                        f"{BASE_WEB_URL}/api/totem/heartbeat",
+                        headers={
+                            "Authorization": f"Bearer {self.token_autenticacao}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "camera_online": bool(self.camera_online or not self.rtsp_url),
+                            "fila_offline_qtd": fila_qtd,
+                        },
+                        timeout=10,
+                    )
+                    if res.status_code == 200:
+                        dados = res.json()
+                        nova_ativa = dados.get("arena_ativa", True)
+                        nova_camera = dados.get("camera_url")
+
+                        if nova_camera and nova_camera != self.rtsp_url:
+                            print("🔄 [HEARTBEAT] Nova URL RTSP recebida do NOC. Aplicando...")
+                            self.rtsp_url = nova_camera
+                            self.salvar_config({"rtsp_url": nova_camera})
+                            self._reiniciar_ffmpeg()
+
+                        if nova_ativa != self.arena_ativa:
+                            self.arena_ativa = nova_ativa
+                            if not nova_ativa:
+                                self.atualizar_display_kiosk({
+                                    "modo": "pronto",
+                                    "mensagem": "Serviço temporariamente em manutenção."
+                                })
+                            else:
+                                self.atualizar_display_kiosk({
+                                    "modo": "pronto",
+                                    "mensagem": "Totem operacional e pronto para gravar!"
+                                })
+                except Exception as err:
+                    print("⚠️ [HEARTBEAT] Sem resposta do NOC:", err)
+            time.sleep(60)
+
+    # ---------------------------------------------------------
+    # CAPTURA DO LANCE, THUMBNAIL E UPLOAD AUTENTICADO
+    # ---------------------------------------------------------
     def acionar_botao_lance(self):
-        """Disparado quando o botão físico é pressionado"""
-        if self.bloqueado_cooldown:
-            print("Ignorando clique: cooldown ativo (20s)")
-            return
+        """Disparado quando o botão físico é pressionado (protegido por threading.Lock)."""
+        agora = time.monotonic()
+        with self.lock_disparo:
+            if (agora - self.ultimo_disparo_ts) < COOLDOWN_SEGUNDOS:
+                restante = int(COOLDOWN_SEGUNDOS - (agora - self.ultimo_disparo_ts))
+                print(f"Ignorando clique: cooldown ativo ({restante}s restantes)")
+                return
+            self.ultimo_disparo_ts = agora
 
-        self.bloqueado_cooldown = True
         print(f"\n🎾 [DISPARO] Lance registrado em {datetime.now().strftime('%H:%M:%S')}!")
-        
-        # Mostra animação na TV Kiosk
         self.atualizar_display_kiosk({
             "modo": "gravando",
-            "mensagem": "Gerando o Replay dos Últimos 30 Segundos..."
+            "mensagem": "Recortando os últimos 30 segundos do seu lance..."
         })
 
-        threading.Thread(target=self.processar_e_enviar_lance).start()
+        threading.Thread(target=self.processar_e_enviar_lance, daemon=True).start()
 
-        # Libera após 20 segundos
-        def liberar_cooldown():
-            time.sleep(COOLDOWN_SEGUNDOS)
-            self.bloqueado_cooldown = False
-            print("Cooldown liberado.")
-        threading.Thread(target=liberar_cooldown).start()
+    def _gerar_thumbnail(self, caminho_video, caminho_thumb):
+        for tempo in ("00:00:02", "00:00:00"):
+            try:
+                subprocess.run(
+                    [
+                        "ffmpeg", "-y", "-loglevel", "error",
+                        "-ss", tempo,
+                        "-i", str(caminho_video),
+                        "-vframes", "1",
+                        "-vf", "scale=480:-2",
+                        "-q:v", "5",
+                        str(caminho_thumb),
+                    ],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=15,
+                )
+                if caminho_thumb.exists() and caminho_thumb.stat().st_size > 0:
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _remover_arquivos_locais(self, *caminhos):
+        for p in caminhos:
+            if p and Path(p).exists():
+                try:
+                    Path(p).unlink()
+                except Exception:
+                    pass
+
+    def _aplicar_teto_fila_offline(self):
+        """Garante que a fila offline nunca ultrapasse 500MB (remove mais antigos primeiro)."""
+        arquivos = sorted(FILA_OFFLINE_DIR.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+        total_bytes = sum(p.stat().st_size for p in FILA_OFFLINE_DIR.glob("*") if p.is_file())
+
+        while total_bytes > LIMITE_FILA_BYTES and arquivos:
+            antigo = arquivos.pop(0)
+            thumb_antiga = antigo.with_suffix(".jpg")
+            self._remover_arquivos_locais(antigo, thumb_antiga)
+            total_bytes = sum(p.stat().st_size for p in FILA_OFFLINE_DIR.glob("*") if p.is_file())
+
+    def _enviar_para_nuvem(self, caminho_video, caminho_thumb=None):
+        """Solicita Signed Upload URL autenticada, faz upload e registra o replay no backend."""
+        headers_auth = {
+            "Authorization": f"Bearer {self.token_autenticacao}",
+            "Content-Type": "application/json",
+        }
+        tem_thumb = bool(caminho_thumb and Path(caminho_thumb).exists())
+
+        # 1. Solicitar Signed Upload URLs ao backend
+        res_url = requests.post(
+            f"{BASE_WEB_URL}/api/totem/upload-url",
+            headers=headers_auth,
+            json={"incluirThumbnail": tem_thumb},
+            timeout=20,
+        )
+        if res_url.status_code != 200:
+            raise RuntimeError(f"Falha ao obter URL de upload ({res_url.status_code}): {res_url.text}")
+
+        dados_url = res_url.json()
+        video_info = dados_url["video"]
+        thumb_info = dados_url.get("thumbnail")
+
+        # 2. Upload do MP4 via Signed URL
+        with open(caminho_video, "rb") as f_vid:
+            res_up = requests.put(
+                video_info["signedUrl"],
+                headers={"Content-Type": "video/mp4", "x-upsert": "false"},
+                data=f_vid,
+                timeout=90,
+            )
+        if res_up.status_code not in (200, 201):
+            raise RuntimeError(f"Falha no upload do MP4 ({res_up.status_code}): {res_up.text}")
+
+        # 3. Upload da thumbnail JPG (opcional, não bloqueia o lance se falhar)
+        thumb_public_url = None
+        if tem_thumb and thumb_info:
+            try:
+                with open(caminho_thumb, "rb") as f_th:
+                    res_th = requests.put(
+                        thumb_info["signedUrl"],
+                        headers={"Content-Type": "image/jpeg", "x-upsert": "false"},
+                        data=f_th,
+                        timeout=25,
+                    )
+                if res_th.status_code in (200, 201):
+                    thumb_public_url = thumb_info["publicUrl"]
+            except Exception as err_th:
+                print("⚠️ Aviso ao enviar thumbnail:", err_th)
+
+        # 4. Registrar replay no banco de dados via API autenticada
+        res_reg = requests.post(
+            f"{BASE_WEB_URL}/api/totem/replays",
+            headers=headers_auth,
+            json={
+                "video_url": video_info["publicUrl"],
+                "thumbnail_url": thumb_public_url,
+            },
+            timeout=20,
+        )
+        if res_reg.status_code not in (200, 201):
+            raise RuntimeError(f"Falha ao registrar replay ({res_reg.status_code}): {res_reg.text}")
+
+        return res_reg.json().get("id")
 
     def processar_e_enviar_lance(self):
-        """Concatena fatias da RAM, gera MP4 otimizado e sobe para o Supabase"""
-        nome_arquivo = f"lance_{int(time.time())}.mp4"
-        caminho_final = GRAVACOES_DIR / nome_arquivo
+        """Concatena segmentos fechados da RAM, gera MP4 + thumbnail e publica."""
+        carimbo = int(time.time() * 1000)
+        caminho_final = GRAVACOES_DIR / f"lance_{carimbo}.mp4"
+        caminho_thumb = GRAVACOES_DIR / f"lance_{carimbo}.jpg"
+        concat_list = GRAVACOES_DIR / f"concat_{carimbo}.txt"
 
         try:
-            # Pega os últimos arquivos da RAM
-            segmentos = sorted(list(BUFFER_DIR.glob("seg_*.mp4")), key=os.path.getmtime)
-            ultimos_6 = segmentos[-6:] if len(segmentos) >= 6 else segmentos
+            # Ordena segmentos MPEG-TS por data de modificação e EXCLUI o último (em escrita ativa)
+            segmentos = sorted(BUFFER_DIR.glob("seg_*.ts"), key=os.path.getmtime)
+            fechados = segmentos[:-1] if len(segmentos) > 1 else segmentos
+            ultimos_6 = fechados[-6:] if len(fechados) >= 6 else fechados
 
             if ultimos_6:
-                concat_list = GRAVACOES_DIR / "concat.txt"
-                with open(concat_list, "w") as f:
-                    for s in ultimos_6:
-                        f.write(f"file '{s.resolve()}'\n")
+                with open(concat_list, "w", encoding="utf-8") as f:
+                    for seg in ultimos_6:
+                        f.write(f"file '{seg.resolve()}'\n")
 
-                subprocess.run([
-                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-                    "-i", str(concat_list),
-                    "-c", "copy",
-                    "-movflags", "+faststart",
-                    str(caminho_final)
-                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(
+                    [
+                        "ffmpeg", "-y", "-loglevel", "error",
+                        "-f", "concat", "-safe", "0",
+                        "-i", str(concat_list),
+                        "-c", "copy",
+                        "-bsf:a", "aac_adtstoasc",
+                        "-movflags", "+faststart",
+                        str(caminho_final),
+                    ],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=45,
+                )
             else:
-                # Fallback caso não tenha segmentos reais na máquina de teste
-                subprocess.run([
-                    "ffmpeg", "-y", "-f", "lavfi",
-                    "-i", "color=c=black:s=1280x720:d=30",
-                    "-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    str(caminho_final)
-                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Fallback apenas em bancada de testes sem câmera configurada
+                subprocess.run(
+                    [
+                        "ffmpeg", "-y", "-loglevel", "error",
+                        "-f", "lavfi",
+                        "-i", f"color=c=black:s=1280x720:d={DURACAO_REPLAY_SEGUNDOS}",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-movflags", "+faststart",
+                        str(caminho_final),
+                    ],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=45,
+                )
 
-            # Upload do vídeo para Supabase Storage
-            url_video = self.upload_supabase_storage(caminho_final, nome_arquivo)
-            if url_video:
-                id_replay = self.registrar_replay_banco(url_video)
+            self._gerar_thumbnail(caminho_final, caminho_thumb)
+
+            # Tenta enviar imediatamente; se a internet caiu, salva na fila offline
+            try:
+                id_replay = self._enviar_para_nuvem(caminho_final, caminho_thumb)
                 print(f"🎉 Replay publicado com sucesso! ID: {id_replay}")
-                
-                # Envia para a TV o link do replay com QR Code
                 url_jogada = f"{BASE_WEB_URL}/jogada?id={id_replay}"
                 self.atualizar_display_kiosk({
                     "modo": "replay_pronto",
                     "url_jogada": url_jogada,
-                    "id_replay": id_replay
+                    "id_replay": id_replay,
                 })
+                self._remover_arquivos_locais(caminho_final, caminho_thumb)
+            except Exception as err_net:
+                print(f"⚠️ Sem conexão para upload imediato ({err_net}). Movendo para fila offline...")
+                destino_vid = FILA_OFFLINE_DIR / caminho_final.name
+                shutil.move(str(caminho_final), str(destino_vid))
+                if caminho_thumb.exists():
+                    shutil.move(str(caminho_thumb), str(FILA_OFFLINE_DIR / caminho_thumb.name))
+                self._aplicar_teto_fila_offline()
+                self.atualizar_display_kiosk({
+                    "modo": "pronto",
+                    "mensagem": "Lance salvo localmente! Será enviado assim que a internet voltar."
+                })
+
         except Exception as e:
             print("Erro ao processar lance:", e)
-            self.atualizar_display_kiosk({"modo": "pronto", "mensagem": "Erro ao gerar vídeo."})
+            self._remover_arquivos_locais(caminho_final, caminho_thumb)
+            self.atualizar_display_kiosk({
+                "modo": "pronto",
+                "mensagem": "Não foi possível gerar o vídeo. Tente novamente."
+            })
+        finally:
+            self._remover_arquivos_locais(concat_list)
 
-    def upload_supabase_storage(self, caminho_arquivo, nome_arquivo):
-        """Envia o arquivo para o bucket 'replays' do Supabase"""
-        url = f"{SUPABASE_URL}/storage/v1/object/replays/{nome_arquivo}"
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "video/mp4"
-        }
-        with open(caminho_arquivo, "rb") as f:
-            res = requests.post(url, headers=headers, data=f, timeout=60)
-            if res.status_code in [200, 201]:
-                return f"{SUPABASE_URL}/storage/v1/object/public/replays/{nome_arquivo}"
-            else:
-                print("Falha no upload do Supabase Storage:", res.text)
-                return None
+    def processar_fila_offline(self):
+        """Reenvia automaticamente lances salvos durante quedas de internet."""
+        while self.executando:
+            time.sleep(30)
+            if not self.token_autenticacao:
+                continue
 
-    def registrar_replay_banco(self, url_video):
-        """Insere o lance na tabela replays do Supabase"""
-        url = f"{SUPABASE_URL}/rest/v1/replays"
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "return=representation"
-        }
-        payload = {
-            "quadra_id": self.quadra_id,
-            "video_url": url_video
-        }
-        res = requests.post(url, headers=headers, json=payload, timeout=10)
-        if res.status_code in [200, 201]:
-            dados = res.json()
-            return dados[0].get("id")
-        return None
+            pendentes = sorted(FILA_OFFLINE_DIR.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+            for video_pendente in pendentes:
+                thumb_pendente = video_pendente.with_suffix(".jpg")
+                try:
+                    id_replay = self._enviar_para_nuvem(
+                        video_pendente,
+                        thumb_pendente if thumb_pendente.exists() else None,
+                    )
+                    print(f"☁️ [FILA OFFLINE] Replay sincronizado com sucesso! ID: {id_replay}")
+                    self._remover_arquivos_locais(video_pendente, thumb_pendente)
+                except Exception as err:
+                    print(f"⏳ [FILA OFFLINE] Ainda sem conexão ({err}). Nova tentativa em 30s.")
+                    break
 
+    # ---------------------------------------------------------
+    # ARDUINO USB SERIAL
+    # ---------------------------------------------------------
+    def monitorar_arduino_serial(self):
+        if not TEM_SERIAL:
+            return
+
+        print("🔍 Monitor de Arduino USB Serial iniciado...")
+        while self.executando:
+            portas_encontradas = glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*")
+            if not portas_encontradas:
+                try:
+                    portas_encontradas = [p.device for p in serial.tools.list_ports.comports()]
+                except Exception:
+                    portas_encontradas = []
+
+            if not portas_encontradas:
+                time.sleep(3)
+                continue
+
+            porta_alvo = portas_encontradas[0]
+            try:
+                print(f"🔌 Conectando ao Arduino em {porta_alvo} (115200 bps)...")
+                with serial.Serial(porta_alvo, 115200, timeout=1) as ser:
+                    ser.reset_input_buffer()
+                    print(f"✅ Conectado com sucesso ao Arduino em {porta_alvo}!")
+                    while self.executando:
+                        linha = ser.readline().decode("utf-8", errors="ignore").strip()
+                        if not linha:
+                            continue
+                        if "FOX_BOTAO_PRESSIONADO" in linha:
+                            print(f"⚡ [ARDUINO USB] Lance acionado na porta {porta_alvo}!")
+                            self.acionar_botao_lance()
+                        elif "FOX_ARDUINO_READY" in linha:
+                            print(f"ℹ️ [ARDUINO] Firmware Fox ativo ({porta_alvo})")
+            except Exception as e:
+                print(f"⚠️ Conexão Serial interrompida ({e}). Tentando em 3s...")
+                time.sleep(3)
+
+    # ---------------------------------------------------------
+    # LOOP PRINCIPAL
+    # ---------------------------------------------------------
     def iniciar(self):
-        print("Iniciando Totem Fox Replay...")
+        print("🦊 Iniciando Totem Fox Replay v2...")
+        self.iniciar_servidor_kiosk()
 
-        if not self.quadra_id:
+        if not self.quadra_id or not self.token_autenticacao:
             self.registrar_pareamento_pendente()
             self.aguardar_ativacao()
+        else:
+            self.atualizar_display_kiosk({
+                "modo": "pronto",
+                "mensagem": "Totem operacional e pronto para gravar!"
+            })
 
         self.iniciar_buffer_camera()
 
-        # Configurar interrupção por hardware no Pino GPIO
+        threading.Thread(target=self.watchdog_buffer_camera, daemon=True).start()
+        threading.Thread(target=self.enviar_heartbeat, daemon=True).start()
+        threading.Thread(target=self.processar_fila_offline, daemon=True).start()
+        threading.Thread(target=self.monitorar_arduino_serial, daemon=True).start()
+
         if TEM_GPIO:
-            botao = Button(PINO_BOTAO_GPIO, pull_up=True, bounce_time=0.1)
-            botao.when_pressed = self.acionar_botao_lance
-            print(f"🟢 Monitorando botão físico no Pino 11 (GPIO {PINO_BOTAO_GPIO}) - Aperte para testar!")
-            while True:
-                time.sleep(1)
+            try:
+                botao = Button(PINO_BOTAO_GPIO, pull_up=True, bounce_time=0.1)
+                botao.when_pressed = self.acionar_botao_lance
+                print(f"🟢 Monitorando botão físico GPIO {PINO_BOTAO_GPIO}")
+            except Exception as e:
+                print(f"Aviso ao inicializar GPIO: {e}")
+
+        if sys.stdin and sys.stdin.isatty():
+            print("💡 Pressione ENTER neste terminal para simular o toque do botão:")
+            while self.executando:
+                try:
+                    input()
+                    self.acionar_botao_lance()
+                except (EOFError, KeyboardInterrupt):
+                    self.executando = False
+                    break
         else:
-            print("⚠️ Pressione ENTER no teclado deste terminal para simular o toque do botão físico:")
-            while True:
-                input()
-                self.acionar_botao_lance()
+            while self.executando:
+                time.sleep(1)
+
 
 if __name__ == "__main__":
     totem = TotemFox()

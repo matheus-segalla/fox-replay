@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
@@ -38,9 +39,12 @@ export default function Navbar() {
                     className="flex items-center gap-3 select-none cursor-pointer group"
                     onClick={() => router.push('/')}
                 >
-                    <img
+                    <Image
                         src="/logo-fox.jpeg"
                         alt="Logo Fox Replay"
+                        width={36}
+                        height={36}
+                        priority
                         className="h-9 w-9 object-cover rounded-xl border border-zinc-800 shadow-xs bg-zinc-900 group-hover:border-amber-500/50 transition-colors"
                     />
                     <div className="flex items-center gap-2">

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { montarUrlWhatsAppSuporte } from '@/lib/auth';
 
 const OPCOES_QUADRAS = [
     { id: '1', label: '1 Quadra', desc: 'Piloto Solo' },
@@ -37,7 +39,7 @@ export default function LeadFormSection() {
         const opcaoQuadraObj = OPCOES_QUADRAS.find(o => o.id === quadras);
         const quadrasTexto = opcaoQuadraObj ? `${opcaoQuadraObj.label} (${opcaoQuadraObj.desc})` : quadras;
 
-        const texto = encodeURIComponent(
+        const texto =
             `🏟️ *SOLICITAÇÃO DE AVALIAÇÃO — FOX REPLAY (ARENA PARCEIRA)*\n\n` +
             `📍 *Complexo Esportivo:* ${nomeArena}\n` +
             `🌎 *Localização:* ${cidade} - ${estado.toUpperCase()}\n` +
@@ -45,11 +47,10 @@ export default function LeadFormSection() {
             `🔢 *Quantidade de Quadras:* ${quadrasTexto}\n` +
             `👤 *Responsável:* ${nomeContato}\n` +
             `📱 *WhatsApp:* ${whatsapp}\n\n` +
-            `Olá equipe Fox Replay! Gostaria de solicitar a avaliação da infraestrutura da minha arena para participar da fase inicial de implantação.`
-        );
+            `Olá equipe Fox Replay! Gostaria de solicitar a avaliação da infraestrutura da minha arena para participar da fase inicial de implantação.`;
 
-        const urlWhatsApp = `https://api.whatsapp.com/send?phone=5511997771152&text=${texto}`;
-        window.open(urlWhatsApp, '_blank');
+        const urlWhatsApp = montarUrlWhatsAppSuporte(texto);
+        window.open(urlWhatsApp, '_blank', 'noopener,noreferrer');
         setEnviando(false);
     };
 
@@ -59,9 +60,11 @@ export default function LeadFormSection() {
                 {/* CABEÇALHO */}
                 <div className="flex flex-col items-center justify-center text-center space-y-2">
                     <div className="flex items-center gap-2 mb-1">
-                        <img
+                        <Image
                             src="/logo-fox.jpeg"
                             alt="Logo Fox Replay"
+                            width={32}
+                            height={32}
                             className="h-8 w-8 object-cover rounded-lg border border-white/10 shadow-xs bg-zinc-900"
                         />
                         <span className="text-[10px] font-mono tracking-widest text-amber-400 uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 font-bold">

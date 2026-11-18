@@ -20,6 +20,45 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Foco visível acessível para navegação por teclado */
+:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* Animações utilitárias utilizadas em todo o portal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn,
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  .animate-fade-in {
+    animation: none;
+  }
+}
+
+/* Ocultar barra de rolagem horizontal mantendo scroll fluido em mobile */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Efeito moderno de scrollbar combinando com a marca */
 ::-webkit-scrollbar {
   width: 6px;
