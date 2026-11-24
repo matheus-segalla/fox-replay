@@ -8,7 +8,7 @@ set -euo pipefail
 echo "🦊 Iniciando instalação do totem Fox Replay v2..."
 
 TARGET_USER="${SUDO_USER:-$(whoami)}"
-FOX_WEB_URL="${FOX_WEB_URL:-https://fox-replay.vercel.app}"
+FOX_WEB_URL="${FOX_WEB_URL:-https://www.foxreplay.com.br}"
 
 # 1. Dependências de Vídeo, Serial, GPIO e Kiosk
 sudo apt update

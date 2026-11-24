@@ -115,7 +115,7 @@ Você não precisa digitar comandos no terminal nem abrir arquivos de configura�
      * Um **QR Code** de ativação rápida.
 3. **Ative pelo Celular**:
    * Aponte a câmera do seu celular para o QR Code da TV **OU** acesse:
-     `https://fox-replay.vercel.app/ativar`
+     `https://www.foxreplay.com.br/ativar`
    * Faça login com a conta de administrador da arena;
    * Selecione a **Arena** e a **Quadra** correspondente (ex: *Quadra 2 - Coberta*);
    * Digite o código de 6 dígitos exibido na TV;

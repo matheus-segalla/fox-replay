@@ -102,7 +102,7 @@ function ConteudoDashboardArena() {
   });
 
   const [urlBaseSistema, setUrlBaseSistema] = useState(
-    process.env.NEXT_PUBLIC_APP_URL || 'https://fox-replay.vercel.app'
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.foxreplay.com.br'
   );
 
   useEffect(() => {

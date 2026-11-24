@@ -60,7 +60,7 @@ LIMITE_FILA_BYTES = 500 * 1024 * 1024  # Teto de 500MB para fila offline
 KIOSK_HTTP_HOST = "127.0.0.1"
 KIOSK_HTTP_PORT = int(os.environ.get("FOX_KIOSK_PORT", "8080"))
 
-BASE_WEB_URL = os.environ.get("FOX_WEB_URL", "https://fox-replay.vercel.app").rstrip("/")
+BASE_WEB_URL = os.environ.get("FOX_WEB_URL", "https://www.foxreplay.com.br").rstrip("/")
 
 
 class KioskHTTPHandler(BaseHTTPRequestHandler):

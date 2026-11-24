@@ -217,7 +217,7 @@ export default function SuperAdminNOCPage() {
   };
 
   const montarMensagemCredenciais = (info) => {
-    const origem = typeof window !== 'undefined' ? window.location.origin : 'https://fox-replay.vercel.app';
+    const origem = typeof window !== 'undefined' ? window.location.origin : 'https://www.foxreplay.com.br';
     if (info.gestor.contaExistente) {
       return (
         `🏟️ *Bem-vindo à Fox Replay — ${info.arena.nome}!*\n\n` +
