@@ -16,10 +16,18 @@ export const metadata = {
   description: "Reveja e baixe seus lances esportivos instantaneamente.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#0d0d0d",
+};
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR" className="h-full scroll-smooth">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-[#0d0d0d] text-white`}>
+    <html lang="pt-BR" className="min-h-full scroll-smooth">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-dvh bg-[#0d0d0d] text-white`}>
         {children}
       </body>
     </html>
