@@ -468,14 +468,14 @@ function ConteudoPortalArena() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-4 pb-16 flex flex-col items-center relative overflow-hidden">
+        <div className="min-h-dvh bg-zinc-50 text-zinc-900 font-sans p-4 pb-16 flex flex-col items-center relative overflow-x-hidden safe-pb">
             {/* Linhas de fundo e glow */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
             <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-amber-400/20 rounded-full blur-[140px] pointer-events-none" />
 
             {/* TOAST FLUTUANTE */}
             {toastMensagem && (
-                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl border border-zinc-700 animate-fadeIn flex items-center gap-2">
+                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl border border-zinc-700 animate-fadeIn flex items-center gap-2 safe-pt">
                     <span>{toastMensagem}</span>
                 </div>
             )}
@@ -484,7 +484,7 @@ function ConteudoPortalArena() {
             <header className="w-full max-w-xl flex justify-between items-center py-3 border-b border-zinc-200 mb-6 shrink-0 relative z-20">
                 <button
                     onClick={() => router.push('/')}
-                    className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95"
+                    className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 min-h-[40px] cursor-pointer"
                 >
                     <IconArrowLeft className="w-3.5 h-3.5" />
                     <span>Início</span>
@@ -634,7 +634,7 @@ function ConteudoPortalArena() {
                                 setDataFiltro(hojeStr);
                                 setCalendarioAberto(false);
                             }}
-                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center ${
+                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center min-h-[42px] cursor-pointer active:scale-95 ${
                                 dataFiltro === hojeStr
                                     ? 'bg-zinc-900 text-white shadow-sm font-black'
                                     : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
@@ -648,7 +648,7 @@ function ConteudoPortalArena() {
                                 setDataFiltro(ontemStr);
                                 setCalendarioAberto(false);
                             }}
-                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center ${
+                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center min-h-[42px] cursor-pointer active:scale-95 ${
                                 dataFiltro === ontemStr
                                     ? 'bg-zinc-900 text-white shadow-sm font-black'
                                     : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
@@ -659,7 +659,7 @@ function ConteudoPortalArena() {
 
                         <button
                             onClick={() => setCalendarioAberto(!calendarioAberto)}
-                            className={`py-2 px-1 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border text-center ${
+                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border text-center min-h-[42px] cursor-pointer active:scale-95 ${
                                 dataFiltro !== hojeStr && dataFiltro !== ontemStr
                                     ? 'bg-amber-500 text-black border-amber-500 shadow-sm font-black'
                                     : calendarioAberto
@@ -680,22 +680,25 @@ function ConteudoPortalArena() {
                                 <span className="text-xs font-bold uppercase text-amber-400 tracking-wider">
                                     {mesesNomes[dataVisualizacaoMes.getMonth()]} {dataVisualizacaoMes.getFullYear()}
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5">
                                     <button
                                         onClick={() => mudarMes(-1)}
-                                        className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold"
+                                        aria-label="Mês anterior"
+                                        className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
                                     >
                                         ‹
                                     </button>
                                     <button
                                         onClick={() => mudarMes(1)}
-                                        className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold"
+                                        aria-label="Próximo mês"
+                                        className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
                                     >
                                         ›
                                     </button>
                                     <button
                                         onClick={() => setCalendarioAberto(false)}
-                                        className="ml-2 w-6 h-6 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs font-bold"
+                                        aria-label="Fechar calendário"
+                                        className="ml-1 w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
                                     >
                                         ×
                                     </button>
@@ -716,7 +719,7 @@ function ConteudoPortalArena() {
                             <div className="grid grid-cols-7 gap-1">
                                 {diasCalendario.map((item, idx) => {
                                     if (!item) {
-                                        return <div key={`vazio-${idx}`} className="h-7 w-full" />;
+                                        return <div key={`vazio-${idx}`} className="h-9 w-full" />;
                                     }
                                     return (
                                         <button
@@ -726,7 +729,7 @@ function ConteudoPortalArena() {
                                                 setDataFiltro(item.dataStr);
                                                 setCalendarioAberto(false);
                                             }}
-                                            className={`h-7 w-full rounded-lg text-xs font-bold transition-all flex items-center justify-center relative ${
+                                            className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center relative cursor-pointer active:scale-95 ${
                                                 item.selecionado
                                                     ? 'bg-amber-500 text-black font-black shadow-md'
                                                     : item.disponivel
@@ -736,7 +739,7 @@ function ConteudoPortalArena() {
                                         >
                                             <span>{item.numero}</span>
                                             {item.ehHoje && !item.selecionado && (
-                                                <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-400" />
+                                                <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
                                             )}
                                         </button>
                                     );
@@ -747,7 +750,7 @@ function ConteudoPortalArena() {
 
                     {/* Linha 2: Faixa de Horário e Seletor Fino Compactos */}
                     <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-1.5">
-                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1">
+                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1 py-0.5">
                             {[
                                 { id: 'todos', label: 'Todos' },
                                 { id: 'manha', label: '06h-12h' },
@@ -757,7 +760,7 @@ function ConteudoPortalArena() {
                                 <button
                                     key={turno.id}
                                     onClick={() => setPeriodoFiltro(turno.id)}
-                                    className={`py-1 px-2.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                                    className={`py-2 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all min-h-[38px] cursor-pointer active:scale-95 ${
                                         periodoFiltro === turno.id
                                             ? 'bg-amber-500 text-black font-black shadow-sm'
                                             : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
@@ -772,7 +775,8 @@ function ConteudoPortalArena() {
                         <select
                             value={['todos', 'manha', 'tarde', 'noite'].includes(periodoFiltro) ? '' : periodoFiltro}
                             onChange={(e) => setPeriodoFiltro(e.target.value || 'todos')}
-                            className="py-1 px-2 rounded-lg text-[11px] font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer"
+                            aria-label="Filtrar por hora exata"
+                            className="py-2 px-2.5 rounded-xl text-xs font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer min-h-[38px]"
                         >
                             <option value="">Hora exata ▾</option>
                             {Array.from({ length: 18 }, (_, i) => i + 6).map((h) => (
@@ -864,7 +868,7 @@ function ConteudoPortalArena() {
                                             <button
                                                 onClick={(e) => abrirDownloadComMarcas(e, replay.id)}
                                                 title="Baixar vídeo 9:16 com marca da arena e patrocinadores"
-                                                className="py-2.5 px-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
+                                                className="py-3 px-3 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
                                             >
                                                 <span>Baixar</span>
                                                 <IconDownload className="w-3.5 h-3.5" />
@@ -872,7 +876,7 @@ function ConteudoPortalArena() {
 
                                             <button
                                                 onClick={(e) => compartilharLance(e, replay.id, nomeQuadra)}
-                                                className="py-2.5 px-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-700 font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                className="py-3 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
                                             >
                                                 <span>Compartilhar</span>
                                                 <IconShare className="w-3.5 h-3.5" />

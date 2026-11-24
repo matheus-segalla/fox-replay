@@ -358,19 +358,19 @@ function ConteudoJogada() {
         : null;
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0B0C] text-white p-4 font-sans relative overflow-hidden">
+        <div className="flex flex-col items-center min-h-dvh bg-[#0B0B0C] text-white p-4 pb-12 font-sans relative overflow-x-hidden safe-pb">
             {/* Efeitos de iluminação de fundo */}
             <div className="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
 
             {/* TOAST FLUTUANTE */}
             {toastMensagem && (
-                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-zinc-800 text-amber-400 border border-zinc-700 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl animate-fadeIn">
+                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-zinc-800 text-amber-400 border border-zinc-700 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl animate-fadeIn safe-pt">
                     {toastMensagem}
                 </div>
             )}
 
-            <div className="w-full max-w-[420px] flex flex-col items-center relative z-10 py-4">
+            <div className="w-full max-w-[420px] flex flex-col items-center relative z-10 py-2 sm:py-4">
 
                 {/* HEADER / IDENTIFICAÇÃO DO JOGADOR */}
                 <div className="text-center mb-5 space-y-2">
@@ -451,6 +451,7 @@ function ConteudoJogada() {
                             controls
                             controlsList="nodownload"
                             playsInline
+                            webkit-playsinline="true"
                             autoPlay
                             muted
                         />
@@ -543,7 +544,7 @@ function ConteudoJogada() {
                     <div className="grid grid-cols-3 gap-2">
                         <button
                             onClick={alternarFavorito}
-                            className={`py-3 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 border ${
+                            className={`py-3 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 border min-h-[44px] cursor-pointer ${
                                 salvoFavorito
                                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
                                     : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
@@ -554,7 +555,7 @@ function ConteudoJogada() {
 
                         <button
                             onClick={compartilharWhatsApp}
-                            className="py-3 px-2 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md shadow-emerald-950/20"
+                            className="py-3 px-2 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md shadow-emerald-950/20 min-h-[44px] cursor-pointer"
                         >
                             <span>WhatsApp</span>
                             <span>💬</span>
@@ -562,7 +563,7 @@ function ConteudoJogada() {
 
                         <button
                             onClick={compartilharNativo}
-                            className="py-3 px-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 active:scale-95 border border-zinc-700 shadow-md"
+                            className="py-3 px-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 active:scale-95 border border-zinc-700 shadow-md min-h-[44px] cursor-pointer"
                         >
                             <span>Redes</span>
                             <span>📱</span>
@@ -573,7 +574,7 @@ function ConteudoJogada() {
                     {dados?.arenaId && (
                         <button
                             onClick={() => router.push(`/arena/${dados.arenaId}`)}
-                            className="w-full py-2.5 text-xs font-bold text-zinc-400 hover:text-amber-400 transition-colors flex items-center justify-center gap-1 pt-2"
+                            className="w-full py-3 text-xs font-bold text-zinc-400 hover:text-amber-400 transition-colors flex items-center justify-center gap-1 pt-2 min-h-[44px] cursor-pointer active:scale-98"
                         >
                             <span>← Ver todos os lances de hoje na {dados.nomeArena}</span>
                         </button>
@@ -593,7 +594,7 @@ function ConteudoJogada() {
                 <div className="mt-6 text-center space-y-2">
                     <button
                         onClick={() => setModalPrivacidadeAberto(true)}
-                        className="text-[10px] text-zinc-500 hover:text-zinc-400 underline font-medium"
+                        className="text-xs text-zinc-500 hover:text-zinc-400 underline font-medium py-2 px-3 inline-block min-h-[44px] cursor-pointer"
                     >
                         🛡️ Privacidade: Solicitar remoção deste vídeo
                     </button>
@@ -607,7 +608,7 @@ function ConteudoJogada() {
             {/* MODAL DE CONVITE SUTIL PARA CRIAR PERFIL */}
             {modalPerfilAberto && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative text-center">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full max-h-[85dvh] overflow-y-auto overscroll-contain space-y-4 shadow-2xl relative text-center">
                         <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
                             <svg className="w-6 h-6 fill-amber-400 text-amber-400" viewBox="0 0 24 24">
                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -622,13 +623,13 @@ function ConteudoJogada() {
                         <div className="space-y-2 pt-2">
                             <button
                                 onClick={() => router.push(`/entrar?redirect=/jogada?id=${jogadaId}`)}
-                                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-95 transition-all"
+                                className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-95 transition-all min-h-[44px] cursor-pointer"
                             >
                                 Salvar Permanente na Minha Conta
                             </button>
                             <button
                                 onClick={() => setModalPerfilAberto(false)}
-                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-semibold text-xs rounded-xl transition-all"
+                                className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-semibold text-xs rounded-xl transition-all min-h-[44px] cursor-pointer"
                             >
                                 Manter salvo apenas neste celular
                             </button>
@@ -640,7 +641,7 @@ function ConteudoJogada() {
             {/* 🌟 MODAL DE PRIVACIDADE E EXCLUSÃO DE VÍDEO (LGPD) 🌟 */}
             {modalPrivacidadeAberto && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-[380px] space-y-4 relative shadow-2xl text-left">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-[380px] max-h-[85dvh] overflow-y-auto overscroll-contain space-y-4 relative shadow-2xl text-left">
                         <div className="flex justify-between items-center">
                             <h3 className="font-black text-sm uppercase tracking-wide text-white flex items-center gap-2">
                                 <span>🛡️</span>
@@ -648,7 +649,8 @@ function ConteudoJogada() {
                             </h3>
                             <button
                                 onClick={() => setModalPrivacidadeAberto(false)}
-                                className="text-zinc-500 hover:text-white text-xs bg-zinc-800 w-7 h-7 rounded-lg flex items-center justify-center"
+                                aria-label="Fechar modal de privacidade"
+                                className="text-zinc-400 hover:text-white text-xs bg-zinc-800 w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95"
                             >
                                 ✕
                             </button>
@@ -670,7 +672,7 @@ function ConteudoJogada() {
                                         `Olá, solicito a exclusão imediata deste replay por questões de privacidade/imagem (LGPD):\n\nID do Replay: ${jogadaId}\nLink: ${window.location.href}`;
                                     window.open(montarUrlWhatsAppSuporte(texto), '_blank', 'noopener,noreferrer');
                                 }}
-                                className="w-full py-3 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md"
+                                className="w-full py-3.5 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md min-h-[44px] cursor-pointer"
                             >
                                 <span>Solicitar Exclusão no WhatsApp</span>
                                 <span>💬</span>
@@ -678,7 +680,7 @@ function ConteudoJogada() {
 
                             <button
                                 onClick={() => setModalPrivacidadeAberto(false)}
-                                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs rounded-xl transition-all"
+                                className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs rounded-xl transition-all min-h-[44px] cursor-pointer"
                             >
                                 Fechar
                             </button>
@@ -690,7 +692,7 @@ function ConteudoJogada() {
             {/* MODAL DE RENDERIZAÇÃO DO VÍDEO COM PATROCINADORES */}
             {modalDownloadAberto && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
-                    <div className="bg-[#121318] border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
+                    <div className="bg-[#121318] border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full max-h-[85dvh] overflow-y-auto overscroll-contain text-center space-y-4 shadow-2xl">
                         <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-xl font-bold animate-pulse">
                             📥
                         </div>

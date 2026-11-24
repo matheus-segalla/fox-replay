@@ -182,7 +182,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-amber-500 selection:text-zinc-950 relative flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-dvh bg-zinc-50 text-zinc-900 font-sans selection:bg-amber-500 selection:text-zinc-950 relative flex flex-col justify-between overflow-x-hidden safe-pb">
 
       {/* ANÉIS 3D METÁLICOS DOURADOS E ILUMINAÇÃO EM TEMA CLARO */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -233,7 +233,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
             <span className="tracking-wide">Tecnologia Autônoma &bull; Reveja seus lances em segundos</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[0.92] select-none">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[0.94] select-none">
             <span className="block text-zinc-950">SEUS LANCES ALÉM DOS</span>
             <span className="block text-stroke-gold mt-2">LIMITES DA QUADRA</span>
           </h1>
@@ -295,11 +295,11 @@ export default function HomeClient({ arenasIniciais = [] }) {
               <button
                 type="button"
                 onClick={() => setTermoBusca('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-full w-5 h-5 flex items-center justify-center transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
                 aria-label="Limpar busca"
                 title="Limpar busca"
               >
-                <IconX className="w-3 h-3" />
+                <IconX className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -462,7 +462,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
           onClick={() => setModalAberto(false)}
         >
           <div
-            className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-[420px] space-y-5 relative shadow-2xl"
+            className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-[420px] max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
@@ -476,7 +476,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
                 type="button"
                 onClick={() => setModalAberto(false)}
                 aria-label="Fechar modal"
-                className="text-zinc-400 hover:text-zinc-700 transition-colors bg-zinc-50 border border-zinc-200 w-7 h-7 rounded-lg flex items-center justify-center shadow-xs"
+                className="text-zinc-400 hover:text-zinc-700 transition-colors bg-zinc-50 border border-zinc-200 w-9 h-9 rounded-xl flex items-center justify-center shadow-xs cursor-pointer active:scale-95"
               >
                 <IconX className="w-3.5 h-3.5" />
               </button>

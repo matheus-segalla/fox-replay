@@ -602,7 +602,7 @@ function ConteudoDashboardArena() {
 
   return (
     <>
-      <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans relative selection:bg-amber-500 selection:text-black overflow-x-hidden print:hidden">
+      <div className="min-h-dvh bg-zinc-50 text-zinc-900 font-sans relative selection:bg-amber-500 selection:text-black overflow-x-hidden print:hidden safe-pb">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
         <div className="absolute top-0 right-1/4 w-[500px] h-[350px] bg-amber-400/15 rounded-full blur-[140px] pointer-events-none" />
 
@@ -1178,7 +1178,7 @@ function ConteudoDashboardArena() {
             onClick={() => setQuadraSelecionada(null)}
           >
             <div
-              className="bg-white border border-zinc-200 rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl"
+              className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-2xl max-h-[85dvh] flex flex-col shadow-2xl overscroll-contain"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex flex-wrap justify-between items-center gap-3 border-b border-zinc-200 pb-4 mb-4 shrink-0">
@@ -1200,7 +1200,7 @@ function ConteudoDashboardArena() {
                         setFiltroDiasModeracao('1');
                         carregarReplaysDaQuadra(quadraSelecionada, '1');
                       }}
-                      className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-md cursor-pointer min-h-[36px] active:scale-95 transition-all ${
                         filtroDiasModeracao === '1' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
                       }`}
                     >
@@ -1212,7 +1212,7 @@ function ConteudoDashboardArena() {
                         setFiltroDiasModeracao('14');
                         carregarReplaysDaQuadra(quadraSelecionada, '14');
                       }}
-                      className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-md cursor-pointer min-h-[36px] active:scale-95 transition-all ${
                         filtroDiasModeracao === '14' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
                       }`}
                     >
@@ -1223,7 +1223,7 @@ function ConteudoDashboardArena() {
                     type="button"
                     onClick={() => setQuadraSelecionada(null)}
                     aria-label="Fechar modal"
-                    className="w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center text-xs cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center text-xs cursor-pointer active:scale-95"
                   >
                     ✕
                   </button>
@@ -1314,7 +1314,7 @@ function ConteudoDashboardArena() {
             }}
           >
             <div
-              className="bg-white border border-zinc-200 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center border-b border-zinc-200 pb-4 mb-5">
@@ -1328,7 +1328,7 @@ function ConteudoDashboardArena() {
                     setQuadraParaEditar(null);
                   }}
                   aria-label="Fechar modal"
-                  className="text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                  className="text-zinc-400 hover:text-zinc-700 w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center text-xs cursor-pointer active:scale-95"
                 >
                   ✕
                 </button>
@@ -1361,14 +1361,14 @@ function ConteudoDashboardArena() {
                   <button
                     type="submit"
                     disabled={salvandoEdicao}
-                    className="w-full py-3.5 text-zinc-950 font-black text-xs uppercase tracking-widest rounded-xl bg-amber-500 hover:bg-amber-400 transition-all disabled:opacity-50 cursor-pointer"
+                    className="w-full py-3.5 text-zinc-950 font-black text-xs uppercase tracking-widest rounded-xl bg-amber-500 hover:bg-amber-400 transition-all disabled:opacity-50 cursor-pointer min-h-[44px] active:scale-95"
                   >
                     {salvandoEdicao ? 'Salvando...' : 'Salvar Alterações'}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleExcluirQuadra(quadraParaEditar.id)}
-                    className="w-full py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                    className="w-full py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer min-h-[44px] active:scale-95"
                   >
                     Excluir Quadra
                   </button>

@@ -468,7 +468,7 @@ export default function SuperAdminNOCPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950 pb-20">
+    <div className="min-h-dvh bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950 pb-20 safe-pb">
       {/* CABEÇALHO GLOBAL CONTEXTUAL (DARK NOC) */}
       <AppHeader theme="dark" activeRoute="admin" badge="NOC Super Admin" showLogout={true} />
 
@@ -872,7 +872,7 @@ export default function SuperAdminNOCPage() {
           onClick={() => setModalNovaArena(false)}
         >
           <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[85dvh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
@@ -883,7 +883,7 @@ export default function SuperAdminNOCPage() {
                 type="button"
                 onClick={() => setModalNovaArena(false)}
                 aria-label="Fechar modal"
-                className="text-zinc-500 hover:text-white p-1 cursor-pointer"
+                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
               >
                 <IconX className="w-4 h-4" />
               </button>
@@ -1070,7 +1070,7 @@ export default function SuperAdminNOCPage() {
           onClick={() => setArenaEditando(null)}
         >
           <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl"
+            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
@@ -1081,7 +1081,7 @@ export default function SuperAdminNOCPage() {
                 type="button"
                 onClick={() => setArenaEditando(null)}
                 aria-label="Fechar modal"
-                className="text-zinc-500 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
               >
                 <IconX className="w-4 h-4" />
               </button>
@@ -1178,7 +1178,7 @@ export default function SuperAdminNOCPage() {
           onClick={() => setDispEditando(null)}
         >
           <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl"
+            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
@@ -1189,7 +1189,7 @@ export default function SuperAdminNOCPage() {
                 type="button"
                 onClick={() => setDispEditando(null)}
                 aria-label="Fechar modal"
-                className="text-zinc-500 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
               >
                 <IconX className="w-4 h-4" />
               </button>
@@ -1208,7 +1208,7 @@ export default function SuperAdminNOCPage() {
               <button
                 type="submit"
                 disabled={salvandoDisp}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer min-h-[44px] active:scale-95"
               >
                 {salvandoDisp ? 'Salvando...' : 'Atualizar URL RTSP'}
               </button>
@@ -1224,7 +1224,7 @@ export default function SuperAdminNOCPage() {
           onClick={() => setModalPareamento(false)}
         >
           <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl"
+            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
@@ -1238,7 +1238,7 @@ export default function SuperAdminNOCPage() {
                 type="button"
                 onClick={() => setModalPareamento(false)}
                 aria-label="Fechar modal"
-                className="text-zinc-500 hover:text-white p-1 cursor-pointer"
+                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
               >
                 <IconX className="w-4 h-4" />
               </button>
@@ -1320,7 +1320,7 @@ export default function SuperAdminNOCPage() {
               <button
                 type="submit"
                 disabled={ativandoTotem || !quadraSelModal}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl disabled:opacity-50 cursor-pointer"
+                className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl disabled:opacity-50 cursor-pointer min-h-[44px] active:scale-95"
               >
                 {ativandoTotem ? 'Ativando Totem...' : 'Ativar e Iniciar Gravação ➔'}
               </button>

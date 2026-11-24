@@ -183,7 +183,7 @@ function FormularioEntrarUnificado() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between relative overflow-hidden">
+    <div className="min-h-dvh bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between relative overflow-x-hidden safe-pb">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
 
@@ -245,7 +245,7 @@ function FormularioEntrarUnificado() {
                 setModo('login');
                 setErro('');
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                 modo === 'login'
                   ? 'bg-white text-zinc-900 shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-800'
@@ -259,7 +259,7 @@ function FormularioEntrarUnificado() {
                 setModo('cadastro');
                 setErro('');
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all min-h-[42px] cursor-pointer active:scale-95 ${
                 modo === 'cadastro'
                   ? 'bg-white text-zinc-900 shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-800'
@@ -292,10 +292,12 @@ function FormularioEntrarUnificado() {
                     <input
                       type="text"
                       required
+                      inputMode="text"
+                      autoComplete="name"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
                       placeholder="Ex: Matheus Silva"
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all min-h-[42px]"
                     />
                     <IconUser className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   </div>
@@ -308,7 +310,7 @@ function FormularioEntrarUnificado() {
                   <select
                     value={esporte}
                     onChange={(e) => setEsporte(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all cursor-pointer min-h-[42px]"
                   >
                     <option value="Beach Tennis">Beach Tennis</option>
                     <option value="Futevôlei">Futevôlei</option>
@@ -330,10 +332,14 @@ function FormularioEntrarUnificado() {
                 <input
                   type="email"
                   required
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all min-h-[42px]"
                 />
                 <IconMail className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -348,10 +354,11 @@ function FormularioEntrarUnificado() {
                   type="password"
                   required
                   minLength={6}
+                  autoComplete={modo === 'login' ? 'current-password' : 'new-password'}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all min-h-[42px]"
                 />
                 <IconLock className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -360,7 +367,7 @@ function FormularioEntrarUnificado() {
             <button
               type="submit"
               disabled={carregando}
-              className="w-full py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 mt-2 disabled:opacity-60 cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 mt-2 disabled:opacity-60 cursor-pointer min-h-[48px]"
             >
               <span>
                 {carregando ? 'Processando...' : modo === 'login' ? 'Entrar' : 'Criar Meu Perfil'}

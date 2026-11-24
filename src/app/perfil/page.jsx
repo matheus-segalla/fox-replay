@@ -333,7 +333,7 @@ export default function PerfilPage() {
   const esporteExibicao = usuario?.user_metadata?.esporte_favorito || 'Beach Tennis';
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between relative selection:bg-amber-500 selection:text-white">
+    <div className="min-h-dvh bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between relative selection:bg-amber-500 selection:text-white safe-pb">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[340px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
 
@@ -441,21 +441,21 @@ export default function PerfilPage() {
             </div>
 
             {lances.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <input
                   type="text"
                   value={buscaTexto}
                   onChange={(e) => setBuscaTexto(e.target.value)}
                   placeholder="Filtrar por arena ou quadra..."
                   aria-label="Filtrar lances salvos"
-                  className="px-3 py-1.5 rounded-xl bg-white border border-zinc-200 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-amber-500 shadow-xs"
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-zinc-200 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-amber-500 shadow-xs min-h-[38px]"
                 />
                 {arenasDosLances.length > 1 && (
                   <select
                     value={filtroArena}
                     onChange={(e) => setFiltroArena(e.target.value)}
                     aria-label="Filtrar por arena"
-                    className="px-3 py-1.5 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer min-h-[38px]"
                   >
                     <option value="todas">Todas as arenas</option>
                     {arenasDosLances.map((nome) => (
@@ -569,11 +569,11 @@ export default function PerfilPage() {
 
                       {/* BOTÕES DE AÇÃO */}
                       <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => abrirDownloadComMarcas(lance.id)}
-                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                            className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer min-h-[40px] active:scale-95"
                             title="Baixar vídeo 9:16 com marca da arena e patrocinadores"
                           >
                             <IconDownload className="w-3.5 h-3.5" />
@@ -582,7 +582,7 @@ export default function PerfilPage() {
                           <button
                             type="button"
                             onClick={() => compartilharLance(lance.id)}
-                            className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                            className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-3 py-2 rounded-xl transition-all cursor-pointer min-h-[40px] active:scale-95 flex items-center justify-center"
                             aria-label="Copiar link do lance"
                             title="Copiar link"
                           >
@@ -593,11 +593,11 @@ export default function PerfilPage() {
                         <button
                           type="button"
                           onClick={() => removerLance(lance.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1.5 rounded-lg transition-colors cursor-pointer"
+                          className="text-zinc-400 hover:text-red-500 p-2 rounded-xl transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center active:scale-95"
                           aria-label="Remover dos salvos"
                           title="Remover dos salvos"
                         >
-                          <IconTrash className="w-3.5 h-3.5" />
+                          <IconTrash className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -616,7 +616,7 @@ export default function PerfilPage() {
           onClick={() => setModalEditarAberto(false)}
         >
           <div
-            className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl"
+            className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
@@ -627,7 +627,7 @@ export default function PerfilPage() {
                 type="button"
                 onClick={() => setModalEditarAberto(false)}
                 aria-label="Fechar modal"
-                className="text-zinc-400 hover:text-zinc-700 w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center text-xs"
+                className="text-zinc-400 hover:text-zinc-700 w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center text-xs active:scale-95 cursor-pointer"
               >
                 ✕
               </button>
@@ -647,6 +647,7 @@ export default function PerfilPage() {
                 <input
                   type="text"
                   required
+                  autoComplete="name"
                   value={editNome}
                   onChange={(e) => setEditNome(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white"
@@ -677,6 +678,7 @@ export default function PerfilPage() {
                 <input
                   type="password"
                   minLength={6}
+                  autoComplete="new-password"
                   value={novaSenha}
                   onChange={(e) => setNovaSenha(e.target.value)}
                   placeholder="Nova senha (mín. 6 caracteres)"
@@ -686,6 +688,7 @@ export default function PerfilPage() {
                   <input
                     type="password"
                     minLength={6}
+                    autoComplete="new-password"
                     value={confirmarSenha}
                     onChange={(e) => setConfirmarSenha(e.target.value)}
                     placeholder="Confirme a nova senha"
@@ -697,7 +700,7 @@ export default function PerfilPage() {
               <button
                 type="submit"
                 disabled={salvandoPerfil}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all shadow-sm disabled:opacity-50 min-h-[44px] cursor-pointer active:scale-95"
               >
                 {salvandoPerfil ? 'Salvando...' : 'Salvar Alterações'}
               </button>

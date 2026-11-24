@@ -147,7 +147,7 @@ function ConteudoAtivarTecnico() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans flex flex-col justify-between relative overflow-hidden">
+    <div className="min-h-dvh bg-zinc-950 text-white font-sans flex flex-col justify-between relative overflow-x-hidden safe-pb">
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-500/15 rounded-full blur-[140px] pointer-events-none" />
 
       <AppHeader theme="dark" activeRoute="admin" badge="Ativação em Campo" showLogout={true} />

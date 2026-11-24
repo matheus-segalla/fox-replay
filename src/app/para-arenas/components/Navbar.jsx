@@ -110,8 +110,8 @@ export default function Navbar() {
                 {/* BOTÃO MOBILE */}
                 <button
                     onClick={() => setMenuAberto(!menuAberto)}
-                    className="md:hidden text-zinc-300 hover:text-white p-2 rounded-lg bg-white/5 border border-white/10"
-                    aria-label="Abrir Menu"
+                    className="md:hidden text-zinc-300 hover:text-white p-2.5 rounded-xl bg-white/5 border border-white/10 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer active:scale-95"
+                    aria-label="Abrir Menu de Navegação"
                 >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         {menuAberto ? (
@@ -125,35 +125,35 @@ export default function Navbar() {
 
             {/* MENU MOBILE EXPANSÍVEL */}
             {menuAberto && (
-                <div className="md:hidden px-5 pt-4 pb-6 bg-[#14151c]/98 border-b border-white/10 space-y-4">
-                    <nav className="flex flex-col space-y-3 text-sm font-semibold text-zinc-300">
+                <div className="md:hidden px-5 pt-4 pb-6 bg-[#14151c]/98 border-b border-white/10 space-y-4 animate-fadeIn">
+                    <nav className="flex flex-col space-y-1.5 text-sm font-semibold text-zinc-300">
                         <button
                             onClick={() => scrollTo('experiencia')}
-                            className="text-left py-1 hover:text-amber-400"
+                            className="text-left py-2 px-2 rounded-lg hover:text-amber-400 hover:bg-white/5 transition-all min-h-[40px] flex items-center cursor-pointer"
                         >
                             A Experiência
                         </button>
                         <button
                             onClick={() => scrollTo('como-funciona')}
-                            className="text-left py-1 hover:text-amber-400"
+                            className="text-left py-2 px-2 rounded-lg hover:text-amber-400 hover:bg-white/5 transition-all min-h-[40px] flex items-center cursor-pointer"
                         >
                             Como Funciona
                         </button>
                         <button
                             onClick={() => scrollTo('modalidades')}
-                            className="text-left py-1 hover:text-amber-400"
+                            className="text-left py-2 px-2 rounded-lg hover:text-amber-400 hover:bg-white/5 transition-all min-h-[40px] flex items-center cursor-pointer"
                         >
                             Modalidades
                         </button>
                         <button
                             onClick={() => scrollTo('implantacao')}
-                            className="text-left py-1 hover:text-amber-400"
+                            className="text-left py-2 px-2 rounded-lg hover:text-amber-400 hover:bg-white/5 transition-all min-h-[40px] flex items-center cursor-pointer"
                         >
                             Implantação
                         </button>
                         <button
                             onClick={() => scrollTo('faq')}
-                            className="text-left py-1 hover:text-amber-400"
+                            className="text-left py-2 px-2 rounded-lg hover:text-amber-400 hover:bg-white/5 transition-all min-h-[40px] flex items-center cursor-pointer"
                         >
                             FAQ
                         </button>
@@ -162,13 +162,13 @@ export default function Navbar() {
                     <div className="pt-3 border-t border-white/10 flex flex-col gap-2.5">
                         <button
                             onClick={() => router.push('/login')}
-                            className="w-full text-center py-2.5 rounded-xl bg-white/5 text-xs font-bold text-zinc-200"
+                            className="w-full text-center py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-200 min-h-[44px] cursor-pointer active:scale-95 transition-all"
                         >
                             Painel da Arena
                         </button>
                         <button
                             onClick={() => scrollTo('contato')}
-                            className="w-full text-center py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider"
+                            className="w-full text-center py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider min-h-[44px] cursor-pointer active:scale-95 transition-all shadow-md"
                         >
                             Avaliar Minha Arena ↗
                         </button>
