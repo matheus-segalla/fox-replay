@@ -4,19 +4,10 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } fr
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
-import ReplayThumbnail from '@/components/ReplayThumbnail';
+import { IconMapPin, IconRefresh } from '@/components/icons';
+import ArenaReplaysGrid from './components/ArenaReplaysGrid';
 
 const TAMANHO_PAGINA = 12;
-
-// Ícones SVG minimalistas para substituir emojis e remover estética de IA
-function IconMapPin({ className = "w-3.5 h-3.5" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-            <circle cx="12" cy="10" r="3" />
-        </svg>
-    );
-}
 
 function IconCalendar({ className = "w-3.5 h-3.5" }) {
     return (
@@ -34,45 +25,6 @@ function IconClock({ className = "w-3.5 h-3.5" }) {
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
-        </svg>
-    );
-}
-
-function IconDownload({ className = "w-3.5 h-3.5" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" x2="12" y1="15" y2="3" />
-        </svg>
-    );
-}
-
-function IconShare({ className = "w-3.5 h-3.5" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
-            <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-        </svg>
-    );
-}
-
-function IconPlay({ className = "w-4 h-4" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="6 3 20 12 6 21 6 3" />
-        </svg>
-    );
-}
-
-function IconVideoOff({ className = "w-7 h-7" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m16 16 5 3V5l-5 3" />
-            <rect width="14" height="12" x="2" y="6" rx="2" />
         </svg>
     );
 }
@@ -97,17 +49,6 @@ function IconSliders({ className = "w-3.5 h-3.5" }) {
             <line x1="1" x2="7" y1="14" y2="14" />
             <line x1="9" x2="15" y1="8" y2="8" />
             <line x1="17" x2="23" y1="16" y2="16" />
-        </svg>
-    );
-}
-
-function IconRefresh({ className = "w-3.5 h-3.5" }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M3 21v-5h5" />
         </svg>
     );
 }
@@ -895,149 +836,20 @@ function ConteudoPortalArena() {
                 {/* ============================================================ */}
                 {/* 3. FEED DE REPLAYS (GRID RESPONSIVO ATÉ 4 COLUNAS NO DESKTOP)*/}
                 {/* ============================================================ */}
-                <div ref={feedTopRef} className="space-y-5 scroll-mt-4">
-                    {carregandoReplays ? (
-                        <div className="py-16 text-center space-y-3">
-                            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                            <p className="animate-pulse text-zinc-400 font-bold text-xs uppercase tracking-wider">
-                                Carregando replays...
-                            </p>
-                        </div>
-                    ) : replaysFiltrados.length === 0 ? (
-                        <div className="max-w-xl mx-auto bg-white border-2 border-dashed border-zinc-200 rounded-3xl p-10 text-center space-y-3 shadow-sm">
-                            <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
-                                <IconVideoOff className="w-6 h-6" />
-                            </div>
-                            <h4 className="text-sm font-bold text-zinc-800 uppercase tracking-wide">
-                                Nenhum lance gravado
-                            </h4>
-                            <p className="text-xs text-zinc-400 font-medium max-w-xs mx-auto leading-relaxed">
-                                Não encontramos vídeos nesta quadra com o filtro selecionado. Tente selecionar &quot;Todos&quot; ou outra data.
-                            </p>
-                            <button
-                                onClick={redefinirFiltros}
-                                className="mt-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-4 py-2 rounded-xl transition-colors inline-flex items-center gap-1.5"
-                            >
-                                <IconRefresh className="w-3.5 h-3.5" />
-                                <span>Redefinir Filtros</span>
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {replaysFiltrados.map((replay) => {
-                                const dataLance = replay.criado_em ? new Date(replay.criado_em) : null;
-                                const horarioFormatado = dataLance
-                                    ? dataLance.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                                    : 'Recente';
-
-                                const nomeQuadra = replay.quadras?.nome || 'Quadra';
-
-                                return (
-                                    <div
-                                        key={replay.id}
-                                        onClick={() => router.push(`/jogada?id=${replay.id}`)}
-                                        className="bg-white border border-zinc-200/90 rounded-2xl overflow-hidden hover:border-amber-400 transition-all shadow-md shadow-zinc-200/30 flex flex-col group cursor-pointer active:scale-[0.99]"
-                                    >
-                                        {/* Header do Card */}
-                                        <div className="p-3.5 pb-2.5 flex justify-between items-center">
-                                            <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                                                {nomeQuadra}
-                                            </span>
-                                            <span className="text-xs font-bold text-zinc-700 tracking-wide flex items-center gap-1">
-                                                <IconClock className="w-3 h-3 text-zinc-400" />
-                                                <span>{horarioFormatado}</span>
-                                            </span>
-                                        </div>
-
-                                        {/* Thumbnail / Miniatura leve com Lazy Loading */}
-                                        <div className="w-full aspect-video bg-black relative overflow-hidden group">
-                                            <ReplayThumbnail
-                                                thumbnailUrl={replay.thumbnail_url}
-                                                alt={`Lance na ${nomeQuadra} às ${horarioFormatado}`}
-                                            />
-                                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/10 pointer-events-none">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black flex items-center justify-center pl-0.5 font-bold shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                                                    <IconPlay className="w-5 h-5" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Ações Rápidas do Card */}
-                                        <div className="p-3 bg-white grid grid-cols-2 gap-2 border-t border-zinc-100">
-                                            <button
-                                                onClick={(e) => abrirDownloadComMarcas(e, replay.id)}
-                                                title="Baixar vídeo 9:16 com marca da arena e patrocinadores"
-                                                className="py-3 px-3 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
-                                            >
-                                                <span>Baixar</span>
-                                                <IconDownload className="w-3.5 h-3.5" />
-                                            </button>
-
-                                            <button
-                                                onClick={(e) => compartilharLance(e, replay.id, nomeQuadra)}
-                                                className="py-3 px-3 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
-                                            >
-                                                <span>Compartilhar</span>
-                                                <IconShare className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* PAGINAÇÃO NUMERADA REAL (LEVE NO MOBILE E DESKTOP) */}
-                    {!carregandoReplays && totalPaginas > 1 && (
-                        <div className="pt-3 flex flex-col items-center gap-2.5">
-                            <p className="text-[11px] text-zinc-500 font-medium">
-                                Mostrando {(paginaAtual - 1) * TAMANHO_PAGINA + 1}–{Math.min(paginaAtual * TAMANHO_PAGINA, totalReplays)} de {totalReplays} lances
-                            </p>
-
-                            <nav aria-label="Paginação de lances" className="flex items-center gap-1.5 flex-wrap justify-center">
-                                <button
-                                    type="button"
-                                    disabled={paginaAtual <= 1}
-                                    onClick={() => mudarPagina(paginaAtual - 1)}
-                                    className="h-9 px-3 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                    ‹ Anterior
-                                </button>
-
-                                {paginasVisiveis.map((item, idx) =>
-                                    item === '...' ? (
-                                        <span key={`dots-${idx}`} className="px-1.5 text-xs text-zinc-400 font-bold select-none">
-                                            ...
-                                        </span>
-                                    ) : (
-                                        <button
-                                            key={item}
-                                            type="button"
-                                            onClick={() => mudarPagina(item)}
-                                            aria-current={paginaAtual === item ? 'page' : undefined}
-                                            className={`h-9 min-w-[36px] px-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer border ${
-                                                paginaAtual === item
-                                                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-xs'
-                                                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300'
-                                            }`}
-                                        >
-                                            {item}
-                                        </button>
-                                    )
-                                )}
-
-                                <button
-                                    type="button"
-                                    disabled={paginaAtual >= totalPaginas}
-                                    onClick={() => mudarPagina(paginaAtual + 1)}
-                                    className="h-9 px-3 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                    Próxima ›
-                                </button>
-                            </nav>
-                        </div>
-                    )}
-                </div>
+                <ArenaReplaysGrid
+                    feedTopRef={feedTopRef}
+                    carregandoReplays={carregandoReplays}
+                    replaysFiltrados={replaysFiltrados}
+                    redefinirFiltros={redefinirFiltros}
+                    abrirDownloadComMarcas={abrirDownloadComMarcas}
+                    compartilharLance={compartilharLance}
+                    totalPaginas={totalPaginas}
+                    paginaAtual={paginaAtual}
+                    tamanhoPagina={TAMANHO_PAGINA}
+                    totalReplays={totalReplays}
+                    paginasVisiveis={paginasVisiveis}
+                    mudarPagina={mudarPagina}
+                />
 
                 <p className="text-[9px] text-zinc-400 text-center tracking-widest uppercase font-bold pt-8">
                     Powered by <span className="font-black text-zinc-600 tracking-normal">FOX <span className="text-amber-500">REPLAY</span></span>
