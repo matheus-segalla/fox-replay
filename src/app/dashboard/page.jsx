@@ -11,9 +11,12 @@ import { fetchComToken } from '../../lib/apiClient';
 import { getArenaAtivaId, setArenaAtivaId, clearArenaAtivaId } from '../../lib/storage';
 import AppHeader from '@/components/AppHeader';
 import ImageUploadField from '@/components/ImageUploadField';
-import ReplayThumbnail from '@/components/ReplayThumbnail';
 import CustomSelect from '@/components/CustomSelect';
-import { IconBuilding, IconTrash } from '@/components/icons';
+import { IconBuilding } from '@/components/icons';
+import ArenaMetricsCard from './components/ArenaMetricsCard';
+import ArenaSponsorsCard from './components/ArenaSponsorsCard';
+import ModerationModal from './components/ModerationModal';
+import QrPrintFlyer from './components/QrPrintFlyer';
 
 const IconSettings = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -778,285 +781,25 @@ function ConteudoDashboardArena() {
           </div>
 
           {/* BENTO 2: MÉTRICAS POR PERÍODO + RANKING DE QUADRAS + RELATÓRIO WHATSAPP */}
-          <div className="glass-card-light rounded-2xl p-6 shadow-sm space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
-              <div>
-                <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 px-3 py-1 rounded-full uppercase tracking-widest inline-block">
-                  Audiência & Retorno de Patrocínio
-                </span>
-                <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tight mt-1">
-                  Desempenho da Arena
-                </h2>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex bg-zinc-100 p-1 rounded-xl">
-                  {PERIODOS_METRICAS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handleTrocarPeriodo(p.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                        periodoMetricas === p.id
-                          ? 'bg-white text-zinc-950 shadow-xs'
-                          : 'text-zinc-500 hover:text-zinc-800'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGerarRelatorioPatrocinadoresWhatsApp}
-                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer"
-                >
-                  📱 Relatório WhatsApp
-                </button>
-              </div>
-            </div>
-
-            <div className={`grid grid-cols-3 gap-4 transition-opacity ${carregandoMetricas ? 'opacity-50' : ''}`}>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/70">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
-                  Lances Gravados
-                </span>
-                <span className="text-2xl sm:text-3xl font-black text-zinc-900">
-                  {metricasArena.lances}
-                </span>
-              </div>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/70">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
-                  Visualizações
-                </span>
-                <span className="text-2xl sm:text-3xl font-black text-amber-600">
-                  {metricasArena.visualizacoes}
-                </span>
-              </div>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/70">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider block">
-                  Downloads 9:16
-                </span>
-                <span className="text-2xl sm:text-3xl font-black text-emerald-600">
-                  {metricasArena.downloads}
-                </span>
-              </div>
-            </div>
-
-            {metricasArena.porQuadra.length > 0 && (
-              <div className="pt-2 space-y-2.5">
-                <span className="text-[10px] font-mono font-bold uppercase text-zinc-400 tracking-wider block">
-                  Ranking por Quadra no Período
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {metricasArena.porQuadra.map((q, idx) => {
-                    const maxLances = Math.max(1, metricasArena.porQuadra[0]?.lances || 1);
-                    const pct = Math.round(((q.lances || 0) / maxLances) * 100);
-                    return (
-                      <div
-                        key={q.quadra_id || idx}
-                        className="p-3 rounded-xl bg-white border border-zinc-200/80 space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-zinc-800 uppercase truncate">
-                            {idx + 1}. {q.nome}
-                          </span>
-                          <span className="font-mono text-[11px] font-bold text-zinc-600 shrink-0">
-                            {q.lances} lances &bull; {q.downloads} downs
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-amber-500 rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+          <ArenaMetricsCard
+            periodos={PERIODOS_METRICAS}
+            periodoMetricas={periodoMetricas}
+            onTrocarPeriodo={handleTrocarPeriodo}
+            onGerarRelatorioWhatsApp={handleGerarRelatorioPatrocinadoresWhatsApp}
+            carregandoMetricas={carregandoMetricas}
+            metricasArena={metricasArena}
+          />
 
           {/* BENTO 3: PATROCINADORES & LOGO COM UPLOAD DIRETO */}
-          <div className="glass-card-light rounded-2xl p-6 shadow-sm space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
-              <div>
-                <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 px-3 py-1 rounded-full uppercase tracking-widest inline-block">
-                  Monetização & Publicidade &bull; 4 Posições
-                </span>
-                <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tight mt-1">
-                  Patrocinadores no Vídeo e Logo da Arena
-                </h2>
-                <p className="text-zinc-500 text-xs mt-0.5">
-                  Envie as imagens direto do seu celular ou computador — elas são gravadas automaticamente em 100% dos downloads dos atletas.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSalvarPatrocinadores}
-                disabled={salvandoPatrocinadores}
-                className="self-start md:self-auto text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black px-6 py-3 rounded-xl transition-all uppercase tracking-wider shadow-md active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                {salvandoPatrocinadores ? 'Salvando...' : 'Salvar Marcas do Vídeo ✓'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-7 space-y-5">
-                <div className="p-4 bg-zinc-50 border border-zinc-200/80 rounded-xl">
-                  <ImageUploadField
-                    arenaId={arena?.id}
-                    prefixo="logo-arena"
-                    value={logoArenaInput}
-                    onChange={setLogoArenaInput}
-                    label="Logomarca Oficial da Arena (Topo Direito)"
-                    hint="PNG transparente recomendado"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <span className="text-xs font-black text-zinc-800 uppercase tracking-wide block">
-                    Grade dos 4 Patrocinadores (Rodapé do Vídeo)
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {patrocinadoresInput.map((pat, idx) => (
-                      <div
-                        key={pat.id || idx}
-                        className="p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl space-y-2.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md uppercase font-mono">
-                            Slot 0{idx + 1}
-                          </span>
-                          <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-zinc-600 font-bold">
-                            <input
-                              type="checkbox"
-                              checked={pat.ativo}
-                              onChange={(e) =>
-                                handleAtualizarSlotPatrocinador(idx, 'ativo', e.target.checked)
-                              }
-                              className="rounded text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
-                            />
-                            <span>Ativo</span>
-                          </label>
-                        </div>
-
-                        <input
-                          type="text"
-                          value={pat.nome || ''}
-                          onChange={(e) =>
-                            handleAtualizarSlotPatrocinador(idx, 'nome', e.target.value)
-                          }
-                          placeholder={`Nome da Marca 0${idx + 1}`}
-                          className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-900 font-medium focus:outline-none focus:border-amber-500"
-                        />
-
-                        <ImageUploadField
-                          arenaId={arena?.id}
-                          prefixo={`patrocinador-${idx + 1}`}
-                          value={pat.logo_url || ''}
-                          onChange={(url) =>
-                            handleAtualizarSlotPatrocinador(idx, 'logo_url', url)
-                          }
-                          label=""
-                          compact={true}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* PREVIEW 9:16 */}
-              <div className="lg:col-span-5 flex flex-col items-center">
-                <span className="text-[11px] font-black uppercase text-zinc-500 tracking-wider mb-2 font-mono">
-                  Prévia do Vídeo Exportado (9:16)
-                </span>
-
-                <div className="w-[260px] bg-[#070709] border-[6px] border-zinc-800 rounded-[32px] p-2.5 shadow-2xl relative overflow-hidden flex flex-col gap-2">
-                  <div className="flex items-center justify-between px-1 border-b border-white/10 pb-1.5 pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <Image
-                        src="/logo-fox.jpeg"
-                        alt="Fox Replay"
-                        width={24}
-                        height={24}
-                        className="w-6 h-6 object-cover rounded-md border border-amber-500/40"
-                      />
-                      <span className="text-[9px] font-black text-white uppercase leading-none">
-                        FOX <span className="text-amber-500">REPLAY</span>
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      {logoArenaInput && validarUrlHttp(logoArenaInput) ? (
-                        <Image
-                          src={logoArenaInput}
-                          alt="Arena Logo"
-                          width={70}
-                          height={24}
-                          unoptimized
-                          className="h-6 w-auto max-w-[70px] object-contain rounded bg-white/5 p-0.5 border border-white/10"
-                        />
-                      ) : (
-                        <span className="text-[8px] font-black text-white uppercase block truncate max-w-[80px]">
-                          {arena?.nome || 'SUA ARENA'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="w-full aspect-[9/12] bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800">
-                    <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-white text-xs">
-                      ▶
-                    </div>
-                    <span className="absolute bottom-2 left-2 text-[8px] font-mono text-zinc-300 font-bold bg-black/60 px-1.5 py-0.5 rounded">
-                      LANCE 30s + ÁUDIO
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-1 w-full h-11 pt-0.5">
-                    {patrocinadoresInput.map((p, i) => {
-                      const tem = p && p.ativo && (p.logo_url || p.nome);
-                      return (
-                        <div
-                          key={i}
-                          className="bg-[#14151b] border border-white/10 rounded-lg flex flex-col items-center justify-center p-1 overflow-hidden text-center"
-                        >
-                          {tem ? (
-                            p.logo_url && validarUrlHttp(p.logo_url) ? (
-                              <Image
-                                src={p.logo_url}
-                                alt={p.nome || 'Patrocinador'}
-                                width={56}
-                                height={36}
-                                unoptimized
-                                className="max-h-full max-w-full w-auto h-auto object-contain"
-                              />
-                            ) : (
-                              <span className="text-[7px] font-black text-white truncate px-0.5 uppercase">
-                                {p.nome}
-                              </span>
-                            )
-                          ) : (
-                            <div className="flex flex-col items-center justify-center leading-none scale-90">
-                              <span className="text-[6px] font-black text-white uppercase">ANUNCIE</span>
-                              <span className="text-[7px] font-black text-amber-400">Aqui!</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ArenaSponsorsCard
+            arena={arena}
+            logoArenaInput={logoArenaInput}
+            setLogoArenaInput={setLogoArenaInput}
+            patrocinadoresInput={patrocinadoresInput}
+            onAtualizarSlot={handleAtualizarSlotPatrocinador}
+            onSalvar={handleSalvarPatrocinadores}
+            salvando={salvandoPatrocinadores}
+          />
 
           {/* BENTO 4: QUADRAS & MODERAÇÃO DE GRAVAÇÕES (SEM TOKEN / SEM RTSP) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -1230,137 +973,20 @@ function ConteudoDashboardArena() {
         </div>
 
         {/* MODAL DE MODERAÇÃO DE GRAVAÇÕES (ÚLTIMOS 5 DIAS + EXCLUSÃO REAL) */}
-        {quadraSelecionada && (
-          <div
-            className="fixed inset-0 bg-zinc-950/45 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn"
-            onClick={() => setQuadraSelecionada(null)}
-          >
-            <div
-              className="bg-white border border-zinc-200 rounded-3xl p-6 w-full max-w-2xl max-h-[85dvh] flex flex-col shadow-2xl overscroll-contain"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex flex-wrap justify-between items-center gap-3 border-b border-zinc-200 pb-4 mb-4 shrink-0">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-zinc-950">
-                    Moderação de Gravações &bull;{' '}
-                    <span className="text-amber-600">{quadraSelecionada.nome}</span>
-                  </h3>
-                  <p className="text-[11px] text-zinc-500">
-                    Visualize ou exclua permanentemente qualquer replay desta quadra (LGPD).
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex bg-zinc-100 p-0.5 rounded-lg text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFiltroDiasModeracao('1');
-                        carregarReplaysDaQuadra(quadraSelecionada, '1');
-                      }}
-                      className={`px-3 py-1.5 rounded-md cursor-pointer min-h-[36px] active:scale-95 transition-all ${
-                        filtroDiasModeracao === '1' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
-                      }`}
-                    >
-                      Hoje
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFiltroDiasModeracao('5');
-                        carregarReplaysDaQuadra(quadraSelecionada, '5');
-                      }}
-                      className={`px-3 py-1.5 rounded-md cursor-pointer min-h-[36px] active:scale-95 transition-all ${
-                        filtroDiasModeracao === '5' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
-                      }`}
-                    >
-                      Últimos 5 dias
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setQuadraSelecionada(null)}
-                    aria-label="Fechar modal"
-                    className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center text-xs cursor-pointer active:scale-95"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-y-auto space-y-3 flex-1 pr-1">
-                {carregandoReplays ? (
-                  <p className="text-center text-xs text-zinc-400 py-10 animate-pulse">
-                    Carregando gravações...
-                  </p>
-                ) : replaysQuadra.length === 0 ? (
-                  <p className="text-center text-xs text-zinc-500 py-10">
-                    Nenhum replay encontrado neste período para esta quadra.
-                  </p>
-                ) : (
-                  replaysQuadra.map((replay) => {
-                    const dt = new Date(replay.criado_em);
-                    const dataStr = dt.toLocaleDateString('pt-BR');
-                    const horaStr = dt.toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-                    const linkJogador = `${urlBaseSistema}/jogada?id=${replay.id}`;
-
-                    return (
-                      <div
-                        key={replay.id}
-                        className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-24 aspect-video rounded-lg overflow-hidden bg-black shrink-0 border border-zinc-200">
-                            <ReplayThumbnail
-                              thumbnailUrl={replay.thumbnail_url}
-                              videoUrl={replay.video_url}
-                              alt={`Replay ${dataStr} ${horaStr}`}
-                            />
-                          </div>
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="text-xs font-bold text-zinc-900">
-                              {dataStr} às {horaStr}
-                            </p>
-                            <p className="text-[11px] text-zinc-500">
-                              {replay.visualizacoes || 0} views &bull; {replay.downloads || 0} downloads
-                            </p>
-                            <a
-                              href={linkJogador}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] text-amber-600 hover:underline font-bold inline-block"
-                            >
-                              Abrir Página do Atleta ➔
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 shrink-0">
-                          <div className="bg-white p-1.5 rounded-lg border border-zinc-200">
-                            <QRCodeSVG value={linkJogador} size={42} />
-                          </div>
-                          <button
-                            type="button"
-                            disabled={excluindoReplayId === replay.id}
-                            onClick={() => handleExcluirReplay(replay)}
-                            className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                            title="Excluir vídeo permanentemente"
-                          >
-                            <IconTrash className="w-3.5 h-3.5" />
-                            <span>{excluindoReplayId === replay.id ? '...' : 'Excluir'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <ModerationModal
+          quadraSelecionada={quadraSelecionada}
+          onClose={() => setQuadraSelecionada(null)}
+          filtroDiasModeracao={filtroDiasModeracao}
+          onMudarFiltroDias={(dias) => {
+            setFiltroDiasModeracao(dias);
+            carregarReplaysDaQuadra(quadraSelecionada, dias);
+          }}
+          carregandoReplays={carregandoReplays}
+          replaysQuadra={replaysQuadra}
+          urlBaseSistema={urlBaseSistema}
+          excluindoReplayId={excluindoReplayId}
+          onExcluirReplay={handleExcluirReplay}
+        />
 
         {/* MODAL EDITAR QUADRA */}
         {modalEditarAberto && quadraParaEditar && (
@@ -1487,62 +1113,7 @@ function ConteudoDashboardArena() {
       </div>
 
       {/* FLYER IMPRESSÃO DIRECT-TO-PAPER (A4) */}
-      <div className="hidden print:flex flex-col items-center justify-between bg-white text-black w-full h-screen p-16 font-sans text-center border-[24px] border-neutral-900 box-border">
-        <div className="space-y-1">
-          <h1 className="text-6xl font-black tracking-widest text-neutral-900 m-0">
-            FOX <span className="text-[#A6801E]">REPLAY</span>
-          </h1>
-          <p className="text-xs uppercase tracking-widest font-extrabold text-neutral-400">
-            REVEJA SEUS LANCES INSTANTANEAMENTE
-          </p>
-        </div>
-
-        <div className="my-auto py-6 space-y-3">
-          <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider m-0">
-            Você está jogando na
-          </p>
-          <h2 className="text-5xl font-black text-neutral-950 uppercase tracking-tight leading-none">
-            {arena?.nome || 'Nossa Arena'}
-          </h2>
-          <div className="w-24 h-1 bg-[#A6801E] mx-auto mt-4" />
-        </div>
-
-        <div className="bg-white p-6 border-4 border-neutral-950 rounded-3xl shadow-sm inline-block">
-          {linkPortalPublico ? (
-            <QRCodeSVG value={linkPortalPublico} size={280} level="H" includeMargin={false} />
-          ) : (
-            <p className="text-xs text-neutral-400">Gerando código seguro...</p>
-          )}
-        </div>
-
-        <div className="w-full max-w-xl bg-neutral-50 border-2 border-neutral-200 rounded-2xl p-6 mt-8 space-y-3 text-left">
-          <h4 className="font-black text-sm uppercase tracking-wider text-neutral-900 text-center border-b border-neutral-200 pb-2 mb-3">
-            Como baixar a sua jogada:
-          </h4>
-          <p className="text-xs font-medium text-neutral-700 flex items-start gap-2">
-            <strong className="bg-neutral-900 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-              1
-            </strong>
-            Fez um ponto incrível? Pressione o botão físico na grade da quadra imediatamente.
-          </p>
-          <p className="text-xs font-medium text-neutral-700 flex items-start gap-2">
-            <strong className="bg-neutral-900 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-              2
-            </strong>
-            Ao final da partida, escaneie este QR Code com a câmera do seu celular.
-          </p>
-          <p className="text-xs font-medium text-neutral-700 flex items-start gap-2">
-            <strong className="bg-neutral-900 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-              3
-            </strong>
-            Escolha sua quadra, encontre o lance pelo horário e baixe em alta definição com áudio!
-          </p>
-        </div>
-
-        <p className="text-[10px] text-neutral-400 font-bold tracking-widest uppercase m-0 mt-8">
-          SISTEMA AUTOMÁTICO DE REPLAYS ESPORTIVOS
-        </p>
-      </div>
+      <QrPrintFlyer arenaNome={arena?.nome} linkPortalPublico={linkPortalPublico} />
     </>
   );
 }

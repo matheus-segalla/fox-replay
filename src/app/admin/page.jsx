@@ -8,6 +8,8 @@ import { fetchComToken } from '../../lib/apiClient';
 import AppHeader from '@/components/AppHeader';
 import CustomSelect from '@/components/CustomSelect';
 import { IconBuilding, IconX } from '@/components/icons';
+import NocLgpdSection from './components/NocLgpdSection';
+import NocEditModals from './components/NocEditModals';
 
 const IconRadio = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -720,68 +722,15 @@ export default function SuperAdminNOCPage() {
         </div>
 
         {/* CENTRAL LGPD COMPACTA */}
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl px-4 py-3 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                <IconShield className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-wider text-zinc-200 truncate">
-                Central LGPD &bull; Moderação por UUID
-              </span>
-            </div>
-
-            <form onSubmit={handleBuscarReplayLgpd} className="flex items-center gap-2 w-full sm:w-auto">
-              <input
-                type="text"
-                value={lgpdReplayId}
-                onChange={(e) => setLgpdReplayId(e.target.value)}
-                placeholder="Cole o ID do replay (UUID)..."
-                className="flex-1 sm:w-64 px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
-              />
-              <button
-                type="submit"
-                disabled={lgpdBuscando}
-                className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer disabled:opacity-50 shrink-0"
-              >
-                {lgpdBuscando ? 'Buscando...' : 'Localizar'}
-              </button>
-            </form>
-          </div>
-
-          {lgpdResultado && (
-            <div className="p-4 rounded-xl bg-zinc-950 border border-red-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fadeIn">
-              <div className="flex items-center gap-4 min-w-0">
-                <video
-                  src={lgpdResultado.video_url}
-                  controls
-                  muted
-                  className="w-36 aspect-video rounded-lg bg-black border border-zinc-800 shrink-0"
-                />
-                <div className="space-y-1 min-w-0">
-                  <span className="text-[10px] font-mono text-amber-400 uppercase font-bold block">
-                    {lgpdResultado.quadras?.arenas?.nome || 'Arena'} &bull;{' '}
-                    {lgpdResultado.quadras?.nome || 'Quadra'}
-                  </span>
-                  <p className="text-xs text-zinc-300 font-mono truncate">ID: {lgpdResultado.id}</p>
-                  <p className="text-[11px] text-zinc-500">
-                    Gravado em: {new Date(lgpdResultado.criado_em).toLocaleString('pt-BR')} &bull;{' '}
-                    {lgpdResultado.visualizacoes || 0} views &bull; {lgpdResultado.downloads || 0} downs
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={lgpdExcluindo}
-                onClick={handleExcluirReplayLgpd}
-                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                {lgpdExcluindo ? 'Excluindo...' : 'Excluir Permanentemente (Banco + Storage)'}
-              </button>
-            </div>
-          )}
-        </div>
+        <NocLgpdSection
+          lgpdReplayId={lgpdReplayId}
+          setLgpdReplayId={setLgpdReplayId}
+          lgpdBuscando={lgpdBuscando}
+          lgpdResultado={lgpdResultado}
+          lgpdExcluindo={lgpdExcluindo}
+          onBuscar={handleBuscarReplayLgpd}
+          onExcluir={handleExcluirReplayLgpd}
+        />
 
         {/* LISTA DE ARENAS, PLANOS E MONITORAMENTO DE HARDWARE */}
         <div className="bg-zinc-900/70 border border-zinc-800 rounded-3xl overflow-hidden shadow-xl">
@@ -1349,282 +1298,35 @@ export default function SuperAdminNOCPage() {
         </div>
       )}
 
-      {/* MODAL 2: EDITAR ARENA / PLANO / COTA / PAUSA */}
-      {arenaEditando && (
-        <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setArenaEditando(null)}
-        >
-          <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="font-black text-xs uppercase tracking-wider text-white">
-                Editar Arena &bull; <span className="text-amber-400">{arenaEditando.nome}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setArenaEditando(null)}
-                aria-label="Fechar modal"
-                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSalvarEdicaoArena} className="space-y-4">
-              <input
-                type="text"
-                required
-                value={editArenaForm.nome}
-                onChange={(e) => setEditArenaForm((p) => ({ ...p, nome: e.target.value }))}
-                placeholder="Nome da arena"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  value={editArenaForm.cidade}
-                  onChange={(e) => setEditArenaForm((p) => ({ ...p, cidade: e.target.value }))}
-                  placeholder="Cidade"
-                  className="col-span-2 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
-                />
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={editArenaForm.estado}
-                  onChange={(e) =>
-                    setEditArenaForm((p) => ({ ...p, estado: e.target.value.toUpperCase() }))
-                  }
-                  placeholder="UF"
-                  className="px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white text-center uppercase"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                    Limite de Quadras
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    required
-                    value={editArenaForm.limite_quadras}
-                    onChange={(e) =>
-                      setEditArenaForm((p) => ({
-                        ...p,
-                        limite_quadras: Math.max(1, parseInt(e.target.value, 10) || 1),
-                      }))
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                    Plano
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editArenaForm.plano_nome}
-                    onChange={(e) => setEditArenaForm((p) => ({ ...p, plano_nome: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
-                  />
-                </div>
-              </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                    Telefone / WhatsApp do Gestor
-                  </label>
-                  <input
-                    type="tel"
-                    value={editArenaForm.telefone_gestor}
-                    onChange={(e) => setEditArenaForm((p) => ({ ...p, telefone_gestor: e.target.value }))}
-                    placeholder="(11) 99999-9999"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
-                  />
-                </div>
-
-                <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={editArenaForm.ativa}
-                  onChange={(e) => setEditArenaForm((p) => ({ ...p, ativa: e.target.checked }))}
-                  className="rounded text-amber-500"
-                />
-                <span>Arena ativa (desmarque para pausa operacional suave)</span>
-              </label>
-
-              <button
-                type="submit"
-                disabled={salvandoArena}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-              >
-                {salvandoArena ? 'Salvando...' : 'Salvar Alterações'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: EDITAR RTSP DO DISPOSITIVO */}
-      {dispEditando && (
-        <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setDispEditando(null)}
-        >
-          <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
-                Configurar Câmera IP / RTSP Remotamente
-              </h3>
-              <button
-                type="button"
-                onClick={() => setDispEditando(null)}
-                aria-label="Fechar modal"
-                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-[11px] text-zinc-400">
-              O Raspberry Pi aplicará a nova URL RTSP automaticamente no próximo heartbeat (até 60 segundos).
-            </p>
-            <form onSubmit={handleSalvarCameraDisp} className="space-y-4">
-              <input
-                type="text"
-                value={editCameraUrl}
-                onChange={(e) => setEditCameraUrl(e.target.value)}
-                placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
-              />
-              <button
-                type="submit"
-                disabled={salvandoDisp}
-                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer min-h-[44px] active:scale-95"
-              >
-                {salvandoDisp ? 'Salvando...' : 'Atualizar URL RTSP'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 4: PAREAMENTO MASTER DE TOTEM */}
-      {modalPareamento && (
-        <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setModalPareamento(false)}
-        >
-          <div
-            className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain space-y-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <IconRadio className="w-4 h-4 text-amber-500" />
-                <h3 className="font-bold text-xs uppercase tracking-wider text-white">
-                  Vincular Totem à Quadra (Master)
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalPareamento(false)}
-                aria-label="Fechar modal"
-                className="text-zinc-400 hover:text-white w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-xs cursor-pointer active:scale-95"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAtivarTotemMaster} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                  1. Complexo Esportivo
-                </label>
-                <CustomSelect
-                  theme="dark"
-                  value={arenaSelModal}
-                  onChange={(val) => {
-                    setArenaSelModal(val);
-                    const a = arenas.find((item) => item.id === val);
-                    setQuadraSelModal(a?.quadras?.[0]?.id || '');
-                  }}
-                  ariaLabel="Complexo Esportivo"
-                  options={arenas.map((a) => ({
-                    value: a.id,
-                    label: `${a.nome} (${a.cidade || 'SP'})`,
-                  }))}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                  2. Quadra Específica
-                </label>
-                {quadrasArenaModal.length === 0 ? (
-                  <p className="text-xs text-amber-500 font-bold p-2 bg-amber-500/10 rounded-xl">
-                    Esta arena não possui quadras cadastradas.
-                  </p>
-                ) : (
-                  <CustomSelect
-                    theme="dark"
-                    value={quadraSelModal}
-                    onChange={(val) => setQuadraSelModal(val)}
-                    ariaLabel="Quadra Específica"
-                    options={quadrasArenaModal.map((q) => ({
-                      value: q.id,
-                      label: q.nome,
-                    }))}
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                  3. Código de 6 Dígitos da TV
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={7}
-                  value={codigoTotem}
-                  onChange={(e) => setCodigoTotem(e.target.value)}
-                  placeholder="Ex: 852-149"
-                  className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-amber-400 text-center text-lg font-black tracking-widest uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                  4. URL Câmera IP / RTSP (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={cameraUrlParear}
-                  onChange={(e) => setCameraUrlParear(e.target.value)}
-                  placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={ativandoTotem || !quadraSelModal}
-                className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl disabled:opacity-50 cursor-pointer min-h-[44px] active:scale-95"
-              >
-                {ativandoTotem ? 'Ativando Totem...' : 'Ativar e Iniciar Gravação ➔'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAIS DE EDIÇÃO DE ARENA, RTSP E PAREAMENTO MASTER */}
+      <NocEditModals
+        arenaEditando={arenaEditando}
+        setArenaEditando={setArenaEditando}
+        editArenaForm={editArenaForm}
+        setEditArenaForm={setEditArenaForm}
+        salvandoArena={salvandoArena}
+        onSalvarEdicaoArena={handleSalvarEdicaoArena}
+        dispEditando={dispEditando}
+        setDispEditando={setDispEditando}
+        editCameraUrl={editCameraUrl}
+        setEditCameraUrl={setEditCameraUrl}
+        salvandoDisp={salvandoDisp}
+        onSalvarCameraDisp={handleSalvarCameraDisp}
+        modalPareamento={modalPareamento}
+        setModalPareamento={setModalPareamento}
+        arenas={arenas}
+        arenaSelModal={arenaSelModal}
+        setArenaSelModal={setArenaSelModal}
+        quadraSelModal={quadraSelModal}
+        setQuadraSelModal={setQuadraSelModal}
+        quadrasArenaModal={quadrasArenaModal}
+        codigoTotem={codigoTotem}
+        setCodigoTotem={setCodigoTotem}
+        cameraUrlParear={cameraUrlParear}
+        setCameraUrlParear={setCameraUrlParear}
+        ativandoTotem={ativandoTotem}
+        onAtivarTotemMaster={handleAtivarTotemMaster}
+      />
     </div>
   );
 }
