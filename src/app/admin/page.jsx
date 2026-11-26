@@ -10,6 +10,7 @@ import CustomSelect from '@/components/CustomSelect';
 import { IconBuilding, IconX } from '@/components/icons';
 import NocLgpdSection from './components/NocLgpdSection';
 import NocEditModals from './components/NocEditModals';
+import NocLogsModal from './components/NocLogsModal';
 
 const IconRadio = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -124,6 +125,13 @@ export default function SuperAdminNOCPage() {
   const [editCameraUrl, setEditCameraUrl] = useState('');
   const [salvandoDisp, setSalvandoDisp] = useState(false);
 
+  // Modal Logs / Telemetria de Erros do Totem
+  const [dispLogs, setDispLogs] = useState(null);
+  const [logsTotem, setLogsTotem] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+  const [avisoLogs, setAvisoLogs] = useState('');
+  const [limpandoLogs, setLimpandoLogs] = useState(false);
+
   // Central LGPD (Busca e Exclusão por ID)
   const [lgpdReplayId, setLgpdReplayId] = useState('');
   const [lgpdBuscando, setLgpdBuscando] = useState(false);
@@ -205,6 +213,7 @@ export default function SuperAdminNOCPage() {
       setModalNovaArena(false);
       setArenaEditando(null);
       setDispEditando(null);
+      setDispLogs(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -479,6 +488,42 @@ export default function SuperAdminNOCPage() {
       exibirToast(err.message || 'Erro na exclusão LGPD.');
     } finally {
       setLgpdExcluindo(false);
+    }
+  };
+
+  const abrirLogsDispositivo = async (disp, quadraNome) => {
+    setDispLogs({ ...disp, quadraNome });
+    setCarregandoLogs(true);
+    setAvisoLogs('');
+    try {
+      const json = await fetchComToken(
+        `/api/admin/dispositivos/logs?dispositivoId=${encodeURIComponent(disp.id)}`
+      );
+      setLogsTotem(json.logs || []);
+      if (json.aviso) setAvisoLogs(json.aviso);
+    } catch (err) {
+      setLogsTotem([]);
+      setAvisoLogs(err.message || 'Não foi possível carregar os logs.');
+    } finally {
+      setCarregandoLogs(false);
+    }
+  };
+
+  const limparLogsDispositivo = async () => {
+    if (!dispLogs?.id) return;
+    setLimpandoLogs(true);
+    try {
+      await fetchComToken(
+        `/api/admin/dispositivos/logs?dispositivoId=${encodeURIComponent(dispLogs.id)}`,
+        { method: 'DELETE' }
+      );
+      setLogsTotem([]);
+      exibirToast('Logs do totem limpos!');
+      await recarregarDados();
+    } catch (err) {
+      exibirToast(err.message || 'Erro ao limpar logs.');
+    } finally {
+      setLimpandoLogs(false);
     }
   };
 
@@ -1034,6 +1079,13 @@ export default function SuperAdminNOCPage() {
                                       </p>
                                     </div>
 
+                                    {disp.ultimo_erro && (
+                                      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/25 text-[10px] text-red-300 leading-snug break-words">
+                                        <span className="font-black uppercase text-red-400">Último erro: </span>
+                                        <span>{disp.ultimo_erro}</span>
+                                      </div>
+                                    )}
+
                                     <div className="flex flex-wrap gap-1.5 pt-0.5">
                                       <button
                                         type="button"
@@ -1045,6 +1097,13 @@ export default function SuperAdminNOCPage() {
                                         className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1 rounded-lg cursor-pointer"
                                       >
                                         Token ({tokenCurto})
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => abrirLogsDispositivo(disp, quadra.nome)}
+                                        className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 px-2.5 py-1 rounded-lg cursor-pointer"
+                                      >
+                                        Logs
                                       </button>
                                       <button
                                         type="button"
@@ -1326,6 +1385,18 @@ export default function SuperAdminNOCPage() {
         setCameraUrlParear={setCameraUrlParear}
         ativandoTotem={ativandoTotem}
         onAtivarTotemMaster={handleAtivarTotemMaster}
+      />
+
+      {/* MODAL DE LOGS / TELEMETRIA DE ERROS DO TOTEM */}
+      <NocLogsModal
+        dispLogs={dispLogs}
+        onClose={() => setDispLogs(null)}
+        logs={logsTotem}
+        carregando={carregandoLogs}
+        aviso={avisoLogs}
+        limpando={limpandoLogs}
+        onRecarregar={() => dispLogs && abrirLogsDispositivo(dispLogs, dispLogs.quadraNome)}
+        onLimpar={limparLogsDispositivo}
       />
     </div>
   );

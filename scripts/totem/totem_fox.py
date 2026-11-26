@@ -21,8 +21,9 @@ import glob
 import shutil
 import threading
 import subprocess
+from collections import deque
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import requests
 
@@ -123,6 +124,10 @@ class TotemFox:
         self.executando = True
         self.camera_online = False
         self.arena_ativa = True
+        self.lock_eventos = threading.Lock()
+        self.fila_eventos = []
+        self.ultimas_linhas_ffmpeg = deque(maxlen=6)
+        self.limpar_erro_pendente = False
 
         self.quadra_id = self.config.get("quadra_id")
         self.arena_id = self.config.get("arena_id")
@@ -295,6 +300,7 @@ class TotemFox:
                 # Filtra ruído contínuo inofensivo de streams RTSP para não poluir o journald
                 if "Timestamps are unset" in linha:
                     continue
+                self.ultimas_linhas_ffmpeg.append(linha[:240])
                 print(f"🎬 [FFMPEG] {linha}")
         except Exception:
             pass
@@ -361,6 +367,20 @@ class TotemFox:
                 self.processo_ffmpeg_buffer = None
         self.iniciar_buffer_camera()
 
+    def registrar_evento(self, categoria, mensagem, nivel="error", detalhes=None):
+        """Enfileira eventos de falha/aviso para envio ao NOC Admin no próximo heartbeat."""
+        evento = {
+            "categoria": categoria,
+            "nivel": nivel,
+            "mensagem": str(mensagem)[:500],
+            "detalhes": detalhes if isinstance(detalhes, dict) else None,
+            "criado_em": datetime.now(timezone.utc).isoformat(),
+        }
+        with self.lock_eventos:
+            self.fila_eventos.append(evento)
+            if len(self.fila_eventos) > 50:
+                self.fila_eventos = self.fila_eventos[-50:]
+
     def watchdog_buffer_camera(self):
         """Monitora o processo FFmpeg e a atualização real dos segmentos .ts na RAM."""
         if not self.rtsp_url:
@@ -370,93 +390,138 @@ class TotemFox:
         camera_estava_offline = False
 
         while self.executando:
-            time.sleep(10)
-            processo_caiu = (
-                self.processo_ffmpeg_buffer is None
-                or self.processo_ffmpeg_buffer.poll() is not None
-            )
+            try:
+                time.sleep(10)
+                processo_caiu = (
+                    self.processo_ffmpeg_buffer is None
+                    or self.processo_ffmpeg_buffer.poll() is not None
+                )
 
-            # Verifica também se o stream RTSP congelou (nenhum segmento atualizado há > 22s)
-            stream_congelado = False
-            segmentos = list(BUFFER_DIR.glob("seg_*.ts"))
-            if segmentos and not processo_caiu:
-                mais_recente = max(s.stat().st_mtime for s in segmentos)
-                if (time.time() - mais_recente) > 22:
-                    stream_congelado = True
+                # Verifica também se o stream RTSP congelou (nenhum segmento atualizado há > 22s)
+                stream_congelado = False
+                segmentos = list(BUFFER_DIR.glob("seg_*.ts"))
+                if segmentos and not processo_caiu:
+                    mais_recente = max(s.stat().st_mtime for s in segmentos)
+                    if (time.time() - mais_recente) > 22:
+                        stream_congelado = True
 
-            if processo_caiu or stream_congelado:
-                self.camera_online = False
-                if processo_caiu and self.processo_ffmpeg_buffer:
-                    codigo_saida = self.processo_ffmpeg_buffer.returncode
-                    motivo = f"processo encerrado (código {codigo_saida})"
-                elif processo_caiu:
-                    motivo = "processo não iniciado"
-                else:
-                    motivo = "stream RTSP congelado"
-                print(f"⚠️ [WATCHDOG] Falha na câmera ({motivo}). Reiniciando em {backoff}s...")
-                camera_estava_offline = True
-                self.atualizar_display_kiosk({
-                    "modo": "camera_offline",
-                    "mensagem": "Reconectando câmera da quadra..."
-                })
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 30)
-                self._reiniciar_ffmpeg()
-            else:
-                backoff = 3
-                if segmentos:
-                    self.camera_online = True
-                if camera_estava_offline and segmentos:
-                    camera_estava_offline = False
-                    print("✅ [WATCHDOG] Câmera RTSP restabelecida!")
+                if processo_caiu or stream_congelado:
+                    self.camera_online = False
+                    if processo_caiu and self.processo_ffmpeg_buffer:
+                        codigo_saida = self.processo_ffmpeg_buffer.returncode
+                        motivo = f"processo encerrado (código {codigo_saida})"
+                    elif processo_caiu:
+                        motivo = "processo não iniciado"
+                    else:
+                        motivo = "stream RTSP congelado"
+
+                    stderr_recente = list(self.ultimas_linhas_ffmpeg)
+                    print(f"⚠️ [WATCHDOG] Falha na câmera ({motivo}). Reiniciando em {backoff}s...")
+                    self.registrar_evento(
+                        "camera",
+                        f"Falha na câmera: {motivo}",
+                        nivel="error",
+                        detalhes={"stderr": stderr_recente[-3:]} if stderr_recente else None,
+                    )
+                    camera_estava_offline = True
                     self.atualizar_display_kiosk({
-                        "modo": "pronto",
-                        "mensagem": "Câmera conectada e pronta para gravar!"
+                        "modo": "camera_offline",
+                        "mensagem": "Reconectando câmera da quadra..."
                     })
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 30)
+                    self._reiniciar_ffmpeg()
+                else:
+                    backoff = 3
+                    if segmentos:
+                        self.camera_online = True
+                    if camera_estava_offline and segmentos:
+                        camera_estava_offline = False
+                        self.limpar_erro_pendente = True
+                        print("✅ [WATCHDOG] Câmera RTSP restabelecida!")
+                        self.registrar_evento(
+                            "camera",
+                            "Câmera RTSP restabelecida com sucesso.",
+                            nivel="info",
+                        )
+                        self.atualizar_display_kiosk({
+                            "modo": "pronto",
+                            "mensagem": "Câmera conectada e pronta para gravar!"
+                        })
+            except Exception as err:
+                print(f"⚠️ [WATCHDOG] Erro inesperado no watchdog: {err}")
+                self.registrar_evento("sistema", f"Erro no watchdog da câmera: {err}")
+                time.sleep(5)
 
     def enviar_heartbeat(self):
         """Reporta saúde em tempo real ao NOC (/api/totem/heartbeat) e sincroniza RTSP/pausa."""
         while self.executando:
-            if self.token_autenticacao:
-                try:
-                    fila_qtd = len(list(self.fila_offline_dir.glob("*.mp4")))
-                    res = requests.post(
-                        f"{BASE_WEB_URL}/api/totem/heartbeat",
-                        headers={
-                            "Authorization": f"Bearer {self.token_autenticacao}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "camera_online": bool(self.camera_online or not self.rtsp_url),
-                            "fila_offline_qtd": fila_qtd,
-                        },
-                        timeout=10,
-                    )
-                    if res.status_code == 200:
-                        dados = res.json()
-                        nova_ativa = dados.get("arena_ativa", True)
-                        nova_camera = dados.get("camera_url")
+            try:
+                if self.token_autenticacao:
+                    try:
+                        fila_qtd = len(list(self.fila_offline_dir.glob("*.mp4")))
+                    except Exception:
+                        fila_qtd = 0
 
-                        if nova_camera and nova_camera != self.rtsp_url:
-                            print("🔄 [HEARTBEAT] Nova URL RTSP recebida do NOC. Aplicando...")
-                            self.rtsp_url = nova_camera
-                            self.salvar_config({"rtsp_url": nova_camera})
-                            self._reiniciar_ffmpeg()
+                    with self.lock_eventos:
+                        lote_eventos = self.fila_eventos[:15]
 
-                        if nova_ativa != self.arena_ativa:
-                            self.arena_ativa = nova_ativa
-                            if not nova_ativa:
-                                self.atualizar_display_kiosk({
-                                    "modo": "pronto",
-                                    "mensagem": "Serviço temporariamente em manutenção."
-                                })
-                            else:
-                                self.atualizar_display_kiosk({
-                                    "modo": "pronto",
-                                    "mensagem": "Totem operacional e pronto para gravar!"
-                                })
-                except Exception as err:
-                    print("⚠️ [HEARTBEAT] Sem resposta do NOC:", err)
+                    payload = {
+                        "camera_online": bool(self.camera_online or not self.rtsp_url),
+                        "fila_offline_qtd": fila_qtd,
+                    }
+                    if lote_eventos:
+                        payload["eventos"] = lote_eventos
+                    if self.limpar_erro_pendente:
+                        payload["limpar_erro"] = True
+
+                    try:
+                        res = requests.post(
+                            f"{BASE_WEB_URL}/api/totem/heartbeat",
+                            headers={
+                                "Authorization": f"Bearer {self.token_autenticacao}",
+                                "Content-Type": "application/json",
+                            },
+                            json=payload,
+                            timeout=10,
+                        )
+                        if res.status_code == 200:
+                            if lote_eventos:
+                                with self.lock_eventos:
+                                    self.fila_eventos = self.fila_eventos[len(lote_eventos):]
+                            self.limpar_erro_pendente = False
+
+                            dados = res.json()
+                            nova_ativa = dados.get("arena_ativa", True)
+                            nova_camera = dados.get("camera_url")
+
+                            if nova_camera and nova_camera != self.rtsp_url:
+                                print("🔄 [HEARTBEAT] Nova URL RTSP recebida do NOC. Aplicando...")
+                                self.rtsp_url = nova_camera
+                                self.salvar_config({"rtsp_url": nova_camera})
+                                self._reiniciar_ffmpeg()
+
+                            if nova_ativa != self.arena_ativa:
+                                self.arena_ativa = nova_ativa
+                                if not nova_ativa:
+                                    self.atualizar_display_kiosk({
+                                        "modo": "pronto",
+                                        "mensagem": "Serviço temporariamente em manutenção."
+                                    })
+                                else:
+                                    self.atualizar_display_kiosk({
+                                        "modo": "pronto",
+                                        "mensagem": "Totem operacional e pronto para gravar!"
+                                    })
+                        else:
+                            msg_http = f"Heartbeat rejeitado pelo NOC (HTTP {res.status_code}): {res.text[:160]}"
+                            print(f"⚠️ [HEARTBEAT] {msg_http}")
+                            self.registrar_evento("heartbeat", msg_http, nivel="error")
+                    except Exception as err:
+                        print("⚠️ [HEARTBEAT] Sem resposta do NOC:", err)
+                        self.registrar_evento("heartbeat", f"Sem resposta do NOC: {err}", nivel="warn")
+            except Exception as err_loop:
+                print(f"⚠️ [HEARTBEAT] Erro inesperado no loop de heartbeat: {err_loop}")
             time.sleep(60)
 
     # ---------------------------------------------------------
@@ -680,6 +745,7 @@ class TotemFox:
                 self._remover_arquivos_locais(caminho_final, caminho_thumb)
             except Exception as err_net:
                 print(f"⚠️ Sem conexão para upload imediato ({err_net}). Salvando na fila offline persistente...")
+                self.registrar_evento("upload", f"Falha no upload imediato (salvo na fila offline): {err_net}", nivel="warn")
                 destino_vid = self.fila_offline_dir / caminho_final.name
                 shutil.move(str(caminho_final), str(destino_vid))
                 if caminho_thumb.exists():
@@ -692,6 +758,7 @@ class TotemFox:
 
         except Exception as e:
             print("Erro ao processar lance:", e)
+            self.registrar_evento("camera", f"Erro ao processar lance: {e}", nivel="error")
             self._remover_arquivos_locais(caminho_final, caminho_thumb)
             self.atualizar_display_kiosk({
                 "modo": "pronto",
@@ -759,6 +826,7 @@ class TotemFox:
                             print(f"ℹ️ [ARDUINO] Firmware Fox ativo ({porta_alvo})")
             except Exception as e:
                 print(f"⚠️ Conexão Serial interrompida ({e}). Tentando em 3s...")
+                self.registrar_evento("serial", f"Conexão Serial interrompida: {e}", nivel="warn")
                 time.sleep(3)
 
     # ---------------------------------------------------------
