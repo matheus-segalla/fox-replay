@@ -51,12 +51,13 @@ APP_DIR = Path(os.environ.get("FOX_APP_DIR", "/opt/foxreplay"))
 BUFFER_DIR = Path(os.environ.get("FOX_BUFFER_DIR", "/dev/shm/fox_buffer"))
 STATUS_FILE = Path(os.environ.get("FOX_STATUS_FILE", "/dev/shm/totem_status.json"))
 GRAVACOES_DIR = Path(os.environ.get("FOX_GRAVACOES_DIR", "/tmp/fox_replays"))
-FILA_OFFLINE_DIR = GRAVACOES_DIR / "pendentes"
+FILA_OFFLINE_DIR = Path(os.environ.get("FOX_OFFLINE_DIR", "/var/lib/foxreplay/pendentes"))
+MODO_SIMULACAO = os.environ.get("FOX_MODO_SIMULACAO", "0") == "1"
 
 PINO_BOTAO_GPIO = 17
 DURACAO_REPLAY_SEGUNDOS = 30
 COOLDOWN_SEGUNDOS = 20
-LIMITE_FILA_BYTES = 500 * 1024 * 1024  # Teto de 500MB para fila offline
+LIMITE_FILA_BYTES = 2 * 1024 * 1024 * 1024  # Teto de 2GB para fila offline persistente
 KIOSK_HTTP_HOST = "127.0.0.1"
 KIOSK_HTTP_PORT = int(os.environ.get("FOX_KIOSK_PORT", "8080"))
 
@@ -134,7 +135,12 @@ class TotemFox:
 
         BUFFER_DIR.mkdir(parents=True, exist_ok=True)
         GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
-        FILA_OFFLINE_DIR.mkdir(parents=True, exist_ok=True)
+        self.fila_offline_dir = FILA_OFFLINE_DIR
+        try:
+            self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            self.fila_offline_dir = GRAVACOES_DIR / "pendentes"
+            self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------------------------------------------------------
     # CONFIGURAÇÃO SEGURA (chmod 0600)
@@ -275,6 +281,29 @@ class TotemFox:
             except Exception:
                 pass
 
+    def _consumir_stderr_ffmpeg(self, processo):
+        """Drena o stderr do FFmpeg em tempo real para evitar deadlock de PIPE cheio (64KB)."""
+        if not processo or not processo.stderr:
+            return
+        try:
+            for linha_bytes in iter(processo.stderr.readline, b""):
+                if not linha_bytes:
+                    break
+                linha = linha_bytes.decode("utf-8", errors="ignore").strip()
+                if not linha:
+                    continue
+                # Filtra ruído contínuo inofensivo de streams RTSP para não poluir o journald
+                if "Timestamps are unset" in linha:
+                    continue
+                print(f"🎬 [FFMPEG] {linha}")
+        except Exception:
+            pass
+        finally:
+            try:
+                processo.stderr.close()
+            except Exception:
+                pass
+
     def iniciar_buffer_camera(self):
         """Inicia gravação contínua em MPEG-TS (.ts) na RAM (14 fatias de 5s = 70s)."""
         if not self.rtsp_url:
@@ -285,11 +314,13 @@ class TotemFox:
             if self.processo_ffmpeg_buffer and self.processo_ffmpeg_buffer.poll() is None:
                 return
 
+            # Garante que a pasta em RAM exista após reboots ou limpezas
+            BUFFER_DIR.mkdir(parents=True, exist_ok=True)
             self._limpar_segmentos_antigos()
 
             cmd = [
                 "ffmpeg", "-y",
-                "-loglevel", "error",
+                "-loglevel", "warning",
                 "-rtsp_transport", "tcp",
                 "-i", self.rtsp_url,
                 "-c:v", "copy",
@@ -308,6 +339,11 @@ class TotemFox:
             self.processo_ffmpeg_buffer = subprocess.Popen(
                 cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
             )
+            threading.Thread(
+                target=self._consumir_stderr_ffmpeg,
+                args=(self.processo_ffmpeg_buffer,),
+                daemon=True,
+            ).start()
 
     def _reiniciar_ffmpeg(self):
         with self.lock_ffmpeg:
@@ -375,7 +411,7 @@ class TotemFox:
         while self.executando:
             if self.token_autenticacao:
                 try:
-                    fila_qtd = len(list(FILA_OFFLINE_DIR.glob("*.mp4")))
+                    fila_qtd = len(list(self.fila_offline_dir.glob("*.mp4")))
                     res = requests.post(
                         f"{BASE_WEB_URL}/api/totem/heartbeat",
                         headers={
@@ -469,15 +505,15 @@ class TotemFox:
                     pass
 
     def _aplicar_teto_fila_offline(self):
-        """Garante que a fila offline nunca ultrapasse 500MB (remove mais antigos primeiro)."""
-        arquivos = sorted(FILA_OFFLINE_DIR.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
-        total_bytes = sum(p.stat().st_size for p in FILA_OFFLINE_DIR.glob("*") if p.is_file())
+        """Garante que a fila offline nunca ultrapasse 2GB (remove mais antigos primeiro)."""
+        arquivos = sorted(self.fila_offline_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+        total_bytes = sum(p.stat().st_size for p in self.fila_offline_dir.glob("*") if p.is_file())
 
         while total_bytes > LIMITE_FILA_BYTES and arquivos:
             antigo = arquivos.pop(0)
             thumb_antiga = antigo.with_suffix(".jpg")
             self._remover_arquivos_locais(antigo, thumb_antiga)
-            total_bytes = sum(p.stat().st_size for p in FILA_OFFLINE_DIR.glob("*") if p.is_file())
+            total_bytes = sum(p.stat().st_size for p in self.fila_offline_dir.glob("*") if p.is_file())
 
     def _enviar_para_nuvem(self, caminho_video, caminho_thumb=None):
         """Solicita Signed Upload URL autenticada, faz upload e registra o replay no backend."""
@@ -545,6 +581,9 @@ class TotemFox:
 
     def processar_e_enviar_lance(self):
         """Concatena segmentos fechados da RAM, gera MP4 + thumbnail e publica."""
+        GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
+        self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
+
         carimbo = int(time.time() * 1000)
         caminho_final = GRAVACOES_DIR / f"lance_{carimbo}.mp4"
         caminho_thumb = GRAVACOES_DIR / f"lance_{carimbo}.jpg"
@@ -576,8 +615,8 @@ class TotemFox:
                     stderr=subprocess.DEVNULL,
                     timeout=45,
                 )
-            else:
-                # Fallback apenas em bancada de testes sem câmera configurada
+            elif MODO_SIMULACAO:
+                # Fallback apenas quando FOX_MODO_SIMULACAO=1 estiver explicitamente ativo
                 subprocess.run(
                     [
                         "ffmpeg", "-y", "-loglevel", "error",
@@ -592,10 +631,17 @@ class TotemFox:
                     stderr=subprocess.DEVNULL,
                     timeout=45,
                 )
+            else:
+                print("⚠️ [CAMERA OFFLINE] Nenhum segmento de vídeo disponível no buffer. Upload bloqueado para evitar vídeo preto.")
+                self.atualizar_display_kiosk({
+                    "modo": "camera_offline",
+                    "mensagem": "Câmera reconectando. Tente novamente em instantes."
+                })
+                return
 
             self._gerar_thumbnail(caminho_final, caminho_thumb)
 
-            # Tenta enviar imediatamente; se a internet caiu, salva na fila offline
+            # Tenta enviar imediatamente; se a internet caiu, salva na fila offline persistente
             try:
                 id_replay = self._enviar_para_nuvem(caminho_final, caminho_thumb)
                 print(f"🎉 Replay publicado com sucesso! ID: {id_replay}")
@@ -607,11 +653,11 @@ class TotemFox:
                 })
                 self._remover_arquivos_locais(caminho_final, caminho_thumb)
             except Exception as err_net:
-                print(f"⚠️ Sem conexão para upload imediato ({err_net}). Movendo para fila offline...")
-                destino_vid = FILA_OFFLINE_DIR / caminho_final.name
+                print(f"⚠️ Sem conexão para upload imediato ({err_net}). Salvando na fila offline persistente...")
+                destino_vid = self.fila_offline_dir / caminho_final.name
                 shutil.move(str(caminho_final), str(destino_vid))
                 if caminho_thumb.exists():
-                    shutil.move(str(caminho_thumb), str(FILA_OFFLINE_DIR / caminho_thumb.name))
+                    shutil.move(str(caminho_thumb), str(self.fila_offline_dir / caminho_thumb.name))
                 self._aplicar_teto_fila_offline()
                 self.atualizar_display_kiosk({
                     "modo": "pronto",
@@ -635,7 +681,8 @@ class TotemFox:
             if not self.token_autenticacao:
                 continue
 
-            pendentes = sorted(FILA_OFFLINE_DIR.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+            self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
+            pendentes = sorted(self.fila_offline_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
             for video_pendente in pendentes:
                 thumb_pendente = video_pendente.with_suffix(".jpg")
                 try:

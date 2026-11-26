@@ -21,10 +21,10 @@ pip3 install requests pyserial --break-system-packages 2>/dev/null || pip3 insta
 sudo usermod -a -G dialout "$TARGET_USER" 2>/dev/null || true
 
 # 4. Pastas de trabalho com permissões restritas (sem chmod 777)
-sudo mkdir -p /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays/pendentes
-sudo chown -R "$TARGET_USER:$TARGET_USER" /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays
+sudo mkdir -p /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays /var/lib/foxreplay/pendentes
+sudo chown -R "$TARGET_USER:$TARGET_USER" /etc/foxreplay /opt/foxreplay /dev/shm/fox_buffer /tmp/fox_replays /var/lib/foxreplay
 sudo chmod 700 /etc/foxreplay
-sudo chmod 750 /dev/shm/fox_buffer /tmp/fox_replays
+sudo chmod 750 /dev/shm/fox_buffer /tmp/fox_replays /var/lib/foxreplay
 
 # 5. Copiar daemon e display
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -45,6 +45,7 @@ if [ ! -f /etc/foxreplay/totem.env ]; then
   cat <<EOF | sudo tee /etc/foxreplay/totem.env >/dev/null
 FOX_WEB_URL=$FOX_WEB_URL
 FOX_KIOSK_PORT=8080
+FOX_OFFLINE_DIR=/var/lib/foxreplay/pendentes
 EOF
   sudo chown "$TARGET_USER:$TARGET_USER" /etc/foxreplay/totem.env
   sudo chmod 600 /etc/foxreplay/totem.env
@@ -56,12 +57,14 @@ cat <<EOF | sudo tee /etc/systemd/system/foxreplay.service >/dev/null
 Description=Fox Replay Edge Totem Daemon v2
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=$TARGET_USER
 WorkingDirectory=/opt/foxreplay
 EnvironmentFile=/etc/foxreplay/totem.env
+ExecStartPre=/bin/mkdir -p /dev/shm/fox_buffer /tmp/fox_replays /var/lib/foxreplay/pendentes
 ExecStart=/usr/bin/python3 -u /opt/foxreplay/totem_fox.py
 Restart=always
 RestartSec=5
