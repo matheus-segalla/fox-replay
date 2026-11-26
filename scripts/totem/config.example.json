@@ -1,0 +1,7 @@
+{
+    "quadra_id": "00000000-0000-0000-0000-000000000000",
+    "arena_id": "00000000-0000-0000-0000-000000000000",
+    "token_autenticacao": "fox_tok_exemplo_gerado_pelo_pareamento_zero_touch",
+    "nome_quadra": "Quadra 1 - Exemplo",
+    "rtsp_url": "rtsp://admin:SUA_SENHA@192.168.1.150:554/Streaming/Channels/101"
+}

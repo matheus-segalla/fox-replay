@@ -321,7 +321,9 @@ class TotemFox:
             cmd = [
                 "ffmpeg", "-y",
                 "-loglevel", "warning",
+                "-fflags", "+genpts",
                 "-rtsp_transport", "tcp",
+                "-timeout", "5000000",
                 "-i", self.rtsp_url,
                 "-c:v", "copy",
                 "-c:a", "aac",
@@ -384,7 +386,13 @@ class TotemFox:
 
             if processo_caiu or stream_congelado:
                 self.camera_online = False
-                motivo = "processo encerrado" if processo_caiu else "stream RTSP congelado"
+                if processo_caiu and self.processo_ffmpeg_buffer:
+                    codigo_saida = self.processo_ffmpeg_buffer.returncode
+                    motivo = f"processo encerrado (código {codigo_saida})"
+                elif processo_caiu:
+                    motivo = "processo não iniciado"
+                else:
+                    motivo = "stream RTSP congelado"
                 print(f"⚠️ [WATCHDOG] Falha na câmera ({motivo}). Reiniciando em {backoff}s...")
                 camera_estava_offline = True
                 self.atualizar_display_kiosk({

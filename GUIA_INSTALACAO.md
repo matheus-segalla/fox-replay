@@ -90,6 +90,15 @@ Se precisar ligar temporariamente em bancada de testes sem o Arduino:
    * Ligue a porta Ethernet do Raspberry Pi 3 em outra porta do switch.
    * Conecte o cabo de rede que vem do roteador da arena no switch para fornecimento de internet.
    * Defina na câmera IP um IP estático (ex: `192.168.1.150`) ou reserve o IP no DHCP do roteador.
+3. **Configuração de Vídeo Recomendada na Câmera IP (Hikvision / Intelbras)**:
+   * **Codec de Vídeo**: `H.264` (**desative** o `H.264+` / `Smart Codec` para garantir compatibilidade total com celulares e navegadores)
+   * **Resolução**: `1920x1080` (Full HD 1080p)
+   * **Taxa de Quadros (FPS)**: `25 fps`
+   * **Taxa de Bits (Bitrate)**: `CBR` (Constante) em `4096 kbps`
+   * **Intervalo de I-Frame**: `25` (1 I-Frame por segundo — essencial para cortes rápidos e precisos de 5s)
+   * **Áudio**: `AAC` (16 kHz ou 44.1 kHz)
+   * **Formato Padrão da URL RTSP (Hikvision)**:
+     `rtsp://admin:SUA_SENHA@192.168.1.150:554/Streaming/Channels/101`
 
 ---
 
