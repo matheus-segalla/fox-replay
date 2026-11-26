@@ -9,7 +9,7 @@ export default function Footer() {
     const urlSuporte = montarUrlWhatsAppSuporte('Olá equipe FOX Replay! Gostaria de falar com o suporte comercial para arenas.');
 
     return (
-        <footer className="w-full border-t border-[#EAE8E5] py-10 z-10 bg-white/90 backdrop-blur-sm">
+        <footer className="w-full border-t border-[#EAE8E5] py-10 z-10 bg-white/95">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
                 <Link href="/" className="flex items-center gap-2.5 select-none">
                     <Image

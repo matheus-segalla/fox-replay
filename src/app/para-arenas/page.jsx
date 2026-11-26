@@ -55,7 +55,7 @@ export default function PaginaParaArenas() {
         <div className="min-h-screen bg-[#FCFBF9] text-[#111111] font-sans selection:bg-[#FF9900] selection:text-[#111111] relative flex flex-col justify-between overflow-x-hidden pb-20 sm:pb-0">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
             />
 
             {/* FUNDO EDITORIAL OFF-WHITE COM GRID E MARCAÇÕES DE QUADRA */}

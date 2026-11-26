@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const PASSOS = [
     {
@@ -55,20 +55,33 @@ export default function HowItWorksSection() {
     const [passoAtivo, setPassoAtivo] = useState(1);
     const [simulando, setSimulando] = useState(false);
     const [simulacaoConcluida, setSimulacaoConcluida] = useState(false);
+    const timersRef = useRef([]);
+
+    const limparTimers = () => {
+        timersRef.current.forEach((id) => clearTimeout(id));
+        timersRef.current = [];
+    };
+
+    useEffect(() => {
+        return () => limparTimers();
+    }, []);
 
     const dispararSimulacao = () => {
         if (simulando) return;
+        limparTimers();
         setSimulando(true);
         setSimulacaoConcluida(false);
         setPassoAtivo(1);
 
-        setTimeout(() => setPassoAtivo(2), 650);
-        setTimeout(() => setPassoAtivo(3), 1400);
-        setTimeout(() => {
-            setPassoAtivo(4);
-            setSimulando(false);
-            setSimulacaoConcluida(true);
-        }, 2200);
+        timersRef.current.push(
+            setTimeout(() => setPassoAtivo(2), 650),
+            setTimeout(() => setPassoAtivo(3), 1400),
+            setTimeout(() => {
+                setPassoAtivo(4);
+                setSimulando(false);
+                setSimulacaoConcluida(true);
+            }, 2200)
+        );
     };
 
     return (

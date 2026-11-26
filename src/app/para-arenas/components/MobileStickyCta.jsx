@@ -23,7 +23,7 @@ export default function MobileStickyCta() {
     if (ocultar) return null;
 
     return (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#FCFBF9]/95 backdrop-blur-md border-t border-[#EAE8E5] shadow-[0_-8px_24px_-12px_rgba(17,17,17,0.12)]">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#FCFBF9] border-t border-[#EAE8E5] shadow-[0_-8px_24px_-12px_rgba(17,17,17,0.12)]">
             <button
                 type="button"
                 onClick={() => {

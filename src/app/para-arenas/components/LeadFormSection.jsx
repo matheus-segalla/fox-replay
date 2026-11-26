@@ -47,8 +47,8 @@ export default function LeadFormSection() {
         setErroValidacao('');
 
         const digitosTel = whatsapp.replace(/\D/g, '');
-        if (!nomeArena.trim() || !cidade.trim() || !estado.trim() || !nomeContato.trim() || digitosTel.length < 10) {
-            setErroValidacao('Preencha todos os campos obrigatórios e informe um WhatsApp válido com DDD.');
+        if (!nomeArena.trim() || !cidade.trim() || estado.trim().length !== 2 || !nomeContato.trim() || digitosTel.length < 10) {
+            setErroValidacao('Preencha todos os campos obrigatórios, informe a UF com 2 letras e um WhatsApp válido com DDD.');
             return;
         }
 
@@ -141,6 +141,7 @@ export default function LeadFormSection() {
                                     id="nome-arena"
                                     type="text"
                                     required
+                                    maxLength={80}
                                     value={nomeArena}
                                     onChange={(e) => setNomeArena(e.target.value)}
                                     placeholder="Ex: Arena Sunset Beach Tennis"
@@ -157,6 +158,7 @@ export default function LeadFormSection() {
                                         id="cidade-arena"
                                         type="text"
                                         required
+                                        maxLength={60}
                                         value={cidade}
                                         onChange={(e) => setCidade(e.target.value)}
                                         placeholder="Ex: Campinas"
@@ -173,7 +175,7 @@ export default function LeadFormSection() {
                                         required
                                         maxLength={2}
                                         value={estado}
-                                        onChange={(e) => setEstado(e.target.value.toUpperCase())}
+                                        onChange={(e) => setEstado(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
                                         placeholder="SP"
                                         className="w-full min-h-[44px] px-3 py-2.5 rounded-xl bg-[#FCFBF9] border border-[#EAE8E5] text-[#111111] text-center uppercase placeholder-[#68666B]/60 text-sm font-bold transition-all focus:outline-none focus:border-[#FF9900] focus:bg-white"
                                     />
@@ -205,6 +207,7 @@ export default function LeadFormSection() {
                                         id="responsavel-arena"
                                         type="text"
                                         required
+                                        maxLength={80}
                                         value={nomeContato}
                                         onChange={(e) => setNomeContato(e.target.value)}
                                         placeholder="Seu nome"
