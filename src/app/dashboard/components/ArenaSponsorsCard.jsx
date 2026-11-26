@@ -102,84 +102,91 @@ export default function ArenaSponsorsCard({
 
         {/* PREVIEW 9:16 */}
         <div className="lg:col-span-5 flex flex-col items-center">
-          <span className="text-[11px] font-black uppercase text-zinc-500 tracking-wider mb-2 font-mono">
+          <span className="text-[11px] font-black uppercase text-zinc-500 tracking-wider mb-1 font-mono">
             Prévia do Vídeo Exportado (9:16)
           </span>
+          <span className="text-[10px] text-zinc-400 font-medium mb-2.5">
+            Quadra expandida + 2 patrocinadores em loop (4s)
+          </span>
 
-          <div className="w-[260px] bg-[#070709] border-[6px] border-zinc-800 rounded-[32px] p-2.5 shadow-2xl relative overflow-hidden flex flex-col gap-2">
-            <div className="flex items-center justify-between px-1 border-b border-white/10 pb-1.5 pt-1">
-              <div className="flex items-center gap-1.5">
-                <Image
-                  src="/logo-fox.jpeg"
-                  alt="Fox Replay"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6 object-cover rounded-md border border-amber-500/40"
-                />
-                <span className="text-[9px] font-black text-white uppercase leading-none">
-                  FOX <span className="text-amber-500">REPLAY</span>
-                </span>
-              </div>
-
-              <div className="text-right">
-                {logoArenaInput && validarUrlHttp(logoArenaInput) ? (
+          <div className="w-[260px] bg-[#070709] border-[6px] border-zinc-800 rounded-[32px] overflow-hidden shadow-2xl relative flex flex-col">
+            {/* Área de Jogo Expandida com Logos Integradas no Topo */}
+            <div className="w-full aspect-[9/13.5] bg-zinc-900 relative flex items-center justify-center overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 via-black/35 to-transparent z-10 p-2.5 flex items-start justify-between">
+                <div className="flex items-center gap-1.5">
                   <Image
-                    src={logoArenaInput}
-                    alt="Arena Logo"
-                    width={70}
-                    height={24}
-                    unoptimized
-                    className="h-6 w-auto max-w-[70px] object-contain rounded bg-white/5 p-0.5 border border-white/10"
+                    src="/logo-fox.jpeg"
+                    alt="Fox Replay"
+                    width={26}
+                    height={26}
+                    className="w-6 h-6 object-cover rounded-md border border-amber-500/60"
                   />
-                ) : (
-                  <span className="text-[8px] font-black text-white uppercase block truncate max-w-[80px]">
-                    {arena?.nome || 'SUA ARENA'}
+                  <span className="text-[8px] font-black text-white uppercase leading-none">
+                    FOX <span className="text-amber-500">REPLAY</span>
                   </span>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <div className="w-full aspect-[9/12] bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800">
-              <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-white text-xs">
+                <div className="text-right">
+                  {logoArenaInput && validarUrlHttp(logoArenaInput) ? (
+                    <Image
+                      src={logoArenaInput}
+                      alt="Arena Logo"
+                      width={64}
+                      height={24}
+                      unoptimized
+                      className="h-6 w-auto max-w-[64px] object-contain rounded bg-black/40 p-0.5 border border-white/15"
+                    />
+                  ) : (
+                    <span className="text-[7px] font-black text-white uppercase block truncate max-w-[80px] bg-black/60 px-2 py-1 rounded border border-white/15">
+                      {arena?.nome || 'SUA ARENA'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-white text-xs z-10">
                 ▶
               </div>
-              <span className="absolute bottom-2 left-2 text-[8px] font-mono text-zinc-300 font-bold bg-black/60 px-1.5 py-0.5 rounded">
-                LANCE 30s + ÁUDIO
+              <span className="absolute bottom-2 left-2 text-[8px] font-mono text-zinc-200 font-bold bg-black/60 px-1.5 py-0.5 rounded z-10">
+                QUADRA EM DESTAQUE + ÁUDIO
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-1 w-full h-11 pt-0.5">
-              {patrocinadoresInput.map((p, i) => {
-                const tem = p && p.ativo && (p.logo_url || p.nome);
-                return (
-                  <div
-                    key={i}
-                    className="bg-[#14151b] border border-white/10 rounded-lg flex flex-col items-center justify-center p-1 overflow-hidden text-center"
-                  >
-                    {tem ? (
-                      p.logo_url && validarUrlHttp(p.logo_url) ? (
-                        <Image
-                          src={p.logo_url}
-                          alt={p.nome || 'Patrocinador'}
-                          width={56}
-                          height={36}
-                          unoptimized
-                          className="max-h-full max-w-full w-auto h-auto object-contain"
-                        />
+            {/* Rodapé: 2 Patrocinadores Amplos (Loop 4s: 1-2 ↔ 3-4) */}
+            <div className="border-t-2 border-[#FF9900] bg-[#070709] p-2">
+              <div className="grid grid-cols-2 gap-1.5 w-full h-14">
+                {patrocinadoresInput.slice(0, 2).map((p, i) => {
+                  const tem = p && p.ativo && (p.logo_url || p.nome);
+                  return (
+                    <div
+                      key={i}
+                      className="bg-[#121318] border border-white/15 rounded-lg flex flex-col items-center justify-center p-1.5 overflow-hidden text-center"
+                    >
+                      {tem ? (
+                        p.logo_url && validarUrlHttp(p.logo_url) ? (
+                          <Image
+                            src={p.logo_url}
+                            alt={p.nome || 'Patrocinador'}
+                            width={84}
+                            height={44}
+                            unoptimized
+                            className="max-h-full max-w-full w-auto h-auto object-contain"
+                          />
+                        ) : (
+                          <span className="text-[8px] font-black text-white truncate px-1 uppercase">
+                            {p.nome}
+                          </span>
+                        )
                       ) : (
-                        <span className="text-[7px] font-black text-white truncate px-0.5 uppercase">
-                          {p.nome}
-                        </span>
-                      )
-                    ) : (
-                      <div className="flex flex-col items-center justify-center leading-none scale-90">
-                        <span className="text-[6px] font-black text-white uppercase">ANUNCIE</span>
-                        <span className="text-[7px] font-black text-amber-400">Aqui!</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        <div className="flex flex-col items-center justify-center leading-none">
+                          <span className="text-[7px] font-black text-white uppercase">ANUNCIE</span>
+                          <span className="text-[8px] font-black text-[#FF9900]">Aqui!</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

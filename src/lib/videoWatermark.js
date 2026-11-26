@@ -210,6 +210,65 @@ export async function comporEBaixarVideoComPatrocinadores({
 
         let gravando = true;
 
+        function desenharSlotPatrocinador(slotIdx, slotX, slotY, larguraSlot, alturaSlot) {
+            const imgPat = imagensPatrocinadores[slotIdx];
+            const pat = patrocinadores?.[slotIdx];
+
+            ctx.save();
+            ctx.fillStyle = '#121318';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+            ctx.lineWidth = 1.5;
+            desenharRetanguloArredondado(ctx, slotX, slotY, larguraSlot, alturaSlot, 18);
+            ctx.fill();
+            ctx.stroke();
+            ctx.clip();
+
+            if (imgPat) {
+                const pAspect = imgPat.width / imgPat.height;
+                let pW = larguraSlot - 28;
+                let pH = pW / pAspect;
+                if (pH > alturaSlot - 24) {
+                    pH = alturaSlot - 24;
+                    pW = pH * pAspect;
+                }
+                const pX = slotX + (larguraSlot - pW) / 2;
+                const pY = slotY + (alturaSlot - pH) / 2;
+                ctx.drawImage(imgPat, pX, pY, pW, pH);
+            } else if (pat && pat.ativo && pat.nome) {
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '900 24px Inter, sans-serif';
+                ctx.fillText(
+                    pat.nome.toUpperCase().substring(0, 16),
+                    slotX + larguraSlot / 2,
+                    slotY + alturaSlot / 2
+                );
+            } else {
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '900 20px Inter, sans-serif';
+                ctx.fillText('ANUNCIE', slotX + larguraSlot / 2, slotY + alturaSlot / 2 - 14);
+
+                ctx.fillStyle = '#FF9900';
+                ctx.font = '900 22px Inter, sans-serif';
+                ctx.fillText('Aqui!', slotX + larguraSlot / 2, slotY + alturaSlot / 2 + 16);
+            }
+            ctx.restore();
+        }
+
+        function desenharParPatrocinadores(parIdx, alpha, slotY, larguraSlot, alturaSlot, margem, gap) {
+            if (alpha <= 0) return;
+            const baseIdx = parIdx === 0 ? 0 : 2;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            desenharSlotPatrocinador(baseIdx, margem, slotY, larguraSlot, alturaSlot);
+            desenharSlotPatrocinador(baseIdx + 1, margem + larguraSlot + gap, slotY, larguraSlot, alturaSlot);
+            ctx.restore();
+        }
+
         function desenharFrameAtual() {
             if (!gravando) return;
 
@@ -217,153 +276,103 @@ export async function comporEBaixarVideoComPatrocinadores({
             ctx.fillStyle = '#070709';
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-            const gradTopo = ctx.createRadialGradient(
-                canvasWidth / 2, 80, 20,
-                canvasWidth / 2, 80, 400
-            );
-            gradTopo.addColorStop(0, 'rgba(245, 158, 11, 0.15)');
+            // B. Área Principal do Jogo (85% da altura: 720x1090 com crop cover centralizado)
+            const areaVideoH = 1090;
+            const vW = video.videoWidth || 1920;
+            const vH = video.videoHeight || 1080;
+            const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
+            const dW = vW * scale;
+            const dH = vH * scale;
+            const dX = (canvasWidth - dW) / 2;
+            const dY = (areaVideoH - dH) / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, canvasWidth, areaVideoH);
+            ctx.clip();
+            ctx.drawImage(video, dX, dY, dW, dH);
+
+            // Degradê superior sutil para legibilidade das logos sobre a quadra
+            const gradTopo = ctx.createLinearGradient(0, 0, 0, 170);
+            gradTopo.addColorStop(0, 'rgba(7, 7, 9, 0.85)');
+            gradTopo.addColorStop(0.55, 'rgba(7, 7, 9, 0.35)');
             gradTopo.addColorStop(1, 'rgba(7, 7, 9, 0)');
             ctx.fillStyle = gradTopo;
-            ctx.fillRect(0, 0, canvasWidth, 220);
+            ctx.fillRect(0, 0, canvasWidth, 170);
+            ctx.restore();
 
-            // B. Topo: Logo Fox Replay + Logo da Arena
+            // C. Topo Integrado: Logo Fox Replay (esquerda) + Arena (direita)
             if (imgFox) {
                 ctx.save();
-                desenharRetanguloArredondado(ctx, 40, 36, 96, 96, 18);
+                desenharRetanguloArredondado(ctx, 28, 28, 86, 86, 18);
                 ctx.clip();
-                ctx.drawImage(imgFox, 40, 36, 96, 96);
+                ctx.drawImage(imgFox, 28, 28, 86, 86);
                 ctx.restore();
 
-                ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+                ctx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
                 ctx.lineWidth = 2;
-                desenharRetanguloArredondado(ctx, 40, 36, 96, 96, 18);
+                desenharRetanguloArredondado(ctx, 28, 28, 86, 86, 18);
                 ctx.stroke();
             } else {
-                ctx.fillStyle = '#f59e0b';
-                ctx.font = '900 24px Inter, sans-serif';
-                ctx.fillText('FOX REPLAY', 40, 85);
+                ctx.fillStyle = '#FF9900';
+                ctx.font = '900 22px Inter, sans-serif';
+                ctx.fillText('FOX REPLAY', 28, 76);
             }
 
             if (imgArena) {
                 ctx.save();
-                desenharRetanguloArredondado(ctx, canvasWidth - 40 - 140, 36, 140, 96, 18);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 132, 28, 132, 86, 18);
                 ctx.clip();
-                ctx.drawImage(imgArena, canvasWidth - 40 - 140, 36, 140, 96);
+                ctx.drawImage(imgArena, canvasWidth - 28 - 132, 28, 132, 86);
                 ctx.restore();
 
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 40 - 140, 36, 140, 96, 18);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 132, 28, 132, 86, 18);
                 ctx.stroke();
             } else {
                 ctx.save();
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.fillStyle = 'rgba(17, 17, 17, 0.72)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 40 - 240, 48, 240, 68, 16);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 220, 40, 220, 62, 16);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = '900 18px Inter, sans-serif';
+                ctx.font = '900 17px Inter, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 40 - 120, 88);
+                ctx.textBaseline = 'middle';
+                ctx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 71);
                 ctx.restore();
             }
 
-            // C. Centro: Vídeo da Quadra
-            const areaVideoY = 170;
-            const areaVideoH = 910;
-            const vW = video.videoWidth || 1920;
-            const vH = video.videoHeight || 1080;
-            const aspect = vW / vH;
+            // D. Rodapé: 2 Patrocinadores Amplos alternando em loop a cada 4 segundos
+            ctx.fillStyle = '#070709';
+            ctx.fillRect(0, areaVideoH, canvasWidth, canvasHeight - areaVideoH);
 
-            let dW = canvasWidth;
-            let dH = dW / aspect;
+            ctx.fillStyle = '#FF9900';
+            ctx.fillRect(0, areaVideoH, canvasWidth, 3);
 
-            if (dH > areaVideoH) {
-                dH = areaVideoH;
-                dW = dH * aspect;
-            }
+            const margem = 20;
+            const gap = 14;
+            const larguraSlot = (canvasWidth - margem * 2 - gap) / 2;
+            const alturaSlot = 148;
+            const slotY = areaVideoH + (canvasHeight - areaVideoH - alturaSlot) / 2;
 
-            const dX = (canvasWidth - dW) / 2;
-            const dY = areaVideoY + (areaVideoH - dH) / 2;
+            const cicloSegundos = 4;
+            const duracaoTransicao = 0.35;
+            const tempoAtual = Math.max(0, video.currentTime || 0);
+            const parAtual = Math.floor(tempoAtual / cicloSegundos) % 2;
+            const tempoNoCiclo = tempoAtual % cicloSegundos;
 
-            ctx.save();
-            desenharRetanguloArredondado(ctx, dX, dY, dW, dH, 16);
-            ctx.clip();
-            ctx.drawImage(video, dX, dY, dW, dH);
-            ctx.restore();
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 2;
-            desenharRetanguloArredondado(ctx, dX, dY, dW, dH, 16);
-            ctx.stroke();
-
-            // D. Rodapé: 4 Patrocinadores
-            const areaPatY = 1100;
-            const areaPatH = 150;
-            const margem = 24;
-            const espacoTotal = canvasWidth - margem * 2;
-            const gap = 12;
-            const larguraSlot = (espacoTotal - gap * 3) / 4;
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(24, areaPatY - 14);
-            ctx.lineTo(canvasWidth - 24, areaPatY - 14);
-            ctx.stroke();
-
-            for (let i = 0; i < 4; i++) {
-                const slotX = margem + i * (larguraSlot + gap);
-                const slotY = areaPatY;
-                const imgPat = imagensPatrocinadores[i];
-                const pat = patrocinadores?.[i];
-
-                ctx.save();
-                ctx.fillStyle = 'rgba(18, 19, 24, 0.85)';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, slotX, slotY, larguraSlot, areaPatH, 16);
-                ctx.fill();
-                ctx.stroke();
-                ctx.clip();
-
-                if (imgPat) {
-                    const pAspect = imgPat.width / imgPat.height;
-                    let pW = larguraSlot - 20;
-                    let pH = pW / pAspect;
-                    if (pH > areaPatH - 20) {
-                        pH = areaPatH - 20;
-                        pW = pH * pAspect;
-                    }
-                    const pX = slotX + (larguraSlot - pW) / 2;
-                    const pY = slotY + (areaPatH - pH) / 2;
-                    ctx.drawImage(imgPat, pX, pY, pW, pH);
-                } else if (pat && pat.ativo && pat.nome) {
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = '900 16px Inter, sans-serif';
-                    ctx.fillText(
-                        pat.nome.toUpperCase().substring(0, 12),
-                        slotX + larguraSlot / 2,
-                        slotY + areaPatH / 2
-                    );
-                } else {
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = '900 18px Inter, sans-serif';
-                    ctx.fillText('ANUNCIE', slotX + larguraSlot / 2, slotY + 60);
-
-                    ctx.fillStyle = '#F59E0B';
-                    ctx.font = '900 20px Inter, sans-serif';
-                    ctx.fillText('Aqui!', slotX + larguraSlot / 2, slotY + 88);
-                }
-                ctx.restore();
+            if (tempoAtual >= cicloSegundos && tempoNoCiclo < duracaoTransicao) {
+                const progresso = tempoNoCiclo / duracaoTransicao;
+                const parAnterior = parAtual === 0 ? 1 : 0;
+                desenharParPatrocinadores(parAnterior, 1 - progresso, slotY, larguraSlot, alturaSlot, margem, gap);
+                desenharParPatrocinadores(parAtual, progresso, slotY, larguraSlot, alturaSlot, margem, gap);
+            } else {
+                desenharParPatrocinadores(parAtual, 1, slotY, larguraSlot, alturaSlot, margem, gap);
             }
 
             const pct = Math.min(95, Math.round((video.currentTime / duracaoTotal) * 100));
