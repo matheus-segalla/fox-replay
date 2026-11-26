@@ -29,6 +29,7 @@ export default function AppHeader({
   const [ehSuperAdmin, setEhSuperAdmin] = useState(false);
   const [ehGestor, setEhGestor] = useState(false);
   const [sessaoChecada, setSessaoChecada] = useState(false);
+  const [saindo, setSaindo] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -85,13 +86,19 @@ export default function AppHeader({
   }, []);
 
   const handleSair = async () => {
-    if (onLogout) {
-      await onLogout();
-      return;
+    if (saindo) return;
+    setSaindo(true);
+    try {
+      if (onLogout) {
+        await onLogout();
+        return;
+      }
+      await supabase.auth.signOut();
+      clearArenaAtivaId();
+      router.push('/');
+    } finally {
+      setSaindo(false);
     }
-    await supabase.auth.signOut();
-    clearArenaAtivaId();
-    router.push('/');
   };
 
   const isDark = theme === 'dark';
@@ -257,14 +264,15 @@ export default function AppHeader({
           {usuario && showLogout && (
             <button
               type="button"
+              disabled={saindo}
               onClick={handleSair}
-              className={`text-xs font-bold px-2.5 sm:px-3 py-2 rounded-xl border transition-all whitespace-nowrap cursor-pointer min-h-[40px] flex items-center justify-center active:scale-95 ${
+              className={`text-xs font-bold px-2.5 sm:px-3 py-2 rounded-xl border transition-all whitespace-nowrap cursor-pointer min-h-[40px] flex items-center justify-center active:scale-95 disabled:opacity-50 ${
                 isDark
                   ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-red-400 hover:border-red-500/40'
                   : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
               }`}
             >
-              Sair
+              {saindo ? 'Saindo...' : 'Sair'}
             </button>
           )}
         </nav>

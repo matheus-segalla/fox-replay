@@ -26,6 +26,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
   const [ultimaArena, setUltimaArena] = useState(null);
   const [lancesFavoritosCount, setLancesFavoritosCount] = useState(0);
   const [cidadeSelecionada, setCidadeSelecionada] = useState('');
+  const [entrandoArenaId, setEntrandoArenaId] = useState(null);
 
   // Fecha modal de cidades com Escape
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
   }, [todasArenas, termoBusca]);
 
   const acessarArena = (arena) => {
+    setEntrandoArenaId(arena.id);
     salvarUltimaArenaLocal(arena);
     router.push(`/arena/${arena.id}`);
   };
@@ -153,6 +155,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
           arenasFiltradas={arenasFiltradas}
           ultimaArena={ultimaArena}
           acessarArena={acessarArena}
+          entrandoArenaId={entrandoArenaId}
           abrirModalCidades={() => setModalAberto(true)}
           searchInputRef={searchInputRef}
           onEncontrarArenaClick={focarBuscaArena}

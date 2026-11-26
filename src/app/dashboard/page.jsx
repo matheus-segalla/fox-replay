@@ -61,6 +61,7 @@ function ConteudoDashboardArena() {
   const [editNome, setEditNome] = useState('');
   const [editFotoUrl, setEditFotoUrl] = useState('');
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [excluindoQuadra, setExcluindoQuadra] = useState(false);
 
   // Moderação de gravações (últimos 5 dias)
   const [quadraSelecionada, setQuadraSelecionada] = useState(null);
@@ -614,6 +615,7 @@ function ConteudoDashboardArena() {
       'Excluir Quadra?',
       'Tem certeza que deseja excluir esta quadra? Todos os replays associados a ela serão perdidos.',
       async () => {
+        setExcluindoQuadra(true);
         try {
           const { error } = await supabase.from('quadras').delete().eq('id', idQuadra);
           if (error) throw error;
@@ -623,6 +625,8 @@ function ConteudoDashboardArena() {
           carregarDados(arena.id, arena);
         } catch {
           mostrarAviso('Erro', 'Não foi possível excluir a quadra.');
+        } finally {
+          setExcluindoQuadra(false);
         }
       }
     );
@@ -1051,10 +1055,11 @@ function ConteudoDashboardArena() {
                   </button>
                   <button
                     type="button"
+                    disabled={excluindoQuadra}
                     onClick={() => handleExcluirQuadra(quadraParaEditar.id)}
-                    className="w-full py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer min-h-[44px] active:scale-95"
+                    className="w-full py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer min-h-[44px] active:scale-95 disabled:opacity-50"
                   >
-                    Excluir Quadra
+                    {excluindoQuadra ? 'Excluindo...' : 'Excluir Quadra'}
                   </button>
                 </div>
               </form>

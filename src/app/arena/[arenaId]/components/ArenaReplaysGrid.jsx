@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReplayThumbnail from '@/components/ReplayThumbnail';
 import { IconDownload, IconShare, IconPlay, IconRefresh } from '@/components/icons';
@@ -38,6 +38,7 @@ export default function ArenaReplaysGrid({
   mudarPagina,
 }) {
   const router = useRouter();
+  const [abrindoReplayId, setAbrindoReplayId] = useState(null);
 
   return (
     <div ref={feedTopRef} className="space-y-5 scroll-mt-4">
@@ -80,8 +81,15 @@ export default function ArenaReplaysGrid({
             return (
               <div
                 key={replay.id}
-                onClick={() => router.push(`/jogada?id=${replay.id}`)}
-                className="bg-white border border-zinc-200/90 rounded-2xl overflow-hidden hover:border-amber-400 transition-all shadow-md shadow-zinc-200/30 flex flex-col group cursor-pointer active:scale-[0.99]"
+                onClick={() => {
+                  setAbrindoReplayId(replay.id);
+                  router.push(`/jogada?id=${replay.id}`);
+                }}
+                className={`bg-white border rounded-2xl overflow-hidden transition-all shadow-md shadow-zinc-200/30 flex flex-col group cursor-pointer active:scale-[0.99] ${
+                  abrindoReplayId === replay.id
+                    ? 'border-[#FF9900] ring-2 ring-[#FF9900]/30 opacity-85'
+                    : 'border-zinc-200/90 hover:border-amber-400'
+                }`}
               >
                 <div className="p-3.5 pb-2.5 flex justify-between items-center">
                   <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -99,9 +107,15 @@ export default function ArenaReplaysGrid({
                     alt={`Lance na ${nomeQuadra} às ${horarioFormatado}`}
                   />
                   <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/10 pointer-events-none">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black flex items-center justify-center pl-0.5 font-bold shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                      <IconPlay className="w-5 h-5" />
-                    </div>
+                    {abrindoReplayId === replay.id ? (
+                      <div className="w-11 h-11 rounded-full bg-black/75 border border-[#FF9900] flex items-center justify-center">
+                        <span className="w-5 h-5 border-2 border-[#FF9900] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black flex items-center justify-center pl-0.5 font-bold shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
+                        <IconPlay className="w-5 h-5" />
+                      </div>
+                    )}
                   </div>
                 </div>
 

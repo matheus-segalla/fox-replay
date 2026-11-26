@@ -19,6 +19,7 @@ export default function HeroSection({
   arenasFiltradas,
   ultimaArena,
   acessarArena,
+  entrandoArenaId,
   abrirModalCidades,
   searchInputRef,
 }) {
@@ -182,8 +183,17 @@ export default function HeroSection({
                           </div>
                         </div>
                         <span className="text-[11px] font-bold text-[#68666B] group-hover:text-[#FF9900] transition-colors flex items-center gap-1 shrink-0 ml-2">
-                          <span>Ver lances</span>
-                          <IconArrowRight className="w-3.5 h-3.5" />
+                          {entrandoArenaId === arena.id ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-[#FF9900] border-t-transparent rounded-full animate-spin" />
+                              <span className="text-[#FF9900]">Abrindo...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Ver lances</span>
+                              <IconArrowRight className="w-3.5 h-3.5" />
+                            </>
+                          )}
                         </span>
                       </button>
                     ))}

@@ -131,6 +131,8 @@ export default function SuperAdminNOCPage() {
   const [carregandoLogs, setCarregandoLogs] = useState(false);
   const [avisoLogs, setAvisoLogs] = useState('');
   const [limpandoLogs, setLimpandoLogs] = useState(false);
+  const [pausandoArenaId, setPausandoArenaId] = useState(null);
+  const [desvinculandoDispId, setDesvinculandoDispId] = useState(null);
 
   // Central LGPD (Busca e Exclusão por ID)
   const [lgpdReplayId, setLgpdReplayId] = useState('');
@@ -345,6 +347,7 @@ export default function SuperAdminNOCPage() {
 
   const handleAlternarPausaArena = async (arena) => {
     const novoStatus = arena.ativa === false;
+    setPausandoArenaId(arena.id);
     try {
       const token = await getAccessToken();
       const res = await fetch('/api/admin/arenas', {
@@ -362,6 +365,8 @@ export default function SuperAdminNOCPage() {
       exibirToast(novoStatus ? `Arena "${arena.nome}" reativada!` : `Arena "${arena.nome}" pausada (pausa suave).`);
     } catch (err) {
       exibirToast(err.message || 'Falha ao alterar status da arena.');
+    } finally {
+      setPausandoArenaId(null);
     }
   };
 
@@ -429,6 +434,7 @@ export default function SuperAdminNOCPage() {
     if (!window.confirm('Desvincular este totem da quadra? Ele deixará de enviar vídeos até ser pareado novamente.')) {
       return;
     }
+    setDesvinculandoDispId(disp.id);
     try {
       const token = await getAccessToken();
       const res = await fetch(`/api/admin/dispositivos?id=${encodeURIComponent(disp.id)}`, {
@@ -442,6 +448,8 @@ export default function SuperAdminNOCPage() {
       exibirToast('Totem desvinculado! A quadra está livre para novo pareamento.');
     } catch (err) {
       exibirToast(err.message || 'Erro ao desvincular totem.');
+    } finally {
+      setDesvinculandoDispId(null);
     }
   };
 
@@ -985,14 +993,21 @@ export default function SuperAdminNOCPage() {
                         </button>
                         <button
                           type="button"
+                          disabled={pausandoArenaId === arena.id}
                           onClick={() => handleAlternarPausaArena(arena)}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors cursor-pointer disabled:opacity-50 ${
                             pausada
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                               : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
                           }`}
                         >
-                          {pausada ? 'Reativar' : 'Pausar'}
+                          {pausandoArenaId === arena.id
+                            ? pausada
+                              ? 'Reativando...'
+                              : 'Pausando...'
+                            : pausada
+                              ? 'Reativar'
+                              : 'Pausar'}
                         </button>
                         <button
                           type="button"
@@ -1117,10 +1132,11 @@ export default function SuperAdminNOCPage() {
                                       </button>
                                       <button
                                         type="button"
+                                        disabled={desvinculandoDispId === disp.id}
                                         onClick={() => handleDesvincularDispositivo(disp)}
-                                        className="text-[10px] font-bold bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-lg cursor-pointer"
+                                        className="text-[10px] font-bold bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-lg cursor-pointer disabled:opacity-50"
                                       >
-                                        Desvincular
+                                        {desvinculandoDispId === disp.id ? 'Desvinculando...' : 'Desvincular'}
                                       </button>
                                     </div>
                                   </div>
