@@ -657,8 +657,9 @@ class TotemFox:
         GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
         self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
 
-        # Aguarda 1.5s para compensar a latência RTSP da câmera e capturar o clique exato
-        time.sleep(1.5)
+        # Aguarda 3.0s para compensar a latência RTSP (~1.5s) + flush do muxer FFmpeg (~1.5s)
+        # garantindo que o final do vídeo capture exatamente a pessoa clicando no botão
+        time.sleep(3.0)
 
         carimbo = int(time.time() * 1000)
         caminho_final = GRAVACOES_DIR / f"lance_{carimbo}.mp4"

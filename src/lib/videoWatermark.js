@@ -290,6 +290,7 @@ export async function comporEBaixarVideoComPatrocinadores({
     let streamCombinado = null;
     let canvasStream = null;
     let rafId = null;
+    let vfcId = null;
     let fallbackIntervalId = null;
     let safetyTimeoutId = null;
     let wakeLockSentinel = null;
@@ -318,29 +319,37 @@ export async function comporEBaixarVideoComPatrocinadores({
             Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 30;
         const canvasWidth = 720;
         const canvasHeight = 1280;
-        const areaVideoY = 120;
-        const areaVideoH = 960;
-        const areaPatY = areaVideoY + areaVideoH + 10;
-        const areaPatH = canvasHeight - areaPatY;
+        const alturaTopo = 120;
+        const areaPatH = 190;
+        const areaPatY = canvasHeight - areaPatH;
+        const areaVideoH = Math.round(canvasHeight * 0.6); // 768px = 60% da tela
+        const areaVideoY = alturaTopo + Math.round((areaPatY - alturaTopo - areaVideoH) / 2);
 
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false });
 
         // Pré-renderiza topo e os 2 pares de patrocinadores em canvas offscreen (zero redesenho por frame)
-        const canvasTopo = criarCanvasTopo(canvasWidth, areaVideoY, imgFox, imgArena, nomeArena);
+        const canvasTopo = criarCanvasTopo(canvasWidth, alturaTopo, imgFox, imgArena, nomeArena);
         const bannersPatrocinadores = [
             criarCanvasBannerPar(canvasWidth, areaPatH, 0, imagensPatrocinadores, patrocinadores),
             criarCanvasBannerPar(canvasWidth, areaPatH, 1, imagensPatrocinadores, patrocinadores),
         ];
 
+        // Calcula recorte direto da fonte (9-arg drawImage, sem ctx.clip())
         const vW = video.videoWidth || 1920;
         const vH = video.videoHeight || 1080;
         const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
-        const dW = vW * scale;
-        const dH = vH * scale;
-        const dX = (canvasWidth - dW) / 2;
-        const dY = areaVideoY + (areaVideoH - dH) / 2;
+        const sw = Math.min(vW, canvasWidth / scale);
+        const sh = Math.min(vH, areaVideoH / scale);
+        const sx = Math.max(0, (vW - sw) / 2);
+        const sy = Math.max(0, (vH - sh) / 2);
+
+        // Pinta fundo e topo estático 1 única vez antes de iniciar a captura
+        ctx.fillStyle = '#070709';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.drawImage(canvasTopo, 0, 0);
+        ctx.drawImage(bannersPatrocinadores[0], 0, areaPatY);
 
         canvasStream = canvas.captureStream
             ? canvas.captureStream(30)
@@ -376,7 +385,7 @@ export async function comporEBaixarVideoComPatrocinadores({
 
         const mimeType = selecionarMelhorMimeType();
         const recorderOptions = mimeType
-            ? { mimeType, videoBitsPerSecond: 3500000, audioBitsPerSecond: 128000 }
+            ? { mimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 }
             : {};
 
         const recorder = new MediaRecorder(streamCombinado, recorderOptions);
@@ -397,7 +406,7 @@ export async function comporEBaixarVideoComPatrocinadores({
         });
 
         onStatus('Estilizando seu lance com áudio e patrocinadores...');
-        recorder.start(150);
+        recorder.start(250);
         video.currentTime = 0;
 
         try {
@@ -408,26 +417,16 @@ export async function comporEBaixarVideoComPatrocinadores({
         }
 
         let gravando = true;
+        let ultimoParDesenhado = 0;
+        let ultimoPctReportado = -1;
 
         function desenharFrameAtual() {
             if (!gravando) return;
 
-            // 1. Fundo base da faixa entre vídeo e rodapé
-            ctx.fillStyle = '#070709';
-            ctx.fillRect(0, areaVideoY + areaVideoH, canvasWidth, 10);
+            // 1. Desenha apenas a área do vídeo com recorte direto da fonte (sem clip, sem save/restore)
+            ctx.drawImage(video, sx, sy, sw, sh, 0, areaVideoY, canvasWidth, areaVideoH);
 
-            // 2. Topo pré-renderizado
-            ctx.drawImage(canvasTopo, 0, 0);
-
-            // 3. Vídeo da quadra (75% da altura)
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, areaVideoY, canvasWidth, areaVideoH);
-            ctx.clip();
-            ctx.drawImage(video, dX, dY, dW, dH);
-            ctx.restore();
-
-            // 4. Rodapé pré-renderizado com crossfade de 0.35s a cada 4s
+            // 2. Só redesenha o rodapé quando trocar o par (ou durante os 0.35s de transição)
             const cicloSegundos = 4;
             const duracaoTransicao = 0.35;
             const tempoAtual = Math.max(0, video.currentTime || 0);
@@ -443,23 +442,39 @@ export async function comporEBaixarVideoComPatrocinadores({
                 ctx.globalAlpha = progresso;
                 ctx.drawImage(bannersPatrocinadores[parAtual], 0, areaPatY);
                 ctx.restore();
-            } else {
+                ultimoParDesenhado = -1;
+            } else if (parAtual !== ultimoParDesenhado) {
                 ctx.drawImage(bannersPatrocinadores[parAtual], 0, areaPatY);
+                ultimoParDesenhado = parAtual;
             }
 
-            const pct = Math.min(95, Math.round((video.currentTime / duracaoTotal) * 100));
-            onProgresso(pct);
-        }
-
-        function loopAnimacao() {
-            if (!gravando) return;
-            desenharFrameAtual();
-            if (!video.ended && !video.paused) {
-                rafId = requestAnimationFrame(loopAnimacao);
+            // 3. Throttle no callback de progresso (atualiza React só a cada 2%)
+            const pct = Math.min(95, Math.round((tempoAtual / duracaoTotal) * 100));
+            if (pct >= ultimoPctReportado + 2) {
+                ultimoPctReportado = pct;
+                onProgresso(pct);
             }
         }
 
-        loopAnimacao();
+        const usaVideoFrameCallback = typeof video.requestVideoFrameCallback === 'function';
+
+        function agendarProximoFrame() {
+            if (!gravando || video.ended || video.paused) return;
+            if (usaVideoFrameCallback) {
+                vfcId = video.requestVideoFrameCallback(() => {
+                    desenharFrameAtual();
+                    agendarProximoFrame();
+                });
+            } else {
+                rafId = requestAnimationFrame(() => {
+                    desenharFrameAtual();
+                    agendarProximoFrame();
+                });
+            }
+        }
+
+        desenharFrameAtual();
+        agendarProximoFrame();
 
         fallbackIntervalId = setInterval(() => {
             if (gravando && document.hidden && !video.ended && !video.paused) {
@@ -509,6 +524,9 @@ export async function comporEBaixarVideoComPatrocinadores({
         return { ok: true, extensao: extensaoReal };
     } finally {
         if (rafId) cancelAnimationFrame(rafId);
+        if (vfcId && typeof video.cancelVideoFrameCallback === 'function') {
+            video.cancelVideoFrameCallback(vfcId);
+        }
         if (fallbackIntervalId) clearInterval(fallbackIntervalId);
         if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
 

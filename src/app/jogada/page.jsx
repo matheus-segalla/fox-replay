@@ -500,8 +500,8 @@ function ConteudoJogada() {
 
                     {/* PRÉ-VISUALIZAÇÃO 9:16 FIEL AO VÍDEO BAIXADO */}
                     <div className="max-w-[360px] mx-auto w-full bg-[#070709] rounded-2xl overflow-hidden border border-zinc-800 shadow-lg">
-                        {/* Área do Jogo Expandida (Crop cover centralizado na quadra) */}
-                        <div className="w-full aspect-[9/13.5] bg-zinc-950 relative overflow-hidden">
+                        {/* Área do Jogo (60% da altura da moldura, alinhada ao download) */}
+                        <div className="w-full aspect-[15/16] bg-zinc-950 relative overflow-hidden">
                             {/* Overlay Superior com Logos (não bloqueia cliques no vídeo) */}
                             <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/85 via-black/35 to-transparent z-10 p-3 flex items-start justify-between pointer-events-none">
                                 <div className="flex items-center gap-1.5">
