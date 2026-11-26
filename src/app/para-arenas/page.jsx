@@ -14,18 +14,45 @@ import Footer from './components/Footer';
 export const metadata = {
     title: 'FOX REPLAY para Arenas — Tecnologia Autônoma de Replay Esportivo',
     description:
-        'Transforme suas quadras de Beach Tennis, Futevôlei, Vôlei e Tênis em arenas conectadas. Replays de 30s via QR Code com monetização por patrocínio local.',
+        'Transforme suas quadras de Beach Tennis, Futevôlei, Vôlei e Tênis em arenas conectadas. Replays via QR Code com monetização por patrocínio local.',
+    alternates: {
+        canonical: '/para-arenas',
+    },
     openGraph: {
         title: 'FOX REPLAY para Arenas — Cada grande jogada merece ser revivida',
         description:
             'Infraestrutura autônoma de gravação de lances com botão na quadra, QR Code instantâneo e espaços para patrocinadores.',
+        url: 'https://www.foxreplay.com.br/para-arenas',
         type: 'website',
+        images: [
+            {
+                url: '/logo-fox.jpeg',
+                width: 1254,
+                height: 1254,
+                alt: 'FOX REPLAY para Arenas',
+            },
+        ],
     },
 };
 
 export default function PaginaParaArenas() {
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'FOX REPLAY para Arenas',
+        applicationCategory: 'SportsApplication',
+        operatingSystem: 'Web',
+        url: 'https://www.foxreplay.com.br/para-arenas',
+        description:
+            'Plataforma autônoma de gravação de replays esportivos para arenas de Beach Tennis, Futevôlei, Padel e Tênis com monetização por patrocínios.',
+    };
+
     return (
         <div className="min-h-screen bg-[#14151c] text-white font-sans selection:bg-amber-500 selection:text-black relative flex flex-col justify-between overflow-x-hidden">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
 
             {/* ANÉIS 3D METÁLICOS E ILUMINAÇÃO VOLUMÉTRICA ÂMBAR */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
