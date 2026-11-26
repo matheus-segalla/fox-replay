@@ -498,60 +498,60 @@ function ConteudoJogada() {
                         )}
                     </div>
 
-                    {/* PRÉ-VISUALIZAÇÃO 9:16 FIEL AO VÍDEO BAIXADO */}
-                    <div className="max-w-[360px] mx-auto w-full bg-[#070709] rounded-2xl overflow-hidden border border-zinc-800 shadow-lg">
-                        {/* Área do Jogo (60% da altura da moldura, alinhada ao download) */}
-                        <div className="w-full aspect-[15/16] bg-zinc-950 relative overflow-hidden">
-                            {/* Overlay Superior com Logos (não bloqueia cliques no vídeo) */}
-                            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/85 via-black/35 to-transparent z-10 p-3 flex items-start justify-between pointer-events-none">
-                                <div className="flex items-center gap-1.5">
-                                    <Image
-                                        src="/logo-fox.jpeg"
-                                        alt="Fox Replay"
-                                        width={34}
-                                        height={34}
-                                        className="w-8 h-8 rounded-lg object-cover border border-amber-500/70"
-                                    />
-                                </div>
-
-                                <div className="text-right">
-                                    {dados?.logoArena ? (
-                                        <Image
-                                            src={dados.logoArena}
-                                            alt={dados.nomeArena || 'Arena'}
-                                            width={88}
-                                            height={34}
-                                            unoptimized
-                                            className="h-8 w-auto max-w-[88px] object-contain rounded-lg bg-black/45 p-1 border border-white/15"
-                                        />
-                                    ) : (
-                                        <span className="text-[9px] font-black text-white uppercase tracking-wider bg-black/65 px-2.5 py-1.5 rounded-lg border border-white/15 inline-block max-w-[120px] truncate">
-                                            {dados?.nomeArena || 'Arena'}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <video
-                                id="video-lance-player"
-                                src={dados?.videoUrl}
-                                poster={dados?.thumbnailUrl || undefined}
-                                preload="metadata"
-                                onTimeUpdate={(e) => {
-                                    const novoPar = Math.floor((e.currentTarget.currentTime || 0) / 4) % 2;
-                                    setParPatrocinadorAtivo((prev) => (prev !== novoPar ? novoPar : prev));
-                                }}
-                                className="w-full h-full object-cover object-center"
-                                controls
-                                controlsList="nodownload"
-                                playsInline
-                                webkit-playsinline="true"
+                    {/* PRÉ-VISUALIZAÇÃO 9:16 EXATA (1:1 COM O VÍDEO BAIXADO 720x1280) */}
+                    <div className="max-w-[330px] sm:max-w-[360px] mx-auto w-full aspect-[9/16] bg-[#070709] rounded-2xl overflow-hidden border border-zinc-800 shadow-lg flex flex-col">
+                        {/* 1. Topo Dedicado (9.4% = 120px de 1280px) */}
+                        <div className="h-[9.4%] shrink-0 px-3 flex items-center justify-between bg-[#070709]">
+                            <Image
+                                src="/logo-fox.jpeg"
+                                alt="Fox Replay"
+                                width={36}
+                                height={36}
+                                className="h-[72%] w-auto aspect-square rounded-lg object-cover border border-amber-500/75"
                             />
+
+                            <div className="h-[72%] flex items-center justify-end">
+                                {dados?.logoArena ? (
+                                    <Image
+                                        src={dados.logoArena}
+                                        alt={dados.nomeArena || 'Arena'}
+                                        width={96}
+                                        height={36}
+                                        unoptimized
+                                        className="h-full w-auto max-w-[96px] object-contain rounded-lg bg-white/5 p-0.5 border border-white/15"
+                                    />
+                                ) : (
+                                    <span className="text-[9px] font-black text-white uppercase tracking-wider bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/15 inline-block max-w-[130px] truncate">
+                                        {dados?.nomeArena || 'Arena'}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Rodapé com 2 Patrocinadores Amplos em Loop de 4s */}
-                        <div className="border-t-2 border-[#FF9900] bg-[#070709] p-2.5 space-y-1.5">
-                            <div className="grid grid-cols-2 gap-2 w-full h-16 sm:h-[72px]">
+                        {/* 2. Área do Jogo Centralizada (60% da altura = 768px de 1280px) */}
+                        <div className="flex-1 flex items-center justify-center bg-[#070709] min-h-0">
+                            <div className="w-full aspect-[15/16] bg-zinc-950 relative overflow-hidden">
+                                <video
+                                    id="video-lance-player"
+                                    src={dados?.videoUrl}
+                                    poster={dados?.thumbnailUrl || undefined}
+                                    preload="metadata"
+                                    onTimeUpdate={(e) => {
+                                        const novoPar = Math.floor((e.currentTarget.currentTime || 0) / 4) % 2;
+                                        setParPatrocinadorAtivo((prev) => (prev !== novoPar ? novoPar : prev));
+                                    }}
+                                    className="w-full h-full object-cover object-center"
+                                    controls
+                                    controlsList="nodownload"
+                                    playsInline
+                                    webkit-playsinline="true"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 3. Rodapé com 2 Patrocinadores Amplos em Loop de 4s (14.8% = 190px de 1280px) */}
+                        <div className="h-[14.8%] shrink-0 border-t-2 border-[#FF9900] bg-[#070709] px-2.5 py-2 flex items-center">
+                            <div className="grid grid-cols-2 gap-2 w-full h-full">
                                 {[0, 1].map((offset) => {
                                     const slotIdx = parPatrocinadorAtivo * 2 + offset;
                                     const pat = dados?.patrocinadores?.[slotIdx];
@@ -559,7 +559,7 @@ function ConteudoJogada() {
                                     return (
                                         <div
                                             key={`${parPatrocinadorAtivo}-${offset}`}
-                                            className="bg-[#121318] rounded-xl border border-white/15 flex flex-col items-center justify-center p-2 overflow-hidden text-center animate-fadeIn"
+                                            className="bg-[#121318] rounded-xl border border-white/15 flex flex-col items-center justify-center p-1.5 overflow-hidden text-center animate-fadeIn"
                                             title={temPat ? (pat.nome || `Patrocinador ${slotIdx + 1}`) : 'Espaço disponível para patrocínio'}
                                         >
                                             {temPat ? (
@@ -590,14 +590,6 @@ function ConteudoJogada() {
                                         </div>
                                     );
                                 })}
-                            </div>
-
-                            <div className="flex items-center justify-between px-0.5 text-[9px] font-mono text-zinc-500">
-                                <span>Prévia do vídeo 9:16</span>
-                                <span className="flex items-center gap-1">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${parPatrocinadorAtivo === 0 ? 'bg-[#FF9900]' : 'bg-zinc-700'}`} />
-                                    <span className={`w-1.5 h-1.5 rounded-full ${parPatrocinadorAtivo === 1 ? 'bg-[#FF9900]' : 'bg-zinc-700'}`} />
-                                </span>
                             </div>
                         </div>
                     </div>
