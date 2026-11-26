@@ -1,76 +1,132 @@
 import React from 'react';
+import EditorialImage from './EditorialImage';
+
+const ETAPAS_ATLETA = [
+    {
+        numero: '01',
+        titulo: 'APERTOU',
+        descricao: 'O atleta realiza uma jogada incrível e aperta o botão físico instalado na quadra.',
+    },
+    {
+        numero: '02',
+        titulo: 'ENCONTROU',
+        descricao: 'Acessa o QR Code da quadra e localiza instantaneamente o replay da sua jogada.',
+    },
+    {
+        numero: '03',
+        titulo: 'COMPARTILHOU',
+        descricao: 'Visualiza, baixa em alta definição e compartilha o vídeo com amigos e nas redes sociais.',
+    },
+];
 
 export default function ExperienceSection() {
     return (
-        <section id="experiencia" className="scroll-mt-28 space-y-12">
-            {/* CABEÇALHO DA SEÇÃO */}
-            <div className="text-center space-y-3 max-w-2xl mx-auto">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
-                    A Experiência do Atleta
+        <section id="experiencia" className="scroll-mt-24 space-y-10">
+            <div className="max-w-2xl space-y-3">
+                <span className="inline-block text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-[#FF9900] bg-[#F7EBD7]/80 px-3.5 py-1 rounded-full border border-[#EAE8E5]">
+                    Jornada do Jogador
                 </span>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
-                    O esporte acontece dentro da quadra. <br />
-                    <span className="text-zinc-400">A experiência continua depois dela.</span>
+                <h2 className="text-2xl sm:text-4xl font-black text-[#111111] uppercase tracking-tight leading-tight">
+                    A experiência começa na quadra.{' '}
+                    <span className="text-[#FF9900]">Continua no celular.</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                    Uma jogada incrível merece mais do que alguns segundos de comemoração. Com o FOX Replay, os atletas podem rever aquele ponto decisivo, vibrar com os amigos e levar uma lembrança marcante da sua arena.
-                </p>
             </div>
 
-            {/* DUPLA DE CARDS DE EXPERIÊNCIA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* CARD 1: REVIVA O MOMENTO */}
-                <div className="glass-card-dark rounded-3xl p-7 sm:p-9 space-y-5 relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-colors pointer-events-none" />
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-
-                    <div className="space-y-2">
-                        <span className="text-[10px] font-mono font-bold uppercase text-amber-400 tracking-wider">
-                            01 &bull; Emoção em Tempo Real
-                        </span>
-                        <h3 className="text-xl font-black text-white uppercase tracking-wide">
-                            Reviva o Momento Decisivo
-                        </h3>
-                        <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-normal">
-                            Aquele smash fulminante, a defesa impossível ou o ponto do match point não se perdem no tempo. Em segundos após o ponto, o replay em alta definição já está pronto para visualização.
-                        </p>
-                    </div>
-
-                    <div className="pt-2 flex items-center gap-3 text-xs text-zinc-300 font-medium border-t border-white/5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span>Replay pronto em menos de 8 segundos</span>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+                {/* ESQUERDA: 3 ETAPAS */}
+                <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+                    {ETAPAS_ATLETA.map((etapa) => (
+                        <div
+                            key={etapa.numero}
+                            className="bg-white border border-[#EAE8E5] hover:border-[#FF9900]/60 rounded-2xl p-5 sm:p-6 transition-all duration-200 flex gap-4 items-start"
+                        >
+                            <span className="w-10 h-10 rounded-xl bg-[#F7EBD7] text-[#111111] font-mono font-black text-sm flex items-center justify-center shrink-0">
+                                {etapa.numero}
+                            </span>
+                            <div className="space-y-1">
+                                <h3 className="text-sm sm:text-base font-black text-[#111111] uppercase tracking-wide">
+                                    {etapa.numero} — {etapa.titulo}
+                                </h3>
+                                <p className="text-xs sm:text-sm text-[#68666B] leading-relaxed">
+                                    {etapa.descricao}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
-                {/* CARD 2: COMPARTILHE O LANCE */}
-                <div className="glass-card-dark rounded-3xl p-7 sm:p-9 space-y-5 relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-colors pointer-events-none" />
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
+                {/* DIREITA: FOTO + TOTEM QR CODE + SMARTPHONE */}
+                <div className="lg:col-span-7 bg-white border border-[#EAE8E5] rounded-3xl p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                    {/* Foto do atleta apertando o botão */}
+                    <div className="sm:col-span-7 relative aspect-[4/3] sm:aspect-[4/5] rounded-2xl overflow-hidden bg-[#111111] border border-[#EAE8E5]">
+                        <EditorialImage
+                            src="/images/para-arenas/atleta-botao.jpg"
+                            alt="Atleta apertando o botão físico do FOX Replay na quadra"
+                            sizes="(max-width: 768px) 100vw, 35vw"
+                            className="object-cover"
+                        />
+                        <div className="absolute bottom-3 left-3 right-3 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-sm border border-[#EAE8E5] flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#111111]">
+                                Botão tátil na quadra
+                            </span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#FF9900]" />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <span className="text-[10px] font-mono font-bold uppercase text-amber-400 tracking-wider">
-                            02 &bull; Engajamento & Viralização
-                        </span>
-                        <h3 className="text-xl font-black text-white uppercase tracking-wide">
-                            Compartilhe nas Redes Sociais
-                        </h3>
-                        <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-normal">
-                            O atleta baixa o vídeo direto na galeria do celular e posta nos Stories, Reels e grupos de WhatsApp. A marca da sua arena viaja junto a cada compartilhamento espontâneo.
-                        </p>
-                    </div>
+                    {/* Composição Totem QR Code + Smartphone */}
+                    <div className="sm:col-span-5 flex flex-col gap-4">
+                        {/* Placa / Totem QR Code ilustrativo */}
+                        <div className="rounded-2xl bg-[#FCFBF9] border border-[#EAE8E5] p-4 flex items-center gap-3.5">
+                            <div className="w-14 h-14 rounded-xl bg-white border border-[#EAE8E5] p-1.5 shrink-0 flex items-center justify-center">
+                                <svg viewBox="0 0 36 36" className="w-full h-full text-[#111111]" fill="currentColor" aria-hidden="true">
+                                    <path d="M2 2h12v12H2V2zm3 3v6h6V5H5zm17-3h12v12H22V2zm3 3v6h6V5h-6zM2 22h12v12H2V22zm3 3v6h6v-6H5zm13-7h4v4h-4v-4zm0-8h4v4h-4V10zm-6 8h4v4h-4v-4zm12 4h4v4h-4v-4zm6 0h4v4h-4v-4zm-6 6h4v6h-4v-6zm6 2h4v4h-4v-4zm-12 2h4v4h-4v-4z" />
+                                </svg>
+                            </div>
+                            <div className="space-y-0.5">
+                                <span className="text-[10px] font-mono font-bold uppercase text-[#FF9900]">
+                                    Totem da Quadra
+                                </span>
+                                <p className="text-xs font-extrabold text-[#111111]">
+                                    Aponte a câmera e acesse
+                                </p>
+                                <p className="text-[11px] text-[#68666B]">
+                                    Sem instalar aplicativo
+                                </p>
+                            </div>
+                        </div>
 
-                    <div className="pt-2 flex items-center gap-3 text-xs text-zinc-300 font-medium border-t border-white/5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        <span>Divulgação espontânea constante da sua marca</span>
+                        {/* Mini Smartphone exibindo gravação */}
+                        <div className="rounded-2xl bg-[#111111] p-3 text-white space-y-2.5">
+                            <div className="flex items-center justify-between text-[10px]">
+                                <span className="font-bold tracking-wider">
+                                    FOX <span className="text-[#FF9900]">REPLAY</span>
+                                </span>
+                                <span className="font-mono text-zinc-400">30s &bull; HD</span>
+                            </div>
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-900">
+                                <EditorialImage
+                                    src="/images/para-arenas/esporte-futevolei.jpg"
+                                    alt="Reprodução do lance no celular do atleta"
+                                    sizes="240px"
+                                    className="object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                                    <span className="w-8 h-8 rounded-full bg-[#FF9900] text-[#111111] flex items-center justify-center">
+                                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                                <span className="py-1.5 rounded-lg bg-[#FF9900] text-[#111111] text-center">
+                                    Baixar Vídeo
+                                </span>
+                                <span className="py-1.5 rounded-lg bg-white/10 text-white text-center">
+                                    Compartilhar
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

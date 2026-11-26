@@ -1,66 +1,128 @@
 'use client';
 
 import React from 'react';
+import EditorialImage from './EditorialImage';
 
 export default function HeroSection() {
     const scrollTo = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
-        <section className="relative pt-6 pb-16 md:pt-12 md:pb-24 text-center max-w-4xl mx-auto space-y-8 z-10">
-            {/* BADGE EYEBROW */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-[11px] font-mono font-bold tracking-widest uppercase text-amber-400">
-                    Tecnologia Inteligente para Arenas Esportivas
-                </span>
-            </div>
+        <section className="pt-8 sm:pt-12 lg:pt-16 pb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                {/* COLUNA ESQUERDA — EDITORIAL B2B */}
+                <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F7EBD7]/80 border border-[#EAE8E5] text-[#111111]">
+                        <span className="w-2 h-2 rounded-full bg-[#FF9900]" />
+                        <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em]">
+                            Tecnologia inteligente para arenas esportivas
+                        </span>
+                    </div>
 
-            {/* HEADLINE PRINCIPAL */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight uppercase leading-[0.94] select-none">
-                <span className="block text-white">CADA GRANDE JOGADA</span>
-                <span className="block text-stroke-gold mt-2">MERECE SER REVIVIDA.</span>
-            </h1>
+                    <h1 className="text-3xl sm:text-5xl lg:text-[52px] font-black text-[#111111] tracking-tight leading-[1.05] uppercase">
+                        Transforme sua arena em uma{' '}
+                        <span className="text-[#FF9900]">experiência extraordinária.</span>
+                    </h1>
 
-            {/* SUBTÍTULO COMERCIAL E POSICIONAMENTO */}
-            <p className="text-zinc-300 text-sm sm:text-base md:text-lg leading-relaxed font-normal max-w-2xl mx-auto">
-                O <strong className="text-white font-bold">FOX Replay</strong> transforma quadras esportivas em experiências conectadas. Com apenas um toque, seus atletas registram os últimos 30 segundos da partida, acessam o replay pelo celular e compartilham seus melhores momentos.
-            </p>
+                    <p className="text-sm sm:text-base text-[#68666B] leading-relaxed max-w-xl mx-auto lg:mx-0">
+                        Ofereça aos seus atletas a possibilidade de reviver seus melhores momentos. Com o FOX Replay, cada grande jogada pode se transformar em uma experiência que continua depois da partida.
+                    </p>
 
-            {/* CTAS */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                <button
-                    onClick={() => scrollTo('contato')}
-                    className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-[0_0_30px_rgba(245,158,11,0.25)] hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                >
-                    <span>Quero Levar o Fox Replay para Minha Arena</span>
-                    <span className="font-bold">↗</span>
-                </button>
-                <button
-                    onClick={() => scrollTo('como-funciona')}
-                    className="w-full sm:w-auto px-7 py-4 glass-card-dark hover:bg-white/5 text-zinc-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-2xl border border-white/10 hover:border-white/25 transition-all text-center cursor-pointer"
-                >
-                    Ver Como Funciona
-                </button>
-            </div>
+                    {/* CTAs */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
+                        <button
+                            type="button"
+                            onClick={() => scrollTo('contato')}
+                            className="px-6 py-4 rounded-xl bg-[#FF9900] hover:bg-[#E68A00] text-[#111111] font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer min-h-[48px]"
+                        >
+                            Quero levar o FOX Replay para minha arena
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => scrollTo('como-funciona')}
+                            className="px-6 py-4 rounded-xl bg-white hover:bg-[#F7EBD7]/40 text-[#111111] border border-[#EAE8E5] font-bold text-xs sm:text-sm uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer min-h-[48px]"
+                        >
+                            Ver como funciona
+                        </button>
+                    </div>
 
-            {/* MICROTEXTOS DE CONFIANÇA */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 max-w-2xl mx-auto border-t border-white/10 text-xs text-zinc-400 font-medium">
-                <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-400 font-bold">✓</span>
-                    <span>Sem operador dedicado</span>
+                    {/* 3 DIFERENCIAIS */}
+                    <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2.5 text-xs font-semibold text-[#111111]">
+                        {[
+                            'Sem operador dedicado',
+                            'Acesso pelo QR Code',
+                            'Implantação personalizada',
+                        ].map((item) => (
+                            <div key={item} className="flex items-center gap-2">
+                                <span className="w-4 h-4 rounded-full bg-[#F7EBD7] text-[#FF9900] flex items-center justify-center shrink-0">
+                                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </span>
+                                <span>{item}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-400 font-bold">✓</span>
-                    <span>Acesso instantâneo via QR Code</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-400 font-bold">✓</span>
-                    <span>Implantação personalizada</span>
+
+                {/* COLUNA DIREITA — COMPOSIÇÃO VISUAL CINEMATOGRÁFICA */}
+                <div className="lg:col-span-6 relative">
+                    <div className="relative rounded-3xl overflow-hidden border border-[#EAE8E5] bg-white p-2 sm:p-3 shadow-[0_20px_50px_-20px_rgba(17,17,17,0.12)]">
+                        <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-[#111111]">
+                            <EditorialImage
+                                src="/images/para-arenas/hero-arena.jpg"
+                                alt="Arena de Beach Tennis equipada com FOX Replay"
+                                priority
+                                sizes="(max-width: 1024px) 100vw, 50vw"
+                                className="object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/25 pointer-events-none" />
+
+                            {/* OVERLAYS DISCRETOS DE TELEMETRIA */}
+                            <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE8E5] shadow-xs">
+                                    <span className="w-2 h-2 rounded-full bg-[#FF9900] animate-pulse" />
+                                    <span className="text-[10px] font-mono font-extrabold tracking-wider text-[#111111]">
+                                        REC &bull; QUADRA 01
+                                    </span>
+                                </div>
+                                <span className="px-3 py-1.5 rounded-full bg-[#111111]/85 backdrop-blur-md text-white text-[10px] font-mono font-bold tracking-wider">
+                                    REPLAY 30S
+                                </span>
+                            </div>
+
+                            {/* MINI MOCKUP DE SMARTPHONE NO CANTO INFERIOR */}
+                            <div className="hidden sm:flex absolute bottom-3.5 right-3.5 w-44 rounded-2xl bg-white/95 backdrop-blur-md border border-[#EAE8E5] p-2.5 shadow-lg flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#111111]">
+                                        FOX <span className="text-[#FF9900]">REPLAY</span>
+                                    </span>
+                                    <span className="text-[9px] font-mono text-[#68666B]">MP4 HD</span>
+                                </div>
+                                <div className="relative h-20 rounded-xl overflow-hidden bg-[#111111]">
+                                    <EditorialImage
+                                        src="/images/para-arenas/esporte-beach-tennis.jpg"
+                                        alt="Prévia de replay no smartphone"
+                                        sizes="180px"
+                                        className="object-cover opacity-90"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                                        <span className="w-7 h-7 rounded-full bg-[#FF9900] text-[#111111] flex items-center justify-center shadow-sm">
+                                            <svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between text-[9px] font-bold text-[#68666B]">
+                                    <span>Lance salvo</span>
+                                    <span className="text-[#FF9900]">Baixar ↓</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
