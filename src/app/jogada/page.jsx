@@ -498,39 +498,42 @@ function ConteudoJogada() {
                         )}
                     </div>
 
-                    {/* PRÉ-VISUALIZAÇÃO 9:16 EXATA (1:1 COM O VÍDEO BAIXADO 720x1280) */}
+                    {/* PRÉ-VISUALIZAÇÃO 9:16 EXATA COM SAFE ZONES DO INSTAGRAM STORIES */}
                     <div className="max-w-[330px] sm:max-w-[360px] mx-auto w-full aspect-[9/16] bg-[#070709] rounded-2xl overflow-hidden border border-zinc-800 shadow-lg flex flex-col">
-                        {/* 1. Topo Dedicado (9.4% = 120px de 1280px) */}
-                        <div className="h-[9.4%] shrink-0 px-3 flex items-center justify-between bg-[#070709]">
+                        {/* Safe Zone Superior Instagram (0..136px) */}
+                        <div className="h-[10.6%] shrink-0 bg-[#070709]" />
+
+                        {/* 1. Faixa de Logos (136..272px — abaixo do cabeçalho do Stories) */}
+                        <div className="h-[10.6%] shrink-0 px-3 flex items-center justify-between bg-[#070709]">
                             <Image
                                 src="/logo-fox.jpeg"
                                 alt="Fox Replay"
-                                width={36}
-                                height={36}
-                                className="h-[72%] w-auto aspect-square rounded-lg object-cover border border-amber-500/75"
+                                width={64}
+                                height={64}
+                                className="h-[90%] w-auto aspect-square rounded-xl object-cover border border-amber-500/75"
                             />
 
-                            <div className="h-[72%] flex items-center justify-end">
+                            <div className="h-[90%] flex items-center justify-end">
                                 {dados?.logoArena ? (
                                     <Image
                                         src={dados.logoArena}
                                         alt={dados.nomeArena || 'Arena'}
-                                        width={96}
-                                        height={36}
+                                        width={136}
+                                        height={64}
                                         unoptimized
-                                        className="h-full w-auto max-w-[96px] object-contain rounded-lg bg-white/5 p-0.5 border border-white/15"
+                                        className="h-full w-auto max-w-[136px] object-contain rounded-xl bg-white/5 p-1 border border-white/15"
                                     />
                                 ) : (
-                                    <span className="text-[9px] font-black text-white uppercase tracking-wider bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/15 inline-block max-w-[130px] truncate">
+                                    <span className="text-[10px] font-black text-white uppercase tracking-wider bg-white/5 px-3 py-2 rounded-xl border border-white/15 inline-block max-w-[150px] truncate">
                                         {dados?.nomeArena || 'Arena'}
                                     </span>
                                 )}
                             </div>
                         </div>
 
-                        {/* 2. Área do Jogo Centralizada (60% da altura = 768px de 1280px) */}
+                        {/* 2. Área do Jogo (~30% zoom = 4:3, 540px de 1280px) */}
                         <div className="flex-1 flex items-center justify-center bg-[#070709] min-h-0">
-                            <div className="w-full aspect-[15/16] bg-zinc-950 relative overflow-hidden">
+                            <div className="w-full aspect-[4/3] bg-zinc-950 relative overflow-hidden">
                                 <video
                                     id="video-lance-player"
                                     src={dados?.videoUrl}
@@ -549,8 +552,8 @@ function ConteudoJogada() {
                             </div>
                         </div>
 
-                        {/* 3. Rodapé com 2 Patrocinadores Amplos em Loop de 4s (14.8% = 190px de 1280px) */}
-                        <div className="h-[14.8%] shrink-0 border-t-2 border-[#FF9900] bg-[#070709] px-2.5 py-2 flex items-center">
+                        {/* 3. Rodapé com 2 Patrocinadores Amplos em Loop de 4s (970..1150px) */}
+                        <div className="h-[14%] shrink-0 border-t-2 border-[#FF9900] bg-[#070709] px-2.5 py-2 flex items-center">
                             <div className="grid grid-cols-2 gap-2 w-full h-full">
                                 {[0, 1].map((offset) => {
                                     const slotIdx = parPatrocinadorAtivo * 2 + offset;
@@ -591,6 +594,13 @@ function ConteudoJogada() {
                                     );
                                 })}
                             </div>
+                        </div>
+
+                        {/* Safe Zone Inferior Instagram (1150..1280px) */}
+                        <div className="h-[10.2%] shrink-0 bg-[#070709] flex items-center justify-center">
+                            <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-600">
+                                Área segura para Stories
+                            </span>
                         </div>
                     </div>
                 </div>

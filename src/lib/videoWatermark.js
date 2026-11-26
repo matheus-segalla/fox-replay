@@ -102,48 +102,65 @@ function criarCanvasTopo(canvasWidth, alturaTopo, imgFox, imgArena, nomeArena) {
     tCtx.fillStyle = '#070709';
     tCtx.fillRect(0, 0, canvasWidth, alturaTopo);
 
+    // Safe Zone superior do Instagram Stories: 0..136px livres; logos começam em y=142
+    const logoY = 142;
+
     if (imgFox) {
         tCtx.save();
-        desenharRetanguloArredondado(tCtx, 28, 20, 82, 82, 18);
+        desenharRetanguloArredondado(tCtx, 28, logoY, 124, 124, 24);
         tCtx.clip();
-        tCtx.drawImage(imgFox, 28, 20, 82, 82);
+        tCtx.drawImage(imgFox, 28, logoY, 124, 124);
         tCtx.restore();
 
         tCtx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
-        tCtx.lineWidth = 2;
-        desenharRetanguloArredondado(tCtx, 28, 20, 82, 82, 18);
+        tCtx.lineWidth = 2.5;
+        desenharRetanguloArredondado(tCtx, 28, logoY, 124, 124, 24);
         tCtx.stroke();
     } else {
         tCtx.fillStyle = '#FF9900';
-        tCtx.font = '900 22px Inter, sans-serif';
-        tCtx.fillText('FOX REPLAY', 28, 68);
+        tCtx.font = '900 28px Inter, sans-serif';
+        tCtx.fillText('FOX REPLAY', 28, logoY + 70);
     }
 
     if (imgArena) {
-        tCtx.save();
-        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 126, 20, 126, 82, 18);
-        tCtx.clip();
-        tCtx.drawImage(imgArena, canvasWidth - 28 - 126, 20, 126, 82);
-        tCtx.restore();
+        const boxW = 204;
+        const boxH = 124;
+        const boxX = canvasWidth - 28 - boxW;
 
+        tCtx.save();
+        tCtx.fillStyle = 'rgba(255, 255, 255, 0.04)';
         tCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         tCtx.lineWidth = 1.5;
-        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 126, 20, 126, 82, 18);
+        desenharRetanguloArredondado(tCtx, boxX, logoY, boxW, boxH, 24);
+        tCtx.fill();
         tCtx.stroke();
+        tCtx.clip();
+
+        const aAspect = imgArena.width / imgArena.height;
+        let aW = boxW - 20;
+        let aH = aW / aAspect;
+        if (aH > boxH - 16) {
+            aH = boxH - 16;
+            aW = aH * aAspect;
+        }
+        const aX = boxX + (boxW - aW) / 2;
+        const aY = logoY + (boxH - aH) / 2;
+        tCtx.drawImage(imgArena, aX, aY, aW, aH);
+        tCtx.restore();
     } else {
         tCtx.save();
         tCtx.fillStyle = 'rgba(255, 255, 255, 0.06)';
         tCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         tCtx.lineWidth = 1.5;
-        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 220, 30, 220, 62, 16);
+        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 260, logoY + 18, 260, 88, 20);
         tCtx.fill();
         tCtx.stroke();
 
         tCtx.fillStyle = '#ffffff';
-        tCtx.font = '900 17px Inter, sans-serif';
+        tCtx.font = '900 20px Inter, sans-serif';
         tCtx.textAlign = 'center';
         tCtx.textBaseline = 'middle';
-        tCtx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 61);
+        tCtx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 130, logoY + 62);
         tCtx.restore();
     }
 
@@ -319,11 +336,11 @@ export async function comporEBaixarVideoComPatrocinadores({
             Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 30;
         const canvasWidth = 720;
         const canvasHeight = 1280;
-        const alturaTopo = 120;
-        const areaPatH = 190;
-        const areaPatY = canvasHeight - areaPatH;
-        const areaVideoH = Math.round(canvasHeight * 0.6); // 768px = 60% da tela
-        const areaVideoY = alturaTopo + Math.round((areaPatY - alturaTopo - areaVideoH) / 2);
+        const alturaTopo = 272; // 136px Safe Zone Instagram + 136px logos
+        const areaPatH = 180;
+        const areaPatY = 970; // Deixa 130px livres abaixo (Safe Zone Instagram Responder)
+        const areaVideoH = 540; // 4:3 (~30% de zoom sobre largura total, mantendo 75% da quadra)
+        const areaVideoY = 322;
 
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;

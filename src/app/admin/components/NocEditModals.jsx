@@ -193,7 +193,7 @@ export default function NocEditModals({
                 type="text"
                 value={editCameraUrl}
                 onChange={(e) => setEditCameraUrl(e.target.value)}
-                placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
+                placeholder="rtsp://admin:senha@192.168.100.64:554/Streaming/Channels/101"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
               />
               <button
@@ -306,7 +306,7 @@ export default function NocEditModals({
                   type="text"
                   value={cameraUrlParear}
                   onChange={(e) => setCameraUrlParear(e.target.value)}
-                  placeholder="rtsp://admin:senha@192.168.1.64:554/Streaming/Channels/101"
+                  placeholder="rtsp://admin:senha@192.168.100.64:554/Streaming/Channels/101"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono"
                 />
               </div>
