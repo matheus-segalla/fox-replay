@@ -172,7 +172,6 @@ function ConteudoPortalArena() {
     const [calendarioAberto, setCalendarioAberto] = useState(false);
     const [menuHoraAberto, setMenuHoraAberto] = useState(false);
     const [menuQuadraAberto, setMenuQuadraAberto] = useState(false);
-    const [dataVisualizacaoMes, setDataVisualizacaoMes] = useState(() => new Date());
 
     // Faixas horárias de 1 hora (06:00 às 23:00)
     const faixasHorario = useMemo(() => {
@@ -192,12 +191,31 @@ function ConteudoPortalArena() {
         return encontrada ? `${encontrada.curto} ▾` : 'Horário ▾';
     }, [periodoFiltro, faixasHorario]);
 
-    // Janela de retenção de 14 dias (hoje + 13 dias passados)
-    const dataLimite14Dias = useMemo(() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 13);
-        d.setHours(0, 0, 0, 0);
-        return d;
+    // Janela de retenção de 5 dias (hoje + 4 dias anteriores)
+    const diasDisponiveis = useMemo(() => {
+        const diasSemana = [
+            'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+            'Quinta-feira', 'Sexta-feira', 'Sábado',
+        ];
+        const lista = [];
+        for (let i = 0; i < 5; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            const ymd = `${ano}-${mes}-${dia}`;
+            let rotulo = diasSemana[d.getDay()];
+            if (i === 0) rotulo = 'Hoje';
+            else if (i === 1) rotulo = 'Ontem';
+            lista.push({
+                dataStr: ymd,
+                rotulo,
+                dataCurta: `${dia}/${mes}`,
+                ehHoje: i === 0,
+            });
+        }
+        return lista;
     }, []);
 
     const formatarDataAmigavel = (dataYmd) => {
@@ -209,48 +227,6 @@ function ConteudoPortalArena() {
             return `${partes[2]}/${partes[1]}`;
         }
         return dataYmd;
-    };
-
-    const diasCalendario = useMemo(() => {
-        const ano = dataVisualizacaoMes.getFullYear();
-        const mes = dataVisualizacaoMes.getMonth();
-        const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
-        const totalDiasNoMes = new Date(ano, mes + 1, 0).getDate();
-
-        const dias = [];
-        for (let i = 0; i < primeiroDiaSemana; i++) {
-            dias.push(null);
-        }
-
-        const hojeLimite = new Date();
-        hojeLimite.setHours(23, 59, 59, 999);
-
-        for (let dia = 1; dia <= totalDiasNoMes; dia++) {
-            const dataObj = new Date(ano, mes, dia, 12, 0, 0);
-            const ymd = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-            const dentroDos14Dias = dataObj >= dataLimite14Dias && dataObj <= hojeLimite;
-            dias.push({
-                numero: dia,
-                dataStr: ymd,
-                disponivel: dentroDos14Dias,
-                selecionado: dataFiltro === ymd,
-                ehHoje: ymd === hojeStr
-            });
-        }
-        return dias;
-    }, [dataVisualizacaoMes, dataLimite14Dias, dataFiltro, hojeStr]);
-
-    const mesesNomes = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-
-    const mudarMes = (delta) => {
-        setDataVisualizacaoMes((prev) => {
-            const nova = new Date(prev);
-            nova.setMonth(nova.getMonth() + delta);
-            return nova;
-        });
     };
 
     const exibirToast = (msg) => {
@@ -804,79 +780,55 @@ function ConteudoPortalArena() {
                             )}
                         </div>
 
-                        {/* DROPDOWN FLUTUANTE CLEAN DE CALENDÁRIO (SOBREPÕE SEM EXPANDIR O CARD) */}
+                        {/* DROPDOWN FLUTUANTE CLEAN DE DATAS (5 DIAS DISPONÍVEIS) */}
                         {calendarioAberto && (
-                            <div className="absolute left-0 right-0 sm:left-auto sm:w-80 top-full mt-1.5 p-3.5 bg-white/95 backdrop-blur-md text-zinc-900 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] border border-zinc-200/90 space-y-2.5 z-50 animate-fadeIn">
-                                {/* Topo do calendário: Navegação de Mês */}
+                            <div className="absolute left-0 right-0 sm:left-auto sm:w-72 top-full mt-1.5 p-3 bg-white/95 backdrop-blur-md text-zinc-900 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] border border-zinc-200/90 space-y-2 z-50 animate-fadeIn">
                                 <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                                    <span className="text-xs font-bold uppercase text-zinc-800 tracking-wider">
-                                        {mesesNomes[dataVisualizacaoMes.getMonth()]} {dataVisualizacaoMes.getFullYear()}
+                                    <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
+                                        Últimos 5 Dias
                                     </span>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={() => mudarMes(-1)}
-                                            aria-label="Mês anterior"
-                                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
-                                        >
-                                            ‹
-                                        </button>
-                                        <button
-                                            onClick={() => mudarMes(1)}
-                                            aria-label="Próximo mês"
-                                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
-                                        >
-                                            ›
-                                        </button>
-                                        <button
-                                            onClick={() => setCalendarioAberto(false)}
-                                            aria-label="Fechar calendário"
-                                            className="ml-1 w-7 h-7 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => setCalendarioAberto(false)}
+                                        aria-label="Fechar seletor de datas"
+                                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
+                                    >
+                                        ×
+                                    </button>
                                 </div>
 
-                                {/* Aviso de retenção de 14 dias */}
-                                <p className="text-[10px] text-zinc-400 font-medium">
-                                    Retenção em nuvem de 14 dias para gravação e download.
-                                </p>
-
-                                {/* Dias da semana */}
-                                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-zinc-400 uppercase">
-                                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-                                </div>
-
-                                {/* Grid dos dias */}
-                                <div className="grid grid-cols-7 gap-1">
-                                    {diasCalendario.map((item, idx) => {
-                                        if (!item) {
-                                            return <div key={`vazio-${idx}`} className="h-8 w-full" />;
-                                        }
+                                <div className="space-y-1">
+                                    {diasDisponiveis.map((item) => {
+                                        const selecionado = dataFiltro === item.dataStr;
                                         return (
                                             <button
                                                 key={item.dataStr}
-                                                disabled={!item.disponivel}
                                                 onClick={() => {
                                                     aplicarData(item.dataStr);
                                                     setCalendarioAberto(false);
                                                 }}
-                                                className={`h-8 w-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center relative cursor-pointer active:scale-95 ${
-                                                    item.selecionado
+                                                className={`w-full py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-between cursor-pointer active:scale-[0.99] ${
+                                                    selecionado
                                                         ? 'bg-zinc-900 text-white font-bold shadow-xs'
-                                                        : item.disponivel
-                                                        ? 'bg-zinc-50 hover:bg-amber-50 hover:text-amber-900 text-zinc-800 border border-zinc-200/70'
-                                                        : 'text-zinc-300 bg-transparent cursor-not-allowed'
+                                                        : 'bg-zinc-50 hover:bg-amber-50 hover:text-amber-900 text-zinc-800 border border-zinc-200/70'
                                                 }`}
                                             >
-                                                <span>{item.numero}</span>
-                                                {item.ehHoje && !item.selecionado && (
-                                                    <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500" />
-                                                )}
+                                                <span className="flex items-center gap-2">
+                                                    {item.ehHoje && (
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${selecionado ? 'bg-amber-400' : 'bg-amber-500'}`} />
+                                                    )}
+                                                    <span>{item.rotulo}</span>
+                                                </span>
+                                                <span className={`text-[11px] font-mono ${selecionado ? 'text-zinc-300' : 'text-zinc-400'}`}>
+                                                    {item.dataCurta}
+                                                </span>
                                             </button>
                                         );
                                     })}
                                 </div>
+
+                                <p className="text-[10px] text-zinc-400 font-medium pt-0.5">
+                                    Retenção em nuvem de 5 dias para gravação e download.
+                                </p>
                             </div>
                         )}
 

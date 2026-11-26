@@ -402,7 +402,7 @@ export default function PerfilPage() {
               </span>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                 <IconShield className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{usuario ? 'Permanente' : 'Local (14 dias)'}</span>
+                <span>{usuario ? 'Permanente' : 'Local (5 dias)'}</span>
               </span>
             </div>
           </div>

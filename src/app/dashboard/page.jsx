@@ -66,11 +66,11 @@ function ConteudoDashboardArena() {
   const [editFotoUrl, setEditFotoUrl] = useState('');
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
-  // Moderação de gravações (últimos 14 dias)
+  // Moderação de gravações (últimos 5 dias)
   const [quadraSelecionada, setQuadraSelecionada] = useState(null);
   const [replaysQuadra, setReplaysQuadra] = useState([]);
   const [carregandoReplays, setCarregandoReplays] = useState(false);
-  const [filtroDiasModeracao, setFiltroDiasModeracao] = useState('14'); // '1' (hoje) ou '14'
+  const [filtroDiasModeracao, setFiltroDiasModeracao] = useState('5'); // '1' (hoje) ou '5'
   const [excluindoReplayId, setExcluindoReplayId] = useState(null);
 
   // Logos e 4 patrocinadores
@@ -415,7 +415,7 @@ function ConteudoDashboardArena() {
     window.open(montarUrlWhatsAppSuporte(msg), '_blank', 'noopener,noreferrer');
   };
 
-  // Moderação de gravações (últimos 14 dias ou hoje)
+  // Moderação de gravações (últimos 5 dias ou hoje)
   const carregarReplaysDaQuadra = async (quadra, diasStr = filtroDiasModeracao) => {
     setReplaysQuadra([]);
     setQuadraSelecionada(quadra);
@@ -426,7 +426,7 @@ function ConteudoDashboardArena() {
       if (diasStr === '1') {
         inicio.setHours(0, 0, 0, 0);
       } else {
-        inicio.setDate(inicio.getDate() - 14);
+        inicio.setDate(inicio.getDate() - 4);
         inicio.setHours(0, 0, 0, 0);
       }
 
@@ -1172,7 +1172,7 @@ function ConteudoDashboardArena() {
           </div>
         </div>
 
-        {/* MODAL DE MODERAÇÃO DE GRAVAÇÕES (ÚLTIMOS 14 DIAS + EXCLUSÃO REAL) */}
+        {/* MODAL DE MODERAÇÃO DE GRAVAÇÕES (ÚLTIMOS 5 DIAS + EXCLUSÃO REAL) */}
         {quadraSelecionada && (
           <div
             className="fixed inset-0 bg-zinc-950/45 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn"
@@ -1210,14 +1210,14 @@ function ConteudoDashboardArena() {
                     <button
                       type="button"
                       onClick={() => {
-                        setFiltroDiasModeracao('14');
-                        carregarReplaysDaQuadra(quadraSelecionada, '14');
+                        setFiltroDiasModeracao('5');
+                        carregarReplaysDaQuadra(quadraSelecionada, '5');
                       }}
                       className={`px-3 py-1.5 rounded-md cursor-pointer min-h-[36px] active:scale-95 transition-all ${
-                        filtroDiasModeracao === '14' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
+                        filtroDiasModeracao === '5' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
                       }`}
                     >
-                      Últimos 14 dias
+                      Últimos 5 dias
                     </button>
                   </div>
                   <button

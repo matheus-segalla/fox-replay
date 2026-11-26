@@ -384,7 +384,7 @@ function FormularioEntrarUnificado() {
             <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-2xl text-[11px] text-amber-900 space-y-1">
               <span className="font-bold block">Proteção Permanente de Lances</span>
               <p className="text-amber-800/90 leading-relaxed font-normal">
-                Os lances gerais da quadra expiram após 14 dias. Ao salvar com seu perfil, suas jogadas favoritas nunca são apagadas.
+                Os lances gerais da quadra expiram após 5 dias. Ao salvar com seu perfil, suas jogadas favoritas nunca são apagadas.
               </p>
             </div>
           )}

@@ -39,13 +39,13 @@ TO authenticated
 USING (auth.uid() = usuario_id);
 
 -- ==============================================================================
--- 5. REGRA DE RETENÇÃO DE 14 DIAS (PROTEGE LANCES SALVOS)
+-- 5. REGRA DE RETENÇÃO DE 5 DIAS (PROTEGE LANCES SALVOS)
 -- ==============================================================================
 -- Esta query deve ser executada periodicamente (via Edge Function ou Cron Job)
--- Ela exclui replays gerais após 14 dias, MAS PRESERVA para sempre os que
+-- Ela exclui replays gerais após 5 dias, MAS PRESERVA para sempre os que
 -- foram favoritados por qualquer atleta.
 --
 -- DELETE FROM replays
--- WHERE criado_em < NOW() - INTERVAL '14 days'
+-- WHERE criado_em < NOW() - INTERVAL '5 days'
 --   AND id NOT IN (SELECT replay_id FROM favoritos);
 -- ==============================================================================

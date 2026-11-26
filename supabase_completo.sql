@@ -252,7 +252,7 @@ $$;
 GRANT EXECUTE ON FUNCTION validar_totem(text) TO anon, authenticated;
 
 -- ==============================================================================
--- 7. ROTINA DE RETENÇÃO AUTOMÁTICA DE 14 DIAS (LGPD & ECONOMIA DE STORAGE)
+-- 7. ROTINA DE RETENÇÃO AUTOMÁTICA DE 5 DIAS (LGPD & ECONOMIA DE STORAGE)
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION expurgar_replays_antigos()
 RETURNS integer
@@ -263,7 +263,7 @@ DECLARE
     v_deletados integer;
 BEGIN
     DELETE FROM replays
-    WHERE criado_em < (NOW() - INTERVAL '14 days');
+    WHERE criado_em < (NOW() - INTERVAL '5 days');
 
     GET DIAGNOSTICS v_deletados = ROW_COUNT;
     RETURN v_deletados;

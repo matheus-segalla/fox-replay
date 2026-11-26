@@ -432,7 +432,7 @@ function ConteudoJogada() {
         ? dataLance.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         : null;
 
-    const dataExpiracao = dataLance ? new Date(dataLance.getTime() + 14 * 24 * 60 * 60 * 1000) : null;
+    const dataExpiracao = dataLance ? new Date(dataLance.getTime() + 5 * 24 * 60 * 60 * 1000) : null;
     const expiracaoFormatada = dataExpiracao
         ? dataExpiracao.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
         : null;
@@ -637,7 +637,7 @@ function ConteudoJogada() {
                 <div className="pt-2 text-center space-y-1.5">
                     {expiracaoFormatada && (
                         <p className="text-[10px] text-zinc-400 font-medium">
-                            Disponível na nuvem até {expiracaoFormatada} (14 dias).
+                            Disponível na nuvem até {expiracaoFormatada} (5 dias).
                         </p>
                     )}
 
@@ -665,7 +665,7 @@ function ConteudoJogada() {
                         <div className="space-y-1.5">
                             <h3 className="text-sm font-black text-zinc-900 uppercase tracking-wider">Lance Salvo no seu Perfil</h3>
                             <p className="text-xs text-zinc-500 leading-relaxed font-medium">
-                                As jogadas da quadra expiram em 14 dias. Salve com seu perfil gratuito para manter este vídeo permanente na sua galeria.
+                                As jogadas da quadra expiram em 5 dias. Salve com seu perfil gratuito para manter este vídeo permanente na sua galeria.
                             </p>
                         </div>
                         <div className="space-y-2 pt-2">

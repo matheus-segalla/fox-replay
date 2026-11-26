@@ -7,7 +7,7 @@ Plataforma completa de captura de jogadas em alta performance (Beach Tennis, Fut
 ## ⚡ Principais Funcionalidades
 
 ### 1. Experiência do Atleta
-* **Visualização Instantânea (`/jogada`):** Acesso rápido aos lances gravados com 14 dias de retenção via QR Code exibido na TV da quadra.
+* **Visualização Instantânea (`/jogada`):** Acesso rápido aos lances gravados com 5 dias de retenção via QR Code exibido na TV da quadra.
 * **Composição de Vídeo 9:16 (Stories/Reels):** Exportação direta do vídeo com a logo da Fox Replay (topo esquerdo), a logo oficial da Arena (topo direito) e uma barra inferior com **4 patrocinadores oficiais** (com fallback automático *"ANUNCIE Aqui!"* para espaços livres).
 * **Download em Alta Definição:** Renderização no cliente via HTML5 Canvas 2D + MediaRecorder a 3.5 Mbps com áudio estéreo preservado.
 * **Perfil do Atleta (`/perfil`):** Organização de jogadas favoritas e histórico de lances salvos.

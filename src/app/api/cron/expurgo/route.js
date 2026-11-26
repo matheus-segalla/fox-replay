@@ -29,7 +29,7 @@ async function executarExpurgo(request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Expurga registros de replays > 14 dias (preservando os favoritados)
+    // 1. Expurga registros de replays > 5 dias (preservando os favoritados)
     const { data: removidos, error: errExpurgo } = await supabaseAdmin.rpc(
       'expurgar_replays_antigos'
     );

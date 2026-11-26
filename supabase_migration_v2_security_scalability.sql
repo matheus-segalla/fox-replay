@@ -486,7 +486,7 @@ $$;
 REVOKE ALL ON FUNCTION public.obter_metricas_arena(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.obter_metricas_arena(UUID) TO authenticated;
 
--- Expurgo seguro de 14 dias: preserva favoritados e retorna URLs para apagar no Storage
+-- Expurgo seguro de 5 dias: preserva favoritados e retorna URLs para apagar no Storage
 DROP FUNCTION IF EXISTS public.expurgar_replays_antigos();
 CREATE OR REPLACE FUNCTION public.expurgar_replays_antigos()
 RETURNS TABLE (id UUID, video_url TEXT, thumbnail_url TEXT)
@@ -497,7 +497,7 @@ AS $$
 BEGIN
     RETURN QUERY
     DELETE FROM replays r
-    WHERE r.criado_em < (NOW() - INTERVAL '14 days')
+    WHERE r.criado_em < (NOW() - INTERVAL '5 days')
       AND NOT EXISTS (
           SELECT 1 FROM favoritos f WHERE f.replay_id = r.id
       )
