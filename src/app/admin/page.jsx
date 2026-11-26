@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { isSuperAdmin } from '../../lib/auth';
+import { fetchComToken } from '../../lib/apiClient';
 import AppHeader from '@/components/AppHeader';
 import CustomSelect from '@/components/CustomSelect';
+import { IconBuilding, IconX } from '@/components/icons';
 
 const IconRadio = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -14,21 +16,9 @@ const IconRadio = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
-const IconBuilding = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-  </svg>
-);
-
 const IconShield = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-  </svg>
-);
-
-const IconX = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
 
@@ -138,10 +128,26 @@ export default function SuperAdminNOCPage() {
   const [lgpdResultado, setLgpdResultado] = useState(null);
   const [lgpdExcluindo, setLgpdExcluindo] = useState(false);
 
+  const toastTimeoutRef = useRef(null);
+
   const exibirToast = (msg) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToast(msg);
-    setTimeout(() => setToast(null), 3500);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimeoutRef.current = null;
+    }, 3500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getAccessToken = async () => {
     const {
@@ -153,15 +159,9 @@ export default function SuperAdminNOCPage() {
   const recarregarDados = useCallback(async () => {
     setAtualizando(true);
     try {
-      const token = await getAccessToken();
-      const res = await fetch('/api/admin/arenas', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json) {
-        throw new Error(json?.error || 'Erro ao carregar arenas.');
+      const json = await fetchComToken('/api/admin/arenas');
+      if (!json) {
+        throw new Error('Erro ao carregar arenas.');
       }
 
       const listaArenas = json.arenas || [];
@@ -185,10 +185,11 @@ export default function SuperAdminNOCPage() {
     }
   }, []);
 
-  // Auto-refresh opcional (30s) para monitoramento em tela/TV
+  // Auto-refresh opcional (30s) para monitoramento em tela/TV (pausa quando aba está oculta)
   useEffect(() => {
     if (!autoRefresh || !autorizado) return;
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       recarregarDados();
     }, 30000);
     return () => clearInterval(interval);

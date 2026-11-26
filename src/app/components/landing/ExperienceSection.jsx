@@ -2,33 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-
-const IconPlay = ({ className = 'w-5 h-5' }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M8 5v14l11-7z" />
-  </svg>
-);
-
-const IconPause = ({ className = 'w-5 h-5' }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
-  </svg>
-);
-
-const IconDownload = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-);
-
-const IconShare = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <circle cx="18" cy="5" r="2.5" />
-    <circle cx="6" cy="12" r="2.5" />
-    <circle cx="18" cy="19" r="2.5" />
-    <path strokeLinecap="round" d="M8.3 13.1l7.4 4.2M15.7 6.7l-7.4 4.2" />
-  </svg>
-);
+import { IconPlay, IconPause, IconDownload, IconShare } from '@/components/icons';
 
 export default function ExperienceSection() {
   const [reproduzindo, setReproduzindo] = useState(true);

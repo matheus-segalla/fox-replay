@@ -1,22 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../../lib/supabase';
 import { isSuperAdmin, validarUrlHttp, montarUrlWhatsAppSuporte } from '../../lib/auth';
+import { fetchComToken } from '../../lib/apiClient';
+import { getArenaAtivaId, setArenaAtivaId, clearArenaAtivaId } from '../../lib/storage';
 import AppHeader from '@/components/AppHeader';
 import ImageUploadField from '@/components/ImageUploadField';
 import ReplayThumbnail from '@/components/ReplayThumbnail';
 import CustomSelect from '@/components/CustomSelect';
-
-const IconBuilding = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-  </svg>
-);
+import { IconBuilding, IconTrash } from '@/components/icons';
 
 const IconSettings = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -29,12 +26,6 @@ const IconFilm = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <rect x="2" y="2" width="20" height="20" rx="2.18" />
     <path strokeLinecap="round" d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5" />
-  </svg>
-);
-
-const IconTrash = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
 
@@ -87,6 +78,8 @@ function ConteudoDashboardArena() {
 
   // Métricas por período + ranking por quadra
   const [periodoMetricas, setPeriodoMetricas] = useState('30d');
+  const periodoMetricasRef = useRef('30d');
+  const usuarioIdRef = useRef(null);
   const [carregandoMetricas, setCarregandoMetricas] = useState(false);
   const [metricasArena, setMetricasArena] = useState({
     lances: 0,
@@ -254,14 +247,14 @@ function ConteudoDashboardArena() {
         });
 
         setQuadras(quadrasFormatadas);
-        await carregarMetricas(arenaId, periodoMetricas);
+        await carregarMetricas(arenaId, periodoMetricasRef.current);
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
       } finally {
         setCarregando(false);
       }
     },
-    [carregarMetricas, periodoMetricas]
+    [carregarMetricas]
   );
 
   // Auth Guard
@@ -280,6 +273,7 @@ function ConteudoDashboardArena() {
         }
 
         const superAdmin = isSuperAdmin(session.user);
+        usuarioIdRef.current = session.user.id;
         if (!cancelado) setEhAdmin(superAdmin);
 
         const { data: arenasPropriasData } = await supabase
@@ -296,7 +290,7 @@ function ConteudoDashboardArena() {
             if (cancelado) return;
             setModoSuporteNoc(false);
             setMinhasArenas(arenasProprias);
-            localStorage.setItem('fox_arena_id', naPropria.id);
+            setArenaAtivaId(naPropria.id);
             carregarDados(naPropria.id, naPropria);
             return;
           }
@@ -329,11 +323,11 @@ function ConteudoDashboardArena() {
         setModoSuporteNoc(false);
         setMinhasArenas(arenasProprias);
 
-        const idPreferido = arenaQueryId || localStorage.getItem('fox_arena_id');
+        const idPreferido = arenaQueryId || getArenaAtivaId();
         const arenaEncontrada =
           arenasProprias.find((a) => a.id === idPreferido) || arenasProprias[0];
 
-        localStorage.setItem('fox_arena_id', arenaEncontrada.id);
+        setArenaAtivaId(arenaEncontrada.id);
         carregarDados(arenaEncontrada.id, arenaEncontrada);
       } catch (err) {
         console.error('Erro no Auth Guard:', err);
@@ -348,12 +342,19 @@ function ConteudoDashboardArena() {
   }, [router, arenaQueryId, carregarDados]);
 
   const handleMudarArenaAtiva = (idNovaArena) => {
-    localStorage.setItem('fox_arena_id', idNovaArena);
     const selecionada = minhasArenas.find((a) => a.id === idNovaArena) || null;
+    const ehSuporte = Boolean(
+      selecionada && usuarioIdRef.current && selecionada.usuario_id !== usuarioIdRef.current
+    );
+    setModoSuporteNoc(ehSuporte);
+    if (!ehSuporte) {
+      setArenaAtivaId(idNovaArena);
+    }
     carregarDados(idNovaArena, selecionada);
   };
 
   const handleTrocarPeriodo = (novoPeriodo) => {
+    periodoMetricasRef.current = novoPeriodo;
     setPeriodoMetricas(novoPeriodo);
     if (arena?.id) {
       carregarMetricas(arena.id, novoPeriodo);
@@ -377,15 +378,27 @@ function ConteudoDashboardArena() {
 
     setSalvandoPatrocinadores(true);
     try {
+      const logoLimpa = logoArenaInput.trim() || null;
       const { error: errDb } = await supabase
         .from('arenas')
         .update({
-          logo_url: logoArenaInput.trim() || null,
+          logo_url: logoLimpa,
           patrocinadores: patrocinadoresInput,
         })
         .eq('id', arena.id);
 
       if (errDb) throw errDb;
+
+      setArena((prev) =>
+        prev ? { ...prev, logo_url: logoLimpa, patrocinadores: patrocinadoresInput } : prev
+      );
+      setMinhasArenas((prev) =>
+        prev.map((a) =>
+          a.id === arena.id
+            ? { ...a, logo_url: logoLimpa, patrocinadores: patrocinadoresInput }
+            : a
+        )
+      );
 
       mostrarAviso(
         'Marcas Atualizadas',
@@ -495,17 +508,9 @@ function ConteudoDashboardArena() {
       async () => {
         setExcluindoReplayId(replay.id);
         try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          const res = await fetch(`/api/replays/${replay.id}`, {
+          await fetchComToken(`/api/replays/${replay.id}`, {
             method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${session?.access_token || ''}`,
-            },
           });
-          const json = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(json.error || 'Falha ao excluir replay.');
 
           setReplaysQuadra((prev) => prev.filter((r) => r.id !== replay.id));
           if (arena?.id) carregarMetricas(arena.id, periodoMetricas);
@@ -622,7 +627,7 @@ function ConteudoDashboardArena() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('fox_arena_id');
+    clearArenaAtivaId();
     router.push('/entrar');
   };
 

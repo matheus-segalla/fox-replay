@@ -2,12 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-
-const IconArrowRight = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-  </svg>
-);
+import { IconArrowRight } from '@/components/icons';
 
 export default function FinalCtaSection({ onEncontrarArenaClick }) {
   return (

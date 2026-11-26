@@ -6,13 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { isSuperAdmin } from '@/lib/auth';
-
-function getIniciais(nome) {
-  if (!nome) return 'FR';
-  const partes = nome.trim().split(/\s+/);
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
+import { getIniciais } from '@/lib/formatters';
+import { clearArenaAtivaId } from '@/lib/storage';
 
 /**
  * Cabeçalho global unificado com seletor contextual por papel:
@@ -95,9 +90,7 @@ export default function AppHeader({
       return;
     }
     await supabase.auth.signOut();
-    try {
-      localStorage.removeItem('fox_arena_id');
-    } catch {}
+    clearArenaAtivaId();
     router.push('/');
   };
 

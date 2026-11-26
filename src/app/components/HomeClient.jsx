@@ -3,8 +3,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getIniciais } from '@/lib/formatters';
+import { getUltimaArena, setUltimaArena as salvarUltimaArenaLocal, getLancesSalvos } from '@/lib/storage';
 import AppHeader from '@/components/AppHeader';
 import CustomSelect from '@/components/CustomSelect';
+import { IconMapPin, IconArrowRight, IconX } from '@/components/icons';
 import LandingBackground from './landing/LandingBackground';
 import HeroSection from './landing/HeroSection';
 import HowItWorksSection from './landing/HowItWorksSection';
@@ -12,32 +15,6 @@ import ExperienceSection from './landing/ExperienceSection';
 import BenefitsSection from './landing/BenefitsSection';
 import FinalCtaSection from './landing/FinalCtaSection';
 import LandingFooter from './landing/LandingFooter';
-
-const IconMapPin = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s-7-5.686-7-12a7 7 0 1114 0c0 6.314-7 12-7 12z" />
-    <circle cx="12" cy="9" r="2.5" />
-  </svg>
-);
-
-const IconArrowRight = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-  </svg>
-);
-
-const IconX = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-function getIniciais(nome) {
-  if (!nome) return 'FR';
-  const partes = nome.trim().split(/\s+/);
-  if (partes.length === 1) return partes[0].substring(0, 2).toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
 
 export default function HomeClient({ arenasIniciais = [] }) {
   const router = useRouter();
@@ -65,19 +42,9 @@ export default function HomeClient({ arenasIniciais = [] }) {
     let cancelado = false;
     const timer = setTimeout(() => {
       if (cancelado) return;
-      try {
-        const salvo = localStorage.getItem('fox_ultima_arena');
-        if (salvo) {
-          const parsed = JSON.parse(salvo);
-          if (parsed && typeof parsed.id === 'string' && /^[a-zA-Z0-9_-]+$/.test(parsed.id)) {
-            setUltimaArena(parsed);
-          }
-        }
-        const favoritosSalvos = JSON.parse(localStorage.getItem('fox_lances_salvos') || '[]');
-        setLancesFavoritosCount(Array.isArray(favoritosSalvos) ? favoritosSalvos.length : 0);
-      } catch (e) {
-        console.warn('Erro ao ler dados locais:', e);
-      }
+      const salvo = getUltimaArena();
+      if (salvo) setUltimaArena(salvo);
+      setLancesFavoritosCount(getLancesSalvos().length);
     }, 0);
     return () => {
       cancelado = true;
@@ -152,17 +119,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
   }, [todasArenas, termoBusca]);
 
   const acessarArena = (arena) => {
-    try {
-      localStorage.setItem(
-        'fox_ultima_arena',
-        JSON.stringify({
-          id: arena.id,
-          nome: arena.nome,
-          cidade: arena.cidade,
-          estado: arena.estado,
-        })
-      );
-    } catch {}
+    salvarUltimaArenaLocal(arena);
     router.push(`/arena/${arena.id}`);
   };
 
