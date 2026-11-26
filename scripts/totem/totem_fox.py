@@ -588,24 +588,42 @@ class TotemFox:
         return res_reg.json().get("id")
 
     def processar_e_enviar_lance(self):
-        """Concatena segmentos fechados da RAM, gera MP4 + thumbnail e publica."""
+        """Concatena últimos 30s+ da RAM (incluindo o segmento ativo) e publica."""
         GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
         self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
+
+        # Aguarda 1.5s para compensar a latência RTSP da câmera e capturar o clique exato
+        time.sleep(1.5)
 
         carimbo = int(time.time() * 1000)
         caminho_final = GRAVACOES_DIR / f"lance_{carimbo}.mp4"
         caminho_thumb = GRAVACOES_DIR / f"lance_{carimbo}.jpg"
         concat_list = GRAVACOES_DIR / f"concat_{carimbo}.txt"
+        seg_ativo_copia = GRAVACOES_DIR / f"ativo_{carimbo}.ts"
 
         try:
-            # Ordena segmentos MPEG-TS por data de modificação e EXCLUI o último (em escrita ativa)
+            # Ordena segmentos MPEG-TS por data de modificação
             segmentos = sorted(BUFFER_DIR.glob("seg_*.ts"), key=os.path.getmtime)
-            fechados = segmentos[:-1] if len(segmentos) > 1 else segmentos
-            ultimos_6 = fechados[-6:] if len(fechados) >= 6 else fechados
+            lista_para_concat = []
 
-            if ultimos_6:
+            if segmentos:
+                fechados = segmentos[:-1]
+                ultimos_fechados = fechados[-6:] if len(fechados) >= 6 else fechados
+                lista_para_concat.extend(ultimos_fechados)
+
+                # Faz uma cópia instantânea do segmento ativo em escrita para não cortar os últimos segundos
+                ultimo_ativo = segmentos[-1]
+                try:
+                    if ultimo_ativo.exists() and ultimo_ativo.stat().st_size > 0:
+                        shutil.copy2(str(ultimo_ativo), str(seg_ativo_copia))
+                        if seg_ativo_copia.stat().st_size > 0:
+                            lista_para_concat.append(seg_ativo_copia)
+                except Exception as err_cp:
+                    print(f"⚠️ Aviso ao copiar segmento ativo: {err_cp}")
+
+            if lista_para_concat:
                 with open(concat_list, "w", encoding="utf-8") as f:
-                    for seg in ultimos_6:
+                    for seg in lista_para_concat:
                         f.write(f"file '{seg.resolve()}'\n")
 
                 subprocess.run(
@@ -680,7 +698,7 @@ class TotemFox:
                 "mensagem": "Não foi possível gerar o vídeo. Tente novamente."
             })
         finally:
-            self._remover_arquivos_locais(concat_list)
+            self._remover_arquivos_locais(concat_list, seg_ativo_copia)
 
     def processar_fila_offline(self):
         """Reenvia automaticamente lances salvos durante quedas de internet."""
