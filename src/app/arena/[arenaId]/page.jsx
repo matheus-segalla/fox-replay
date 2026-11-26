@@ -125,8 +125,9 @@ function ConteudoPortalArena() {
     const [totalReplays, setTotalReplays] = useState(0);
     const [carregando, setCarregando] = useState(true);
     const [carregandoReplays, setCarregandoReplays] = useState(false);
-    const [carregandoMais, setCarregandoMais] = useState(false);
+    const [paginaAtual, setPaginaAtual] = useState(1);
     const [erroArena, setErroArena] = useState(false);
+    const feedTopRef = useRef(null);
 
     // Estados de Filtro
     const [quadraAtiva, setQuadraAtiva] = useState(searchParams.get('quadra') || 'todas');
@@ -369,14 +370,40 @@ function ConteudoPortalArena() {
         return { lista, total };
     }, [quadras, dataFiltro, periodoFiltro, quadraAtiva]);
 
+    const aplicarQuadra = (novaQuadra) => {
+        setQuadraAtiva(novaQuadra);
+        setPaginaAtual(1);
+    };
+
+    const aplicarData = (novaData) => {
+        setDataFiltro(novaData);
+        setPaginaAtual(1);
+    };
+
+    const aplicarPeriodo = (novoPeriodo) => {
+        setPeriodoFiltro(novoPeriodo);
+        setPaginaAtual(1);
+    };
+
+    const redefinirFiltros = () => {
+        setQuadraAtiva('todas');
+        setPeriodoFiltro('todos');
+        setDataFiltro(hojeStr);
+        setPaginaAtual(1);
+        setCalendarioAberto(false);
+        setMenuHoraAberto(false);
+        setMenuQuadraAberto(false);
+    };
+
     useEffect(() => {
         if (quadras.length === 0) return;
         let cancelado = false;
 
-        async function carregarPaginaInicial() {
+        async function carregarPagina() {
             setCarregandoReplays(true);
             try {
-                const { lista, total } = await executarConsultaReplays(0);
+                const offset = (paginaAtual - 1) * TAMANHO_PAGINA;
+                const { lista, total } = await executarConsultaReplays(offset);
                 if (!cancelado) {
                     setReplays(lista);
                     setTotalReplays(total);
@@ -388,27 +415,40 @@ function ConteudoPortalArena() {
             }
         }
 
-        carregarPaginaInicial();
+        carregarPagina();
         return () => {
             cancelado = true;
         };
-    }, [quadras.length, executarConsultaReplays]);
+    }, [quadras.length, executarConsultaReplays, paginaAtual]);
 
-    const carregarMaisReplays = async () => {
-        setCarregandoMais(true);
-        try {
-            const { lista, total } = await executarConsultaReplays(replays.length);
-            setReplays(prev => [...prev, ...lista]);
-            setTotalReplays(total);
-        } catch (err) {
-            console.error('Erro ao carregar mais replays:', err);
-        } finally {
-            setCarregandoMais(false);
+    const totalPaginas = Math.max(1, Math.ceil(totalReplays / TAMANHO_PAGINA));
+
+    const mudarPagina = (novaPagina) => {
+        const alvo = Math.max(1, Math.min(totalPaginas, novaPagina));
+        if (alvo === paginaAtual) return;
+        setPaginaAtual(alvo);
+        if (feedTopRef.current) {
+            feedTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
+    const paginasVisiveis = useMemo(() => {
+        if (totalPaginas <= 5) {
+            return Array.from({ length: totalPaginas }, (_, i) => i + 1);
+        }
+        const lista = [1];
+        const inicio = Math.max(2, paginaAtual - 1);
+        const fim = Math.min(totalPaginas - 1, paginaAtual + 1);
+        if (inicio > 2) lista.push('...');
+        for (let i = inicio; i <= fim; i++) lista.push(i);
+        if (fim < totalPaginas - 1) lista.push('...');
+        lista.push(totalPaginas);
+        return lista;
+    }, [totalPaginas, paginaAtual]);
+
     const replaysFiltrados = replays;
-    const temMaisReplays = replays.length < totalReplays;
 
     const filtrosContainerRef = useRef(null);
 
@@ -523,7 +563,7 @@ function ConteudoPortalArena() {
             )}
 
             {/* HEADER CLEAN */}
-            <header className="w-full max-w-xl flex justify-between items-center py-2.5 border-b border-zinc-200/80 mb-3.5 shrink-0 relative z-20">
+            <header className="w-full max-w-6xl flex justify-between items-center py-2.5 border-b border-zinc-200/80 mb-3.5 shrink-0 relative z-20">
                 <button
                     onClick={() => router.push('/')}
                     className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 min-h-[36px] cursor-pointer"
@@ -541,12 +581,12 @@ function ConteudoPortalArena() {
             </header>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="w-full max-w-xl relative z-10 space-y-4">
+            <main className="w-full max-w-6xl relative z-10 space-y-5">
 
-                {/* CARD UNIFICADO DA ARENA, QUADRAS E FILTROS (ULTRA COMPACTO & CLEAN) */}
+                {/* CARD UNIFICADO DA ARENA, QUADRAS E FILTROS (CENTRALIZADO E COMPACTO) */}
                 <div
                     ref={filtrosContainerRef}
-                    className="relative z-30 overflow-visible bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-3.5 shadow-sm space-y-2.5"
+                    className="w-full max-w-2xl mx-auto relative z-30 overflow-visible bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-3.5 shadow-sm space-y-2.5"
                 >
                     {/* Fundo sutil com fade da logo da Arena (com overflow-hidden próprio para não cortar dropdowns) */}
                     <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none select-none">
@@ -630,7 +670,7 @@ function ConteudoPortalArena() {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    setQuadraAtiva('todas');
+                                                    aplicarQuadra('todas');
                                                     setMenuQuadraAberto(false);
                                                 }}
                                                 className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-left flex items-center justify-between cursor-pointer ${
@@ -650,7 +690,7 @@ function ConteudoPortalArena() {
                                                         key={q.id}
                                                         type="button"
                                                         onClick={() => {
-                                                            setQuadraAtiva(q.id);
+                                                            aplicarQuadra(q.id);
                                                             setMenuQuadraAberto(false);
                                                         }}
                                                         className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-left flex items-center justify-between cursor-pointer ${
@@ -679,7 +719,7 @@ function ConteudoPortalArena() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setDataFiltro(hojeStr);
+                                        aplicarData(hojeStr);
                                         setCalendarioAberto(false);
                                         setMenuHoraAberto(false);
                                         setMenuQuadraAberto(false);
@@ -717,7 +757,7 @@ function ConteudoPortalArena() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setPeriodoFiltro('todos');
+                                        aplicarPeriodo('todos');
                                         setMenuHoraAberto(false);
                                         setCalendarioAberto(false);
                                         setMenuQuadraAberto(false);
@@ -755,14 +795,7 @@ function ConteudoPortalArena() {
                             {filtrosPersonalizadosAtivos && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setQuadraAtiva('todas');
-                                        setPeriodoFiltro('todos');
-                                        setDataFiltro(hojeStr);
-                                        setCalendarioAberto(false);
-                                        setMenuHoraAberto(false);
-                                        setMenuQuadraAberto(false);
-                                    }}
+                                    onClick={redefinirFiltros}
                                     title="Limpar todos os filtros"
                                     className="h-8 w-8 rounded-lg bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 text-zinc-500 hover:text-zinc-900 transition-colors shrink-0 flex items-center justify-center active:scale-95 cursor-pointer"
                                 >
@@ -825,7 +858,7 @@ function ConteudoPortalArena() {
                                                 key={item.dataStr}
                                                 disabled={!item.disponivel}
                                                 onClick={() => {
-                                                    setDataFiltro(item.dataStr);
+                                                    aplicarData(item.dataStr);
                                                     setCalendarioAberto(false);
                                                 }}
                                                 className={`h-8 w-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center relative cursor-pointer active:scale-95 ${
@@ -868,7 +901,7 @@ function ConteudoPortalArena() {
                                 {/* Opção Rápida: Todos os horários */}
                                 <button
                                     onClick={() => {
-                                        setPeriodoFiltro('todos');
+                                        aplicarPeriodo('todos');
                                         setMenuHoraAberto(false);
                                     }}
                                     className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center cursor-pointer ${
@@ -888,7 +921,7 @@ function ConteudoPortalArena() {
                                             <button
                                                 key={faixa.id}
                                                 onClick={() => {
-                                                    setPeriodoFiltro(faixa.id);
+                                                    aplicarPeriodo(faixa.id);
                                                     setMenuHoraAberto(false);
                                                 }}
                                                 className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center text-center cursor-pointer active:scale-95 ${
@@ -908,9 +941,9 @@ function ConteudoPortalArena() {
                 </div>
 
                 {/* ============================================================ */}
-                {/* 3. FEED DE REPLAYS (CARDS MODERNOS BENTO)                    */}
+                {/* 3. FEED DE REPLAYS (GRID RESPONSIVO ATÉ 4 COLUNAS NO DESKTOP)*/}
                 {/* ============================================================ */}
-                <div className="space-y-4">
+                <div ref={feedTopRef} className="space-y-5 scroll-mt-4">
                     {carregandoReplays ? (
                         <div className="py-16 text-center space-y-3">
                             <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -919,7 +952,7 @@ function ConteudoPortalArena() {
                             </p>
                         </div>
                     ) : replaysFiltrados.length === 0 ? (
-                        <div className="bg-white border-2 border-dashed border-zinc-200 rounded-3xl p-10 text-center space-y-3 shadow-sm">
+                        <div className="max-w-xl mx-auto bg-white border-2 border-dashed border-zinc-200 rounded-3xl p-10 text-center space-y-3 shadow-sm">
                             <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
                                 <IconVideoOff className="w-6 h-6" />
                             </div>
@@ -930,11 +963,7 @@ function ConteudoPortalArena() {
                                 Não encontramos vídeos nesta quadra com o filtro selecionado. Tente selecionar &quot;Todos&quot; ou outra data.
                             </p>
                             <button
-                                onClick={() => {
-                                    setQuadraAtiva('todas');
-                                    setPeriodoFiltro('todos');
-                                    setDataFiltro(hojeStr);
-                                }}
+                                onClick={redefinirFiltros}
                                 className="mt-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-4 py-2 rounded-xl transition-colors inline-flex items-center gap-1.5"
                             >
                                 <IconRefresh className="w-3.5 h-3.5" />
@@ -942,7 +971,7 @@ function ConteudoPortalArena() {
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {replaysFiltrados.map((replay) => {
                                 const dataLance = replay.criado_em ? new Date(replay.criado_em) : null;
                                 const horarioFormatado = dataLance
@@ -1006,27 +1035,54 @@ function ConteudoPortalArena() {
                         </div>
                     )}
 
-                    {/* BOTÃO DE PAGINAÇÃO REAL */}
-                    {!carregandoReplays && temMaisReplays && (
-                        <div className="pt-2 text-center space-y-2">
+                    {/* PAGINAÇÃO NUMERADA REAL (LEVE NO MOBILE E DESKTOP) */}
+                    {!carregandoReplays && totalPaginas > 1 && (
+                        <div className="pt-3 flex flex-col items-center gap-2.5">
                             <p className="text-[11px] text-zinc-500 font-medium">
-                                Exibindo {replays.length} de {totalReplays} lances
+                                Mostrando {(paginaAtual - 1) * TAMANHO_PAGINA + 1}–{Math.min(paginaAtual * TAMANHO_PAGINA, totalReplays)} de {totalReplays} lances
                             </p>
-                            <button
-                                type="button"
-                                disabled={carregandoMais}
-                                onClick={carregarMaisReplays}
-                                className="px-6 py-3 bg-white hover:bg-amber-50 border border-zinc-200 hover:border-amber-400 text-zinc-900 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 inline-flex items-center gap-2"
-                            >
-                                {carregandoMais ? (
-                                    <>
-                                        <span className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                                        <span>Carregando mais lances...</span>
-                                    </>
-                                ) : (
-                                    <span>Carregar mais lances ({totalReplays - replays.length} restantes)</span>
+
+                            <nav aria-label="Paginação de lances" className="flex items-center gap-1.5 flex-wrap justify-center">
+                                <button
+                                    type="button"
+                                    disabled={paginaAtual <= 1}
+                                    onClick={() => mudarPagina(paginaAtual - 1)}
+                                    className="h-9 px-3 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                    ‹ Anterior
+                                </button>
+
+                                {paginasVisiveis.map((item, idx) =>
+                                    item === '...' ? (
+                                        <span key={`dots-${idx}`} className="px-1.5 text-xs text-zinc-400 font-bold select-none">
+                                            ...
+                                        </span>
+                                    ) : (
+                                        <button
+                                            key={item}
+                                            type="button"
+                                            onClick={() => mudarPagina(item)}
+                                            aria-current={paginaAtual === item ? 'page' : undefined}
+                                            className={`h-9 min-w-[36px] px-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer border ${
+                                                paginaAtual === item
+                                                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-xs'
+                                                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300'
+                                            }`}
+                                        >
+                                            {item}
+                                        </button>
+                                    )
                                 )}
-                            </button>
+
+                                <button
+                                    type="button"
+                                    disabled={paginaAtual >= totalPaginas}
+                                    onClick={() => mudarPagina(paginaAtual + 1)}
+                                    className="h-9 px-3 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                    Próxima ›
+                                </button>
+                            </nav>
                         </div>
                     )}
                 </div>

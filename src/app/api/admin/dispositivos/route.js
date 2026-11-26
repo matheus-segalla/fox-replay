@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { exigirSuperAdminApi } from '@/lib/adminRouteAuth';
 
+function validarUrlRtsp(url) {
+  if (!url) return true;
+  if (url.length > 512) return false;
+  if (/[\s\x00-\x1f\x7f"']/.test(url)) return false;
+  return /^rtsps?:\/\/.+/i.test(url);
+}
+
 /**
  * PATCH /api/admin/dispositivos
  * Atualiza a URL RTSP (`camera_url`) de um dispositivo/totem vinculado.
@@ -18,6 +25,12 @@ export async function PATCH(request) {
     }
 
     const cameraUrl = typeof body?.camera_url === 'string' ? body.camera_url.trim() || null : null;
+    if (cameraUrl && !validarUrlRtsp(cameraUrl)) {
+      return NextResponse.json(
+        { error: 'URL RTSP inválida. Deve iniciar com rtsp:// ou rtsps:// sem espaços ou aspas.' },
+        { status: 400 }
+      );
+    }
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { compararSeguro } from '@/lib/totemAuth';
+import { verificarRateLimit } from '@/lib/rateLimit';
 
 function gerarCodigo6Digitos() {
   const parte1 = crypto.randomInt(100, 1000);
@@ -14,7 +15,19 @@ function gerarCodigo6Digitos() {
  * Chamado pelo totem não configurado para registrar um código temporário de pareamento
  * protegido por um `pair_secret` exclusivo daquela sessão.
  */
-export async function POST() {
+export async function POST(request) {
+  const rl = verificarRateLimit(request, {
+    chave: 'totem_pair_post',
+    limite: 10,
+    janelaMs: 60_000,
+  });
+  if (!rl.permitido) {
+    return NextResponse.json(
+      { error: 'Muitas solicitações de pareamento. Aguarde um instante.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSegundos) } }
+    );
+  }
+
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const pairSecret = crypto.randomBytes(24).toString('hex');
@@ -72,6 +85,18 @@ export async function POST() {
  * UMA ÚNICA VEZ e limpa token/camera_url da tabela temporária de pareamentos.
  */
 export async function GET(request) {
+  const rl = verificarRateLimit(request, {
+    chave: 'totem_pair_get',
+    limite: 40,
+    janelaMs: 60_000,
+  });
+  if (!rl.permitido) {
+    return NextResponse.json(
+      { error: 'Muitas consultas de pareamento. Aguarde um instante.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSegundos) } }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const codigo = (searchParams.get('codigo') || '').trim().toUpperCase();

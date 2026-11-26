@@ -263,12 +263,12 @@ VALUES (
     'midia-arenas',
     true,
     5242880,
-    ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+    ARRAY['image/png', 'image/jpeg', 'image/webp']
 )
 ON CONFLICT (id) DO UPDATE
 SET public = true,
     file_size_limit = 5242880,
-    allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/webp'];
 
 DROP POLICY IF EXISTS "Leitura pública de midia-arenas" ON storage.objects;
 CREATE POLICY "Leitura pública de midia-arenas"

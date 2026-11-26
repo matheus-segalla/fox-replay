@@ -25,19 +25,20 @@ function gerarSenhaTemporaria() {
   return `Fox@${corpo}`;
 }
 
-async function listarMapaUsuarios(supabaseAdmin) {
+async function buscarMapaGestoresPorIds(supabaseAdmin, userIds) {
+  const unicos = Array.from(new Set(userIds.filter(Boolean)));
   const mapa = new Map();
-  let page = 1;
-  const perPage = 200;
+  const LOTE = 10;
 
-  while (page <= 20) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-    if (error || !data?.users?.length) break;
-    for (const u of data.users) {
-      mapa.set(u.id, u);
+  for (let i = 0; i < unicos.length; i += LOTE) {
+    const slice = unicos.slice(i, i + LOTE);
+    const resultados = await Promise.all(
+      slice.map((uid) => supabaseAdmin.auth.admin.getUserById(uid).catch(() => null))
+    );
+    for (const res of resultados) {
+      const u = res?.data?.user;
+      if (u) mapa.set(u.id, u);
     }
-    if (data.users.length < perPage) break;
-    page += 1;
   }
   return mapa;
 }
@@ -69,18 +70,23 @@ export async function GET(request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    const [resArenas, resCount, mapaUsuarios] = await Promise.all([
+    const [resArenas, resCount] = await Promise.all([
       supabaseAdmin
         .from('arenas')
         .select('*, quadras(*, dispositivos(*))')
         .order('nome', { ascending: true }),
       supabaseAdmin.from('replays').select('id', { count: 'exact', head: true }),
-      listarMapaUsuarios(supabaseAdmin),
     ]);
 
     if (resArenas.error) throw resArenas.error;
 
-    const arenasEnriquecidas = (resArenas.data || []).map((arena) => {
+    const listaArenas = resArenas.data || [];
+    const mapaUsuarios = await buscarMapaGestoresPorIds(
+      supabaseAdmin,
+      listaArenas.map((a) => a.usuario_id)
+    );
+
+    const arenasEnriquecidas = listaArenas.map((arena) => {
       const usuario = arena.usuario_id ? mapaUsuarios.get(arena.usuario_id) : null;
       const meta = usuario?.user_metadata || {};
       const telefone = meta.telefone || meta.phone || usuario?.phone || '';
