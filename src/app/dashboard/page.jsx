@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../../lib/supabase';
@@ -50,6 +51,7 @@ function ConteudoDashboardArena() {
   const arenaQueryId = searchParams.get('arena');
 
   const [ehAdmin, setEhAdmin] = useState(false);
+  const [modoSuporteNoc, setModoSuporteNoc] = useState(false);
   const [arena, setArena] = useState(null);
   const [minhasArenas, setMinhasArenas] = useState([]);
   const [quadras, setQuadras] = useState([]);
@@ -280,15 +282,41 @@ function ConteudoDashboardArena() {
         const superAdmin = isSuperAdmin(session.user);
         if (!cancelado) setEhAdmin(superAdmin);
 
-        let queryArenas = supabase.from('arenas').select('*').order('nome', { ascending: true });
-        if (!superAdmin) {
-          queryArenas = queryArenas.eq('usuario_id', session.user.id);
+        const { data: arenasPropriasData } = await supabase
+          .from('arenas')
+          .select('*')
+          .eq('usuario_id', session.user.id)
+          .order('nome', { ascending: true });
+        const arenasProprias = arenasPropriasData || [];
+
+        // Super Admin acessando arena específica via NOC Admin (/dashboard?arena=<id>)
+        if (superAdmin && arenaQueryId) {
+          const naPropria = arenasProprias.find((a) => a.id === arenaQueryId);
+          if (naPropria) {
+            if (cancelado) return;
+            setModoSuporteNoc(false);
+            setMinhasArenas(arenasProprias);
+            localStorage.setItem('fox_arena_id', naPropria.id);
+            carregarDados(naPropria.id, naPropria);
+            return;
+          }
+
+          const { data: arenaSuporte } = await supabase
+            .from('arenas')
+            .select('*')
+            .eq('id', arenaQueryId)
+            .single();
+
+          if (arenaSuporte) {
+            if (cancelado) return;
+            setModoSuporteNoc(true);
+            setMinhasArenas(arenasProprias.length > 0 ? [arenaSuporte, ...arenasProprias] : [arenaSuporte]);
+            carregarDados(arenaSuporte.id, arenaSuporte);
+            return;
+          }
         }
 
-        const { data: arenasData } = await queryArenas;
-        const arenasCarregadas = arenasData || [];
-
-        if (arenasCarregadas.length === 0) {
+        if (arenasProprias.length === 0) {
           if (superAdmin) {
             router.replace('/admin');
           } else {
@@ -298,11 +326,12 @@ function ConteudoDashboardArena() {
         }
 
         if (cancelado) return;
-        setMinhasArenas(arenasCarregadas);
+        setModoSuporteNoc(false);
+        setMinhasArenas(arenasProprias);
 
         const idPreferido = arenaQueryId || localStorage.getItem('fox_arena_id');
         const arenaEncontrada =
-          arenasCarregadas.find((a) => a.id === idPreferido) || arenasCarregadas[0];
+          arenasProprias.find((a) => a.id === idPreferido) || arenasProprias[0];
 
         localStorage.setItem('fox_arena_id', arenaEncontrada.id);
         carregarDados(arenaEncontrada.id, arenaEncontrada);
@@ -617,6 +646,29 @@ function ConteudoDashboardArena() {
         />
 
         <div className="max-w-[1120px] mx-auto px-5 sm:px-6 py-8 relative z-10 space-y-7">
+          {/* BANNER DE MODO SUPORTE NOC (QUANDO SUPER ADMIN ABRE ARENA DE OUTRO GESTOR VIA /admin) */}
+          {modoSuporteNoc && arena && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-mono font-black uppercase tracking-widest text-amber-800 block">
+                  Modo Suporte NOC &bull; Super Admin
+                </span>
+                <p className="text-xs text-zinc-800 font-medium">
+                  Visualizando a arena <strong className="font-black uppercase">{arena.nome}</strong>
+                  {arena.email_contato ? ` (${arena.email_contato})` : ''}.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/admin"
+                  className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition-colors"
+                >
+                  Voltar ao NOC Admin
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* BARRA DE UNIDADE ATIVA & EXPANSÃO */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-zinc-200/90 px-5 py-4 rounded-2xl shadow-xs">
             <div className="space-y-1">
