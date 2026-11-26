@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { isSuperAdmin } from '../../lib/auth';
 import AppHeader from '@/components/AppHeader';
+import CustomSelect from '@/components/CustomSelect';
 
 const IconRadio = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1249,21 +1250,20 @@ export default function SuperAdminNOCPage() {
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
                   1. Complexo Esportivo
                 </label>
-                <select
+                <CustomSelect
+                  theme="dark"
                   value={arenaSelModal}
-                  onChange={(e) => {
-                    setArenaSelModal(e.target.value);
-                    const a = arenas.find((item) => item.id === e.target.value);
+                  onChange={(val) => {
+                    setArenaSelModal(val);
+                    const a = arenas.find((item) => item.id === val);
                     setQuadraSelModal(a?.quadras?.[0]?.id || '');
                   }}
-                  className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold cursor-pointer"
-                >
-                  {arenas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nome} ({a.cidade || 'SP'})
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel="Complexo Esportivo"
+                  options={arenas.map((a) => ({
+                    value: a.id,
+                    label: `${a.nome} (${a.cidade || 'SP'})`,
+                  }))}
+                />
               </div>
 
               <div>
@@ -1275,17 +1275,16 @@ export default function SuperAdminNOCPage() {
                     Esta arena não possui quadras cadastradas.
                   </p>
                 ) : (
-                  <select
+                  <CustomSelect
+                    theme="dark"
                     value={quadraSelModal}
-                    onChange={(e) => setQuadraSelModal(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold cursor-pointer"
-                  >
-                    {quadrasArenaModal.map((q) => (
-                      <option key={q.id} value={q.id}>
-                        {q.nome}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setQuadraSelModal(val)}
+                    ariaLabel="Quadra Específica"
+                    options={quadrasArenaModal.map((q) => ({
+                      value: q.id,
+                      label: q.nome,
+                    }))}
+                  />
                 )}
               </div>
 

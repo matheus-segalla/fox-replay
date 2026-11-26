@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { isSuperAdmin, sanitizarRedirect } from '../../lib/auth';
+import CustomSelect from '@/components/CustomSelect';
 
 const IconMail = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -307,19 +308,22 @@ function FormularioEntrarUnificado() {
                   <label className="block text-[10px] font-bold uppercase text-zinc-500 tracking-wider">
                     Esporte Principal
                   </label>
-                  <select
+                  <CustomSelect
+                    theme="light"
                     value={esporte}
-                    onChange={(e) => setEsporte(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all cursor-pointer min-h-[42px]"
-                  >
-                    <option value="Beach Tennis">Beach Tennis</option>
-                    <option value="Futevôlei">Futevôlei</option>
-                    <option value="Padel">Padel</option>
-                    <option value="Tênis">Tênis</option>
-                    <option value="Vôlei de Praia">Vôlei de Praia</option>
-                    <option value="Futebol Society">Futebol Society</option>
-                    <option value="Outro">Outro Esporte</option>
-                  </select>
+                    onChange={(val) => setEsporte(val)}
+                    ariaLabel="Esporte Principal"
+                    buttonClassName="min-h-[42px]"
+                    options={[
+                      { value: 'Beach Tennis', label: 'Beach Tennis' },
+                      { value: 'Futevôlei', label: 'Futevôlei' },
+                      { value: 'Padel', label: 'Padel' },
+                      { value: 'Tênis', label: 'Tênis' },
+                      { value: 'Vôlei de Praia', label: 'Vôlei de Praia' },
+                      { value: 'Futebol Society', label: 'Futebol Society' },
+                      { value: 'Outro', label: 'Outro Esporte' },
+                    ]}
+                  />
                 </div>
               </>
             )}

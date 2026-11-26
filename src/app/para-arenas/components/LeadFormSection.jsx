@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { montarUrlWhatsAppSuporte } from '@/lib/auth';
+import CustomSelect from '@/components/CustomSelect';
 
 const OPCOES_QUADRAS = [
     { id: '1', label: '1 Quadra', desc: 'Piloto Solo' },
@@ -165,17 +166,14 @@ export default function LeadFormSection() {
                                 <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
                                     3. Modalidade Principal
                                 </label>
-                                <select
+                                <CustomSelect
+                                    theme="dark"
                                     value={modalidade}
-                                    onChange={(e) => setModalidade(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#1a1b23] border border-white/10 text-white text-xs font-medium transition-all focus:outline-none focus:border-amber-500 cursor-pointer"
-                                >
-                                    {MODALIDADES_LISTA.map((mod) => (
-                                        <option key={mod} value={mod} className="bg-zinc-900 text-white">
-                                            {mod}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setModalidade(val)}
+                                    ariaLabel="Modalidade Principal"
+                                    buttonClassName="bg-[#1a1b23] border-white/10"
+                                    options={MODALIDADES_LISTA.map((mod) => ({ value: mod, label: mod }))}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

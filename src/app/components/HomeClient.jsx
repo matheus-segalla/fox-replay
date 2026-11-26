@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import AppHeader from '@/components/AppHeader';
+import CustomSelect from '@/components/CustomSelect';
 
 const IconSearch = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -224,15 +225,8 @@ export default function HomeClient({ arenasIniciais = [] }) {
       <AppHeader theme="light" activeRoute="home" lancesFavoritosCount={lancesFavoritosCount} />
 
       {/* HERO SECTION */}
-      <main className="w-full max-w-5xl mx-auto px-5 text-center py-12 md:py-18 z-10 flex-1 flex flex-col justify-center space-y-11">
-        <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill-light border border-amber-500/30 text-zinc-700 text-xs font-semibold shadow-xs">
-            <span className="w-4 h-4 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-bold text-[10px]">
-              ↗
-            </span>
-            <span className="tracking-wide">Tecnologia Autônoma &bull; Reveja seus lances em segundos</span>
-          </div>
-
+      <main className="w-full max-w-5xl mx-auto px-5 text-center py-10 md:py-16 z-10 flex-1 flex flex-col justify-center space-y-10">
+        <div className="space-y-5 animate-fadeIn max-w-4xl mx-auto">
           <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[0.94] select-none">
             <span className="block text-zinc-950">SEUS LANCES ALÉM DOS</span>
             <span className="block text-stroke-gold mt-2">LIMITES DA QUADRA</span>
@@ -278,7 +272,18 @@ export default function HomeClient({ arenasIniciais = [] }) {
         )}
 
         {/* BARRA DE BUSCA RÁPIDA INSTANTÂNEA */}
-        <div className="w-full max-w-lg mx-auto relative z-20">
+        <div className="w-full max-w-lg mx-auto relative z-20 space-y-2.5">
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setModalAberto(true)}
+              className="text-xs font-semibold text-zinc-500 hover:text-amber-600 transition-colors flex items-center gap-1.5 cursor-pointer py-1"
+            >
+              <span>Explorar lista de cidades com quadras ativas</span>
+              <IconArrowRight className="w-3.5 h-3.5 text-amber-500" />
+            </button>
+          </div>
+
           <div className="relative">
             <input
               type="text"
@@ -286,7 +291,7 @@ export default function HomeClient({ arenasIniciais = [] }) {
               onChange={(e) => setTermoBusca(e.target.value)}
               placeholder="Digite o nome do complexo esportivo ou cidade..."
               aria-label="Buscar arena por nome ou cidade"
-              className="w-full pl-12 pr-11 py-4 rounded-2xl bg-white/95 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs sm:text-sm font-medium shadow-sm transition-all focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 backdrop-blur-xl"
+              className="w-full pl-12 pr-11 py-4 rounded-2xl bg-white/95 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-xs sm:text-sm font-medium shadow-sm transition-all focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500">
               <IconSearch className="w-4 h-4" />
@@ -305,61 +310,64 @@ export default function HomeClient({ arenasIniciais = [] }) {
           </div>
 
           {termoBusca.trim() && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-white/98 border border-zinc-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto z-30 divide-y divide-zinc-100 text-left animate-fadeIn backdrop-blur-2xl">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white/95 backdrop-blur-md border border-zinc-200/90 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] overflow-hidden max-h-[260px] overflow-y-auto overscroll-contain z-30 divide-y divide-zinc-100 text-left animate-fadeIn">
               {arenasFiltradas.length === 0 ? (
                 <div className="p-6 text-center text-zinc-500 text-xs font-medium space-y-2">
                   <p>Nenhuma arena encontrada para &quot;{termoBusca}&quot;.</p>
                   <button
                     type="button"
                     onClick={() => setModalAberto(true)}
-                    className="text-amber-600 font-bold hover:underline text-xs inline-flex items-center gap-1"
+                    className="text-amber-600 font-bold hover:underline text-xs inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>Ver lista completa por cidades</span>
                     <IconArrowRight className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
-                arenasFiltradas.map((arena) => (
-                  <button
-                    key={arena.id}
-                    type="button"
-                    onClick={() => acessarArena(arena)}
-                    className="w-full p-4 hover:bg-zinc-50 cursor-pointer transition-colors flex items-center justify-between group text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 text-amber-700 border border-amber-500/20 flex items-center justify-center text-xs font-black tracking-wider transition-colors">
-                        {getIniciais(arena.nome)}
+                <>
+                  {arenasFiltradas.slice(0, 12).map((arena) => (
+                    <button
+                      key={arena.id}
+                      type="button"
+                      onClick={() => acessarArena(arena)}
+                      className="w-full p-3.5 hover:bg-zinc-50 cursor-pointer transition-colors flex items-center justify-between group text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 text-amber-700 border border-amber-500/20 flex items-center justify-center text-xs font-black tracking-wider transition-colors shrink-0">
+                          {getIniciais(arena.nome)}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-zinc-900 group-hover:text-amber-600 transition-colors uppercase truncate">
+                            {arena.nome}
+                          </h4>
+                          <p className="text-[10px] text-zinc-500 font-medium flex items-center gap-1 mt-0.5 truncate">
+                            <IconMapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                            <span className="truncate">{arena.cidade || 'Localização não informada'} {arena.estado ? `• ${arena.estado}` : ''}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900 group-hover:text-amber-600 transition-colors uppercase">
-                          {arena.nome}
-                        </h4>
-                        <p className="text-[10px] text-zinc-500 font-medium flex items-center gap-1 mt-0.5">
-                          <IconMapPin className="w-3 h-3 text-zinc-400" />
-                          <span>{arena.cidade || 'Localização não informada'} {arena.estado ? `• ${arena.estado}` : ''}</span>
-                        </p>
-                      </div>
+                      <span className="text-[11px] font-bold text-zinc-500 group-hover:text-amber-600 transition-colors flex items-center gap-1 shrink-0 ml-2">
+                        <span>Ver lances</span>
+                        <IconArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </button>
+                  ))}
+                  {arenasFiltradas.length > 12 && (
+                    <div className="px-4 py-2.5 bg-zinc-50 text-[11px] text-zinc-500 font-medium flex items-center justify-between gap-2">
+                      <span>Exibindo 12 de {arenasFiltradas.length} resultados</span>
+                      <button
+                        type="button"
+                        onClick={() => setModalAberto(true)}
+                        className="text-amber-600 font-bold hover:underline cursor-pointer shrink-0"
+                      >
+                        Explorar por cidade
+                      </button>
                     </div>
-                    <span className="text-[11px] font-bold text-zinc-500 group-hover:text-amber-600 transition-colors flex items-center gap-1">
-                      <span>Ver lances</span>
-                      <IconArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                  </button>
-                ))
+                  )}
+                </>
               )}
             </div>
           )}
-
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <button
-              type="button"
-              onClick={() => setModalAberto(true)}
-              className="text-xs font-mono font-semibold text-zinc-500 hover:text-amber-600 transition-colors flex items-center gap-1.5"
-            >
-              <span>Ou explorar lista de cidades com quadras ativas</span>
-              <IconArrowRight className="w-3.5 h-3.5 text-amber-500" />
-            </button>
-          </div>
         </div>
 
         {/* 3 ETAPAS */}
@@ -487,20 +495,17 @@ export default function HomeClient({ arenasIniciais = [] }) {
                 <label className="block text-[10px] font-bold uppercase text-zinc-500 tracking-wider">
                   1. Cidade
                 </label>
-                <select
+                <CustomSelect
+                  theme="light"
                   value={cidadeSelecionada}
-                  onChange={(e) => setCidadeSelecionada(e.target.value)}
-                  className="w-full px-3.5 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-800 font-semibold text-xs focus:outline-none focus:border-amber-500 cursor-pointer shadow-xs"
-                >
-                  <option value="" className="text-zinc-400">
-                    Selecione o município...
-                  </option>
-                  {cidadesDisponiveis.map((c) => (
-                    <option key={`${c.cidade}-${c.estado}`} value={c.cidade} className="text-zinc-800">
-                      {c.cidade} ({c.estado.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setCidadeSelecionada(val)}
+                  placeholder="Selecione o município..."
+                  ariaLabel="Selecionar cidade"
+                  options={cidadesDisponiveis.map((c) => ({
+                    value: c.cidade,
+                    label: `${c.cidade} (${c.estado.toUpperCase()})`,
+                  }))}
+                />
               </div>
 
               {cidadeSelecionada && (

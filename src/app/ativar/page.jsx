@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { isSuperAdmin } from '../../lib/auth';
 import AppHeader from '@/components/AppHeader';
+import CustomSelect from '@/components/CustomSelect';
 
 function ConteudoAtivarTecnico() {
   const router = useRouter();
@@ -173,17 +174,17 @@ function ConteudoAtivarTecnico() {
               <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
                 Complexo Esportivo
               </label>
-              <select
+              <CustomSelect
+                theme="dark"
                 value={arenaSelecionada}
-                onChange={(e) => setArenaSelecionada(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
-              >
-                {arenas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nome} {a.cidade ? `(${a.cidade})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setArenaSelecionada(val)}
+                ariaLabel="Complexo Esportivo"
+                buttonClassName="py-3 font-bold"
+                options={arenas.map((a) => ({
+                  value: a.id,
+                  label: `${a.nome}${a.cidade ? ` (${a.cidade})` : ''}`,
+                }))}
+              />
             </div>
 
             <div>
@@ -195,18 +196,17 @@ function ConteudoAtivarTecnico() {
                   Nenhuma quadra cadastrada nesta arena.
                 </p>
               ) : (
-                <select
-                  required
+                <CustomSelect
+                  theme="dark"
                   value={quadraSelecionada}
-                  onChange={(e) => setQuadraSelecionada(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  {quadras.map((q) => (
-                    <option key={q.id} value={q.id}>
-                      {q.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setQuadraSelecionada(val)}
+                  ariaLabel="Quadra deste Totem"
+                  buttonClassName="py-3 font-bold"
+                  options={quadras.map((q) => ({
+                    value: q.id,
+                    label: q.nome,
+                  }))}
+                />
               )}
             </div>
 

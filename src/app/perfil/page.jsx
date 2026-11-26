@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import AppHeader from '@/components/AppHeader';
 import ReplayThumbnail from '@/components/ReplayThumbnail';
+import CustomSelect from '@/components/CustomSelect';
 
 const IconStar = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -451,19 +452,18 @@ export default function PerfilPage() {
                   className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-zinc-200 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-amber-500 shadow-xs min-h-[38px]"
                 />
                 {arenasDosLances.length > 1 && (
-                  <select
+                  <CustomSelect
+                    theme="light"
                     value={filtroArena}
-                    onChange={(e) => setFiltroArena(e.target.value)}
-                    aria-label="Filtrar por arena"
-                    className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer min-h-[38px]"
-                  >
-                    <option value="todas">Todas as arenas</option>
-                    {arenasDosLances.map((nome) => (
-                      <option key={nome} value={nome}>
-                        {nome}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFiltroArena(val)}
+                    ariaLabel="Filtrar por arena"
+                    className="w-full sm:w-48"
+                    buttonClassName="bg-white min-h-[38px]"
+                    options={[
+                      { value: 'todas', label: 'Todas as arenas' },
+                      ...arenasDosLances.map((nome) => ({ value: nome, label: nome })),
+                    ]}
+                  />
                 )}
               </div>
             )}
@@ -658,17 +658,13 @@ export default function PerfilPage() {
                 <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1 tracking-wider">
                   Esporte Principal
                 </label>
-                <select
+                <CustomSelect
+                  theme="light"
                   value={editEsporte}
-                  onChange={(e) => setEditEsporte(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 focus:outline-none focus:border-amber-500 focus:bg-white cursor-pointer"
-                >
-                  {ESPORTES.map((esp) => (
-                    <option key={esp} value={esp}>
-                      {esp}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setEditEsporte(val)}
+                  ariaLabel="Esporte Principal"
+                  options={ESPORTES.map((esp) => ({ value: esp, label: esp }))}
+                />
               </div>
 
               <div className="pt-3 border-t border-zinc-100 space-y-3">

@@ -9,6 +9,7 @@ import { isSuperAdmin, validarUrlHttp, montarUrlWhatsAppSuporte } from '../../li
 import AppHeader from '@/components/AppHeader';
 import ImageUploadField from '@/components/ImageUploadField';
 import ReplayThumbnail from '@/components/ReplayThumbnail';
+import CustomSelect from '@/components/CustomSelect';
 
 const IconBuilding = ({ className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -631,18 +632,18 @@ function ConteudoDashboardArena() {
                 <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                   Unidade:
                 </span>
-                <select
+                <CustomSelect
+                  theme="light"
                   value={arena?.id || ''}
-                  onChange={(e) => handleMudarArenaAtiva(e.target.value)}
-                  aria-label="Selecionar unidade"
-                  className="bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs font-black rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  {minhasArenas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nome} {a.cidade ? `(${a.cidade})` : ''} {a.ativa === false ? '— PAUSADA' : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleMudarArenaAtiva(val)}
+                  ariaLabel="Selecionar unidade"
+                  className="w-full sm:w-64"
+                  buttonClassName="py-1.5 min-h-[34px] font-black"
+                  options={minhasArenas.map((a) => ({
+                    value: a.id,
+                    label: `${a.nome}${a.cidade ? ` (${a.cidade})` : ''}${a.ativa === false ? ' — PAUSADA' : ''}`,
+                  }))}
+                />
               </div>
             </div>
 
