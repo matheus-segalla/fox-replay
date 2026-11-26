@@ -337,9 +337,10 @@ class TotemFox:
                 "-b:a", "128k",
                 "-f", "segment",
                 "-segment_format", "mpegts",
-                "-segment_time", "5",
-                "-segment_wrap", "14",
+                "-segment_time", "2",
+                "-segment_wrap", "20",
                 "-reset_timestamps", "1",
+                "-flush_packets", "1",
                 str(BUFFER_DIR / "seg_%02d.ts"),
             ]
 
@@ -657,9 +658,9 @@ class TotemFox:
         GRAVACOES_DIR.mkdir(parents=True, exist_ok=True)
         self.fila_offline_dir.mkdir(parents=True, exist_ok=True)
 
-        # Aguarda 3.0s para compensar a latência RTSP (~1.5s) + flush do muxer FFmpeg (~1.5s)
-        # garantindo que o final do vídeo capture exatamente a pessoa clicando no botão
-        time.sleep(3.0)
+        # Aguarda exatamente 1.5s após o clique para compensar a latência RTSP
+        # (com -flush_packets 1 no FFmpeg, os frames até +1.5s já estão gravados em RAM)
+        time.sleep(1.5)
 
         carimbo = int(time.time() * 1000)
         caminho_final = GRAVACOES_DIR / f"lance_{carimbo}.mp4"
@@ -674,7 +675,7 @@ class TotemFox:
 
             if segmentos:
                 fechados = segmentos[:-1]
-                ultimos_fechados = fechados[-6:] if len(fechados) >= 6 else fechados
+                ultimos_fechados = fechados[-15:] if len(fechados) >= 15 else fechados
                 lista_para_concat.extend(ultimos_fechados)
 
                 # Faz uma cópia instantânea do segmento ativo em escrita para não cortar os últimos segundos
