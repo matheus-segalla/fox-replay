@@ -2,10 +2,26 @@
  * Utilitário de Composição de Vídeo com Patrocinadores e Logos (Client-Side)
  *
  * Renderiza em alta fidelidade um quadro vertical (9:16) contendo:
- * - Topo: Logo Fox Replay + Logo da Arena
- * - Centro: Vídeo do lance com aspect ratio preservado + trilha de áudio original
- * - Rodapé: Barra com 4 posições de patrocinadores (marcas ativas ou "ANUNCIE Aqui!")
+ * - Topo: Logo Fox Replay + Logo da Arena (pré-renderizado em offscreen canvas)
+ * - Centro: Vídeo do lance (75% da altura = 960px) com trilha de áudio original
+ * - Rodapé: 2 patrocinadores amplos alternando em loop de 4s (pré-renderizados em offscreen canvas)
  */
+
+const cacheVideosExportados = new Map();
+const MAX_CACHE_VIDEOS = 3;
+
+function dispararDownloadBlob(blob, nomeArquivo, extensaoReal) {
+    const nomeBase = nomeArquivo.replace(/\.(mp4|webm)$/i, '');
+    const nomeFinal = `${nomeBase}.${extensaoReal}`;
+    const urlBlob = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = urlBlob;
+    link.download = nomeFinal;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(urlBlob), 10000);
+}
 
 // Carrega imagem com CORS anônimo e timeout de segurança (nunca trava se URL externa cair)
 function carregarImagem(url, timeoutMs = 5000) {
@@ -27,6 +43,18 @@ function carregarImagem(url, timeoutMs = 5000) {
         img.onerror = () => finalizar(null);
         img.src = url;
     });
+}
+
+// Pré-carrega o vídeo em Blob local para evitar buffering/travamentos no meio da gravação
+async function preCarregarVideoBlob(videoUrl) {
+    try {
+        const res = await fetch(videoUrl, { mode: 'cors' });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+    } catch {
+        return null;
+    }
 }
 
 // Helper compatível com navegadores/WebViews mais antigos sem ctx.roundRect nativo
@@ -65,6 +93,146 @@ function selecionarMelhorMimeType() {
     return '';
 }
 
+function criarCanvasTopo(canvasWidth, alturaTopo, imgFox, imgArena, nomeArena) {
+    const c = document.createElement('canvas');
+    c.width = canvasWidth;
+    c.height = alturaTopo;
+    const tCtx = c.getContext('2d');
+
+    tCtx.fillStyle = '#070709';
+    tCtx.fillRect(0, 0, canvasWidth, alturaTopo);
+
+    if (imgFox) {
+        tCtx.save();
+        desenharRetanguloArredondado(tCtx, 28, 20, 82, 82, 18);
+        tCtx.clip();
+        tCtx.drawImage(imgFox, 28, 20, 82, 82);
+        tCtx.restore();
+
+        tCtx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
+        tCtx.lineWidth = 2;
+        desenharRetanguloArredondado(tCtx, 28, 20, 82, 82, 18);
+        tCtx.stroke();
+    } else {
+        tCtx.fillStyle = '#FF9900';
+        tCtx.font = '900 22px Inter, sans-serif';
+        tCtx.fillText('FOX REPLAY', 28, 68);
+    }
+
+    if (imgArena) {
+        tCtx.save();
+        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 126, 20, 126, 82, 18);
+        tCtx.clip();
+        tCtx.drawImage(imgArena, canvasWidth - 28 - 126, 20, 126, 82);
+        tCtx.restore();
+
+        tCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        tCtx.lineWidth = 1.5;
+        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 126, 20, 126, 82, 18);
+        tCtx.stroke();
+    } else {
+        tCtx.save();
+        tCtx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+        tCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        tCtx.lineWidth = 1.5;
+        desenharRetanguloArredondado(tCtx, canvasWidth - 28 - 220, 30, 220, 62, 16);
+        tCtx.fill();
+        tCtx.stroke();
+
+        tCtx.fillStyle = '#ffffff';
+        tCtx.font = '900 17px Inter, sans-serif';
+        tCtx.textAlign = 'center';
+        tCtx.textBaseline = 'middle';
+        tCtx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 61);
+        tCtx.restore();
+    }
+
+    return c;
+}
+
+function desenharSlotNoBanner(bCtx, slotIdx, slotX, slotY, larguraSlot, alturaSlot, imagensPatrocinadores, patrocinadores) {
+    const imgPat = imagensPatrocinadores[slotIdx];
+    const pat = patrocinadores?.[slotIdx];
+
+    bCtx.save();
+    bCtx.fillStyle = '#121318';
+    bCtx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    bCtx.lineWidth = 1.5;
+    desenharRetanguloArredondado(bCtx, slotX, slotY, larguraSlot, alturaSlot, 18);
+    bCtx.fill();
+    bCtx.stroke();
+    bCtx.clip();
+
+    if (imgPat) {
+        const pAspect = imgPat.width / imgPat.height;
+        let pW = larguraSlot - 28;
+        let pH = pW / pAspect;
+        if (pH > alturaSlot - 24) {
+            pH = alturaSlot - 24;
+            pW = pH * pAspect;
+        }
+        const pX = slotX + (larguraSlot - pW) / 2;
+        const pY = slotY + (alturaSlot - pH) / 2;
+        bCtx.drawImage(imgPat, pX, pY, pW, pH);
+    } else if (pat && pat.ativo && pat.nome) {
+        bCtx.textAlign = 'center';
+        bCtx.textBaseline = 'middle';
+        bCtx.fillStyle = '#FFFFFF';
+        bCtx.font = '900 24px Inter, sans-serif';
+        bCtx.fillText(
+            pat.nome.toUpperCase().substring(0, 16),
+            slotX + larguraSlot / 2,
+            slotY + alturaSlot / 2
+        );
+    } else {
+        bCtx.textAlign = 'center';
+        bCtx.textBaseline = 'middle';
+
+        bCtx.fillStyle = '#FFFFFF';
+        bCtx.font = '900 20px Inter, sans-serif';
+        bCtx.fillText('ANUNCIE', slotX + larguraSlot / 2, slotY + alturaSlot / 2 - 14);
+
+        bCtx.fillStyle = '#FF9900';
+        bCtx.font = '900 22px Inter, sans-serif';
+        bCtx.fillText('Aqui!', slotX + larguraSlot / 2, slotY + alturaSlot / 2 + 16);
+    }
+    bCtx.restore();
+}
+
+function criarCanvasBannerPar(canvasWidth, alturaBanner, parIdx, imagensPatrocinadores, patrocinadores) {
+    const c = document.createElement('canvas');
+    c.width = canvasWidth;
+    c.height = alturaBanner;
+    const bCtx = c.getContext('2d');
+
+    bCtx.fillStyle = '#070709';
+    bCtx.fillRect(0, 0, canvasWidth, alturaBanner);
+
+    bCtx.fillStyle = '#FF9900';
+    bCtx.fillRect(0, 0, canvasWidth, 3);
+
+    const margem = 20;
+    const gap = 14;
+    const larguraSlot = (canvasWidth - margem * 2 - gap) / 2;
+    const alturaSlot = 148;
+    const slotY = (alturaBanner - alturaSlot) / 2;
+    const baseIdx = parIdx === 0 ? 0 : 2;
+
+    desenharSlotNoBanner(bCtx, baseIdx, margem, slotY, larguraSlot, alturaSlot, imagensPatrocinadores, patrocinadores);
+    desenharSlotNoBanner(
+        bCtx,
+        baseIdx + 1,
+        margem + larguraSlot + gap,
+        slotY,
+        larguraSlot,
+        alturaSlot,
+        imagensPatrocinadores,
+        patrocinadores
+    );
+
+    return c;
+}
+
 export async function comporEBaixarVideoComPatrocinadores({
     videoUrl,
     nomeArena = 'Arena Parceira',
@@ -86,29 +254,37 @@ export async function comporEBaixarVideoComPatrocinadores({
         throw new Error('Navegador não suporta composição de vídeo em tempo real.');
     }
 
+    // 1. Verifica cache em memória (download instantâneo se já gerou nesta sessão)
+    const chaveCache = `${videoUrl}|${nomeArena}|${arenaLogoUrl || ''}|${JSON.stringify(patrocinadores || [])}`;
+    const itemCache = cacheVideosExportados.get(chaveCache);
+    if (itemCache) {
+        onStatus('Replay recuperado do cache!');
+        onProgresso(100);
+        dispararDownloadBlob(itemCache.blob, nomeArquivo, itemCache.extensaoReal);
+        return { ok: true, extensao: itemCache.extensaoReal };
+    }
+
     onStatus('Carregando vídeo e marcas...');
     onProgresso(5);
 
-    const [imgFox, imgArena] = await Promise.all([
+    const [imgFox, imgArena, blobVideoUrl, ...imagensPatrocinadores] = await Promise.all([
         carregarImagem(foxLogoUrl),
         carregarImagem(arenaLogoUrl),
-    ]);
-
-    const imagensPatrocinadores = await Promise.all(
-        Array.from({ length: 4 }).map(async (_, idx) => {
+        preCarregarVideoBlob(videoUrl),
+        ...Array.from({ length: 4 }).map(async (_, idx) => {
             const pat = patrocinadores?.[idx];
             if (pat && pat.ativo && pat.logo_url) {
                 return await carregarImagem(pat.logo_url);
             }
             return null;
-        })
-    );
+        }),
+    ]);
 
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
     video.playsInline = true;
     video.preload = 'auto';
-    video.src = videoUrl;
+    video.src = blobVideoUrl || videoUrl;
 
     let audioCtx = null;
     let streamCombinado = null;
@@ -116,8 +292,13 @@ export async function comporEBaixarVideoComPatrocinadores({
     let rafId = null;
     let fallbackIntervalId = null;
     let safetyTimeoutId = null;
+    let wakeLockSentinel = null;
 
     try {
+        if (navigator.wakeLock?.request) {
+            wakeLockSentinel = await navigator.wakeLock.request('screen').catch(() => null);
+        }
+
         await new Promise((resolve, reject) => {
             const timeoutMeta = setTimeout(
                 () => reject(new Error('Tempo esgotado ao carregar metadados do vídeo.')),
@@ -137,9 +318,29 @@ export async function comporEBaixarVideoComPatrocinadores({
             Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 30;
         const canvasWidth = 720;
         const canvasHeight = 1280;
+        const areaVideoY = 120;
+        const areaVideoH = 960;
+        const areaPatY = areaVideoY + areaVideoH + 10;
+        const areaPatH = canvasHeight - areaPatY;
+
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d');
+
+        // Pré-renderiza topo e os 2 pares de patrocinadores em canvas offscreen (zero redesenho por frame)
+        const canvasTopo = criarCanvasTopo(canvasWidth, areaVideoY, imgFox, imgArena, nomeArena);
+        const bannersPatrocinadores = [
+            criarCanvasBannerPar(canvasWidth, areaPatH, 0, imagensPatrocinadores, patrocinadores),
+            criarCanvasBannerPar(canvasWidth, areaPatH, 1, imagensPatrocinadores, patrocinadores),
+        ];
+
+        const vW = video.videoWidth || 1920;
+        const vH = video.videoHeight || 1080;
+        const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
+        const dW = vW * scale;
+        const dH = vH * scale;
+        const dX = (canvasWidth - dW) / 2;
+        const dY = areaVideoY + (areaVideoH - dH) / 2;
 
         canvasStream = canvas.captureStream
             ? canvas.captureStream(30)
@@ -168,7 +369,6 @@ export async function comporEBaixarVideoComPatrocinadores({
                 video.muted = true;
             }
         } catch {
-            // Fallback seguro caso o navegador restrinja Web Audio
             video.muted = true;
         }
 
@@ -203,136 +403,23 @@ export async function comporEBaixarVideoComPatrocinadores({
         try {
             await video.play();
         } catch {
-            // Se autoplay sem mute for bloqueado, faz fallback mudo para garantir o download
             video.muted = true;
             await video.play();
         }
 
         let gravando = true;
 
-        function desenharSlotPatrocinador(slotIdx, slotX, slotY, larguraSlot, alturaSlot) {
-            const imgPat = imagensPatrocinadores[slotIdx];
-            const pat = patrocinadores?.[slotIdx];
-
-            ctx.save();
-            ctx.fillStyle = '#121318';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
-            ctx.lineWidth = 1.5;
-            desenharRetanguloArredondado(ctx, slotX, slotY, larguraSlot, alturaSlot, 18);
-            ctx.fill();
-            ctx.stroke();
-            ctx.clip();
-
-            if (imgPat) {
-                const pAspect = imgPat.width / imgPat.height;
-                let pW = larguraSlot - 28;
-                let pH = pW / pAspect;
-                if (pH > alturaSlot - 24) {
-                    pH = alturaSlot - 24;
-                    pW = pH * pAspect;
-                }
-                const pX = slotX + (larguraSlot - pW) / 2;
-                const pY = slotY + (alturaSlot - pH) / 2;
-                ctx.drawImage(imgPat, pX, pY, pW, pH);
-            } else if (pat && pat.ativo && pat.nome) {
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '900 24px Inter, sans-serif';
-                ctx.fillText(
-                    pat.nome.toUpperCase().substring(0, 16),
-                    slotX + larguraSlot / 2,
-                    slotY + alturaSlot / 2
-                );
-            } else {
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '900 20px Inter, sans-serif';
-                ctx.fillText('ANUNCIE', slotX + larguraSlot / 2, slotY + alturaSlot / 2 - 14);
-
-                ctx.fillStyle = '#FF9900';
-                ctx.font = '900 22px Inter, sans-serif';
-                ctx.fillText('Aqui!', slotX + larguraSlot / 2, slotY + alturaSlot / 2 + 16);
-            }
-            ctx.restore();
-        }
-
-        function desenharParPatrocinadores(parIdx, alpha, slotY, larguraSlot, alturaSlot, margem, gap) {
-            if (alpha <= 0) return;
-            const baseIdx = parIdx === 0 ? 0 : 2;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            desenharSlotPatrocinador(baseIdx, margem, slotY, larguraSlot, alturaSlot);
-            desenharSlotPatrocinador(baseIdx + 1, margem + larguraSlot + gap, slotY, larguraSlot, alturaSlot);
-            ctx.restore();
-        }
-
         function desenharFrameAtual() {
             if (!gravando) return;
 
-            // A. Fundo escuro esportivo
+            // 1. Fundo base da faixa entre vídeo e rodapé
             ctx.fillStyle = '#070709';
-            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            ctx.fillRect(0, areaVideoY + areaVideoH, canvasWidth, 10);
 
-            // B. Topo: Logo Fox Replay (esquerda) + Arena (direita) acima da área de jogo
-            if (imgFox) {
-                ctx.save();
-                desenharRetanguloArredondado(ctx, 28, 20, 82, 82, 18);
-                ctx.clip();
-                ctx.drawImage(imgFox, 28, 20, 82, 82);
-                ctx.restore();
+            // 2. Topo pré-renderizado
+            ctx.drawImage(canvasTopo, 0, 0);
 
-                ctx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
-                ctx.lineWidth = 2;
-                desenharRetanguloArredondado(ctx, 28, 20, 82, 82, 18);
-                ctx.stroke();
-            } else {
-                ctx.fillStyle = '#FF9900';
-                ctx.font = '900 22px Inter, sans-serif';
-                ctx.fillText('FOX REPLAY', 28, 68);
-            }
-
-            if (imgArena) {
-                ctx.save();
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 126, 20, 126, 82, 18);
-                ctx.clip();
-                ctx.drawImage(imgArena, canvasWidth - 28 - 126, 20, 126, 82);
-                ctx.restore();
-
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 126, 20, 126, 82, 18);
-                ctx.stroke();
-            } else {
-                ctx.save();
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 220, 30, 220, 62, 16);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '900 17px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 61);
-                ctx.restore();
-            }
-
-            // C. Área Principal do Jogo (75% da altura da tela = 960px)
-            const areaVideoY = 120;
-            const areaVideoH = 960;
-            const vW = video.videoWidth || 1920;
-            const vH = video.videoHeight || 1080;
-            const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
-            const dW = vW * scale;
-            const dH = vH * scale;
-            const dX = (canvasWidth - dW) / 2;
-            const dY = areaVideoY + (areaVideoH - dH) / 2;
-
+            // 3. Vídeo da quadra (75% da altura)
             ctx.save();
             ctx.beginPath();
             ctx.rect(0, areaVideoY, canvasWidth, areaVideoH);
@@ -340,20 +427,7 @@ export async function comporEBaixarVideoComPatrocinadores({
             ctx.drawImage(video, dX, dY, dW, dH);
             ctx.restore();
 
-            // D. Rodapé: 2 Patrocinadores Amplos alternando em loop a cada 4 segundos
-            const areaPatY = areaVideoY + areaVideoH + 10;
-            ctx.fillStyle = '#070709';
-            ctx.fillRect(0, areaPatY, canvasWidth, canvasHeight - areaPatY);
-
-            ctx.fillStyle = '#FF9900';
-            ctx.fillRect(0, areaPatY, canvasWidth, 3);
-
-            const margem = 20;
-            const gap = 14;
-            const larguraSlot = (canvasWidth - margem * 2 - gap) / 2;
-            const alturaSlot = 148;
-            const slotY = areaPatY + (canvasHeight - areaPatY - alturaSlot) / 2;
-
+            // 4. Rodapé pré-renderizado com crossfade de 0.35s a cada 4s
             const cicloSegundos = 4;
             const duracaoTransicao = 0.35;
             const tempoAtual = Math.max(0, video.currentTime || 0);
@@ -363,10 +437,14 @@ export async function comporEBaixarVideoComPatrocinadores({
             if (tempoAtual >= cicloSegundos && tempoNoCiclo < duracaoTransicao) {
                 const progresso = tempoNoCiclo / duracaoTransicao;
                 const parAnterior = parAtual === 0 ? 1 : 0;
-                desenharParPatrocinadores(parAnterior, 1 - progresso, slotY, larguraSlot, alturaSlot, margem, gap);
-                desenharParPatrocinadores(parAtual, progresso, slotY, larguraSlot, alturaSlot, margem, gap);
+                ctx.save();
+                ctx.globalAlpha = 1 - progresso;
+                ctx.drawImage(bannersPatrocinadores[parAnterior], 0, areaPatY);
+                ctx.globalAlpha = progresso;
+                ctx.drawImage(bannersPatrocinadores[parAtual], 0, areaPatY);
+                ctx.restore();
             } else {
-                desenharParPatrocinadores(parAtual, 1, slotY, larguraSlot, alturaSlot, margem, gap);
+                ctx.drawImage(bannersPatrocinadores[parAtual], 0, areaPatY);
             }
 
             const pct = Math.min(95, Math.round((video.currentTime / duracaoTotal) * 100));
@@ -383,7 +461,6 @@ export async function comporEBaixarVideoComPatrocinadores({
 
         loopAnimacao();
 
-        // Garante continuidade caso a aba vá brevemente para segundo plano
         fallbackIntervalId = setInterval(() => {
             if (gravando && document.hidden && !video.ended && !video.paused) {
                 desenharFrameAtual();
@@ -419,26 +496,25 @@ export async function comporEBaixarVideoComPatrocinadores({
         onProgresso(100);
         onStatus('Download pronto!');
 
-        // Usa a extensão REAL do container gerado pelo navegador (nunca salva WebM como .mp4!)
         const extensaoReal = tipoFinal.toLowerCase().includes('mp4') ? 'mp4' : 'webm';
-        const nomeBase = nomeArquivo.replace(/\.(mp4|webm)$/i, '');
-        const nomeFinal = `${nomeBase}.${extensaoReal}`;
 
-        const urlBlob = URL.createObjectURL(blobFinal);
-        const link = document.createElement('a');
-        link.href = urlBlob;
-        link.download = nomeFinal;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(urlBlob), 10000);
+        // Salva no cache da sessão (máximo 3 vídeos)
+        if (cacheVideosExportados.size >= MAX_CACHE_VIDEOS) {
+            const primeiraChave = cacheVideosExportados.keys().next().value;
+            if (primeiraChave) cacheVideosExportados.delete(primeiraChave);
+        }
+        cacheVideosExportados.set(chaveCache, { blob: blobFinal, extensaoReal });
 
+        dispararDownloadBlob(blobFinal, nomeArquivo, extensaoReal);
         return { ok: true, extensao: extensaoReal };
     } finally {
         if (rafId) cancelAnimationFrame(rafId);
         if (fallbackIntervalId) clearInterval(fallbackIntervalId);
         if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
 
+        if (wakeLockSentinel) {
+            wakeLockSentinel.release().catch(() => {});
+        }
         if (streamCombinado) {
             streamCombinado.getTracks().forEach((t) => t.stop());
         }
@@ -451,5 +527,8 @@ export async function comporEBaixarVideoComPatrocinadores({
         video.pause();
         video.removeAttribute('src');
         video.load();
+        if (blobVideoUrl) {
+            URL.revokeObjectURL(blobVideoUrl);
+        }
     }
 }
