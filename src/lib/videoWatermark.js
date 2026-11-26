@@ -276,66 +276,41 @@ export async function comporEBaixarVideoComPatrocinadores({
             ctx.fillStyle = '#070709';
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-            // B. Área Principal do Jogo (85% da altura: 720x1090 com crop cover centralizado)
-            const areaVideoH = 1090;
-            const vW = video.videoWidth || 1920;
-            const vH = video.videoHeight || 1080;
-            const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
-            const dW = vW * scale;
-            const dH = vH * scale;
-            const dX = (canvasWidth - dW) / 2;
-            const dY = (areaVideoH - dH) / 2;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, 0, canvasWidth, areaVideoH);
-            ctx.clip();
-            ctx.drawImage(video, dX, dY, dW, dH);
-
-            // Degradê superior sutil para legibilidade das logos sobre a quadra
-            const gradTopo = ctx.createLinearGradient(0, 0, 0, 170);
-            gradTopo.addColorStop(0, 'rgba(7, 7, 9, 0.85)');
-            gradTopo.addColorStop(0.55, 'rgba(7, 7, 9, 0.35)');
-            gradTopo.addColorStop(1, 'rgba(7, 7, 9, 0)');
-            ctx.fillStyle = gradTopo;
-            ctx.fillRect(0, 0, canvasWidth, 170);
-            ctx.restore();
-
-            // C. Topo Integrado: Logo Fox Replay (esquerda) + Arena (direita)
+            // B. Topo: Logo Fox Replay (esquerda) + Arena (direita) acima da área de jogo
             if (imgFox) {
                 ctx.save();
-                desenharRetanguloArredondado(ctx, 28, 28, 86, 86, 18);
+                desenharRetanguloArredondado(ctx, 28, 20, 82, 82, 18);
                 ctx.clip();
-                ctx.drawImage(imgFox, 28, 28, 86, 86);
+                ctx.drawImage(imgFox, 28, 20, 82, 82);
                 ctx.restore();
 
                 ctx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
                 ctx.lineWidth = 2;
-                desenharRetanguloArredondado(ctx, 28, 28, 86, 86, 18);
+                desenharRetanguloArredondado(ctx, 28, 20, 82, 82, 18);
                 ctx.stroke();
             } else {
                 ctx.fillStyle = '#FF9900';
                 ctx.font = '900 22px Inter, sans-serif';
-                ctx.fillText('FOX REPLAY', 28, 76);
+                ctx.fillText('FOX REPLAY', 28, 68);
             }
 
             if (imgArena) {
                 ctx.save();
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 132, 28, 132, 86, 18);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 126, 20, 126, 82, 18);
                 ctx.clip();
-                ctx.drawImage(imgArena, canvasWidth - 28 - 132, 28, 132, 86);
+                ctx.drawImage(imgArena, canvasWidth - 28 - 126, 20, 126, 82);
                 ctx.restore();
 
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 132, 28, 132, 86, 18);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 126, 20, 126, 82, 18);
                 ctx.stroke();
             } else {
                 ctx.save();
-                ctx.fillStyle = 'rgba(17, 17, 17, 0.72)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.lineWidth = 1.5;
-                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 220, 40, 220, 62, 16);
+                desenharRetanguloArredondado(ctx, canvasWidth - 28 - 220, 30, 220, 62, 16);
                 ctx.fill();
                 ctx.stroke();
 
@@ -343,22 +318,41 @@ export async function comporEBaixarVideoComPatrocinadores({
                 ctx.font = '900 17px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 71);
+                ctx.fillText(nomeArena.toUpperCase().substring(0, 18), canvasWidth - 28 - 110, 61);
                 ctx.restore();
             }
 
+            // C. Área Principal do Jogo (75% da altura da tela = 960px)
+            const areaVideoY = 120;
+            const areaVideoH = 960;
+            const vW = video.videoWidth || 1920;
+            const vH = video.videoHeight || 1080;
+            const scale = Math.max(canvasWidth / vW, areaVideoH / vH);
+            const dW = vW * scale;
+            const dH = vH * scale;
+            const dX = (canvasWidth - dW) / 2;
+            const dY = areaVideoY + (areaVideoH - dH) / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, areaVideoY, canvasWidth, areaVideoH);
+            ctx.clip();
+            ctx.drawImage(video, dX, dY, dW, dH);
+            ctx.restore();
+
             // D. Rodapé: 2 Patrocinadores Amplos alternando em loop a cada 4 segundos
+            const areaPatY = areaVideoY + areaVideoH + 10;
             ctx.fillStyle = '#070709';
-            ctx.fillRect(0, areaVideoH, canvasWidth, canvasHeight - areaVideoH);
+            ctx.fillRect(0, areaPatY, canvasWidth, canvasHeight - areaPatY);
 
             ctx.fillStyle = '#FF9900';
-            ctx.fillRect(0, areaVideoH, canvasWidth, 3);
+            ctx.fillRect(0, areaPatY, canvasWidth, 3);
 
             const margem = 20;
             const gap = 14;
             const larguraSlot = (canvasWidth - margem * 2 - gap) / 2;
             const alturaSlot = 148;
-            const slotY = areaVideoH + (canvasHeight - areaVideoH - alturaSlot) / 2;
+            const slotY = areaPatY + (canvasHeight - areaPatY - alturaSlot) / 2;
 
             const cicloSegundos = 4;
             const duracaoTransicao = 0.35;

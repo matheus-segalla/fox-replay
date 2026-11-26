@@ -68,6 +68,18 @@ function ConteudoJogada() {
     const [salvoFavorito, setSalvoFavorito] = useState(false);
     const [modalPerfilAberto, setModalPerfilAberto] = useState(false);
     const [modalPrivacidadeAberto, setModalPrivacidadeAberto] = useState(false);
+    const [parPatrocinadorAtivo, setParPatrocinadorAtivo] = useState(0);
+
+    // Fallback de rotação automática a cada 4s enquanto o vídeo ainda não está tocando
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const vid = document.getElementById('video-lance-player');
+            if (!vid || vid.paused) {
+                setParPatrocinadorAtivo((prev) => (prev === 0 ? 1 : 0));
+            }
+        }, 4000);
+        return () => clearInterval(timer);
+    }, []);
 
     const exibirToast = (msg) => {
         setToastMensagem(msg);
@@ -486,67 +498,107 @@ function ConteudoJogada() {
                         )}
                     </div>
 
-                    {/* PLAYER 16:9 PROPORCIONAL E RÁPIDO (COM POSTER INSTANTÂNEO) */}
-                    <div className="w-full aspect-video bg-zinc-950 rounded-xl overflow-hidden relative border border-zinc-200/80 shadow-inner">
-                        <video
-                            id="video-lance-player"
-                            src={dados?.videoUrl}
-                            poster={dados?.thumbnailUrl || undefined}
-                            preload="metadata"
-                            className="w-full h-full object-contain"
-                            controls
-                            controlsList="nodownload"
-                            playsInline
-                            webkit-playsinline="true"
-                        />
-                    </div>
+                    {/* PRÉ-VISUALIZAÇÃO 9:16 FIEL AO VÍDEO BAIXADO */}
+                    <div className="max-w-[360px] mx-auto w-full bg-[#070709] rounded-2xl overflow-hidden border border-zinc-800 shadow-lg">
+                        {/* Área do Jogo Expandida (Crop cover centralizado na quadra) */}
+                        <div className="w-full aspect-[9/13.5] bg-zinc-950 relative overflow-hidden">
+                            {/* Overlay Superior com Logos (não bloqueia cliques no vídeo) */}
+                            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/85 via-black/35 to-transparent z-10 p-3 flex items-start justify-between pointer-events-none">
+                                <div className="flex items-center gap-1.5">
+                                    <Image
+                                        src="/logo-fox.jpeg"
+                                        alt="Fox Replay"
+                                        width={34}
+                                        height={34}
+                                        className="w-8 h-8 rounded-lg object-cover border border-amber-500/70"
+                                    />
+                                </div>
 
-                    {/* BARRA COMPACTA DOS 4 PATROCINADORES OFICIAIS */}
-                    <div className="pt-0.5">
-                        <div className="flex items-center justify-between mb-1.5 px-0.5">
-                            <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
-                                Patrocinadores da Arena
-                            </span>
+                                <div className="text-right">
+                                    {dados?.logoArena ? (
+                                        <Image
+                                            src={dados.logoArena}
+                                            alt={dados.nomeArena || 'Arena'}
+                                            width={88}
+                                            height={34}
+                                            unoptimized
+                                            className="h-8 w-auto max-w-[88px] object-contain rounded-lg bg-black/45 p-1 border border-white/15"
+                                        />
+                                    ) : (
+                                        <span className="text-[9px] font-black text-white uppercase tracking-wider bg-black/65 px-2.5 py-1.5 rounded-lg border border-white/15 inline-block max-w-[120px] truncate">
+                                            {dados?.nomeArena || 'Arena'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <video
+                                id="video-lance-player"
+                                src={dados?.videoUrl}
+                                poster={dados?.thumbnailUrl || undefined}
+                                preload="metadata"
+                                onTimeUpdate={(e) => {
+                                    const novoPar = Math.floor((e.currentTarget.currentTime || 0) / 4) % 2;
+                                    setParPatrocinadorAtivo((prev) => (prev !== novoPar ? novoPar : prev));
+                                }}
+                                className="w-full h-full object-cover object-center"
+                                controls
+                                controlsList="nodownload"
+                                playsInline
+                                webkit-playsinline="true"
+                            />
                         </div>
 
-                        <div className="grid grid-cols-4 gap-1.5 w-full h-14 sm:h-16">
-                            {Array.from({ length: 4 }).map((_, idx) => {
-                                const pat = dados?.patrocinadores?.[idx];
-                                const temPat = pat && pat.ativo && (pat.logo_url || pat.nome);
-                                return (
-                                    <div
-                                        key={idx}
-                                        className="bg-zinc-50 hover:bg-zinc-100 transition-colors rounded-xl border border-zinc-200/80 flex flex-col items-center justify-center p-1.5 overflow-hidden text-center"
-                                        title={temPat ? (pat.nome || `Patrocinador ${idx + 1}`) : 'Espaço disponível para patrocínio'}
-                                    >
-                                        {temPat ? (
-                                            pat.logo_url ? (
-                                                <Image
-                                                    src={pat.logo_url}
-                                                    alt={pat.nome || 'Patrocinador'}
-                                                    width={90}
-                                                    height={56}
-                                                    unoptimized
-                                                    className="max-h-full max-w-full w-auto h-auto object-contain"
-                                                />
+                        {/* Rodapé com 2 Patrocinadores Amplos em Loop de 4s */}
+                        <div className="border-t-2 border-[#FF9900] bg-[#070709] p-2.5 space-y-1.5">
+                            <div className="grid grid-cols-2 gap-2 w-full h-16 sm:h-[72px]">
+                                {[0, 1].map((offset) => {
+                                    const slotIdx = parPatrocinadorAtivo * 2 + offset;
+                                    const pat = dados?.patrocinadores?.[slotIdx];
+                                    const temPat = pat && pat.ativo && (pat.logo_url || pat.nome);
+                                    return (
+                                        <div
+                                            key={`${parPatrocinadorAtivo}-${offset}`}
+                                            className="bg-[#121318] rounded-xl border border-white/15 flex flex-col items-center justify-center p-2 overflow-hidden text-center animate-fadeIn"
+                                            title={temPat ? (pat.nome || `Patrocinador ${slotIdx + 1}`) : 'Espaço disponível para patrocínio'}
+                                        >
+                                            {temPat ? (
+                                                pat.logo_url ? (
+                                                    <Image
+                                                        src={pat.logo_url}
+                                                        alt={pat.nome || 'Patrocinador'}
+                                                        width={120}
+                                                        height={56}
+                                                        unoptimized
+                                                        className="max-h-full max-w-full w-auto h-auto object-contain"
+                                                    />
+                                                ) : (
+                                                    <span className="text-[11px] font-black text-white uppercase truncate px-1">
+                                                        {pat.nome}
+                                                    </span>
+                                                )
                                             ) : (
-                                                <span className="text-[10px] font-black text-zinc-800 uppercase truncate px-1">
-                                                    {pat.nome}
-                                                </span>
-                                            )
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center leading-tight select-none">
-                                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
-                                                    Anuncie
-                                                </span>
-                                                <span className="text-[10px] font-black text-amber-600">
-                                                    Aqui
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                                <div className="flex flex-col items-center justify-center leading-tight select-none">
+                                                    <span className="text-[9px] font-black text-white uppercase tracking-wider">
+                                                        ANUNCIE
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-[#FF9900]">
+                                                        Aqui!
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex items-center justify-between px-0.5 text-[9px] font-mono text-zinc-500">
+                                <span>Prévia do vídeo 9:16</span>
+                                <span className="flex items-center gap-1">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${parPatrocinadorAtivo === 0 ? 'bg-[#FF9900]' : 'bg-zinc-700'}`} />
+                                    <span className={`w-1.5 h-1.5 rounded-full ${parPatrocinadorAtivo === 1 ? 'bg-[#FF9900]' : 'bg-zinc-700'}`} />
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
