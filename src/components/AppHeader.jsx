@@ -110,41 +110,41 @@ export default function AppHeader({
         : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 font-bold';
     }
     return ativo
-      ? 'bg-zinc-900 text-white font-black border border-zinc-900 shadow-xs'
-      : 'bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 border border-zinc-200 font-bold';
+      ? 'bg-[#111111] text-[#FCFBF9] font-bold border border-[#111111]'
+      : 'bg-[#FCFBF9] hover:bg-[#F7EBD7]/60 text-[#111111] border border-[#EAE8E5] font-semibold';
   };
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full border-b backdrop-blur-xl transition-colors safe-pt ${
+      className={`sticky top-0 z-50 w-full border-b backdrop-blur-xl transition-colors pt-[env(safe-area-inset-top)] ${
         isDark
           ? 'border-zinc-800 bg-zinc-950/85 text-white'
-          : 'border-zinc-200/80 bg-white/85 text-zinc-900 shadow-xs'
+          : 'border-[#EAE8E5] bg-[#FCFBF9]/92 text-[#111111]'
       }`}
     >
       <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 h-16 flex justify-between items-center gap-2 sm:gap-3">
         {/* BRAND */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-2.5 select-none shrink-0">
+        <Link href="/" className="flex items-center gap-2 sm:gap-2.5 select-none shrink-0 group">
           <Image
             src="/logo-fox.jpeg"
             alt="Logo Fox Replay"
             width={36}
             height={36}
             priority
-            className={`h-9 w-9 object-cover rounded-xl border shadow-xs ${
-              isDark ? 'border-zinc-700 bg-zinc-900' : 'border-zinc-200 bg-white'
+            className={`h-9 w-9 object-cover rounded-xl border transition-transform duration-200 group-hover:scale-[1.03] ${
+              isDark ? 'border-zinc-700 bg-zinc-900' : 'border-[#EAE8E5] bg-white'
             }`}
           />
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span
-              className={`text-sm sm:text-lg font-black tracking-widest uppercase leading-none ${
-                isDark ? 'text-white' : 'text-zinc-950'
+              className={`text-sm sm:text-base font-black tracking-[0.14em] uppercase leading-none ${
+                isDark ? 'text-white' : 'text-[#111111]'
               }`}
             >
-              FOX <span className="text-amber-500">REPLAY</span>
+              FOX <span className={isDark ? 'text-amber-500' : 'text-[#FF9900]'}>REPLAY</span>
             </span>
             {badge && (
-              <span className="hidden sm:inline-block text-[9px] font-mono font-bold uppercase bg-amber-500/15 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline-block text-[9px] font-mono font-bold uppercase bg-[#FF9900]/10 text-[#FF9900] border border-[#FF9900]/25 px-2 py-0.5 rounded-full">
                 {badge}
               </span>
             )}
@@ -152,14 +152,15 @@ export default function AppHeader({
         </Link>
 
         {/* SELETOR CONTEXTUAL POR PAPEL */}
-        <nav aria-label="Navegação principal" className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none py-1">
+        <nav aria-label="Navegação principal" className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-1">
           {!usuario && lancesFavoritosCount > 0 && activeRoute === 'home' && (
             <Link
               href="/perfil"
-              className="text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] active:scale-95 cursor-pointer"
+              className="text-xs font-semibold text-[#111111] bg-[#F7EBD7]/70 hover:bg-[#F7EBD7] border border-[#FF9900]/30 px-2.5 sm:px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[38px] active:scale-95 cursor-pointer"
             >
-              <span>★ Meus Lances</span>
-              <span className="bg-amber-500 text-zinc-950 text-[10px] font-black px-1.5 rounded-full">
+              <span className="text-[#FF9900]">★</span>
+              <span className="hidden sm:inline">Meus Lances</span>
+              <span className="bg-[#FF9900] text-[#111111] text-[10px] font-black px-1.5 rounded-full">
                 {lancesFavoritosCount}
               </span>
             </Link>
@@ -236,16 +237,28 @@ export default function AppHeader({
           )}
 
           {sessaoChecada && !usuario && (
-            <Link
-              href="/entrar"
-              className={`text-xs font-bold px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-xs active:scale-95 whitespace-nowrap min-h-[40px] flex items-center justify-center cursor-pointer ${
-                isDark
-                  ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              }`}
-            >
-              Entrar
-            </Link>
+            <>
+              <Link
+                href="/para-arenas"
+                className={`hidden md:flex text-xs font-semibold px-3 py-2 rounded-xl transition-all whitespace-nowrap min-h-[38px] items-center justify-center ${
+                  isDark
+                    ? 'text-zinc-300 hover:text-white hover:bg-zinc-900'
+                    : 'text-[#68666B] hover:text-[#111111] hover:bg-[#F7EBD7]/60'
+                }`}
+              >
+                Para Arenas
+              </Link>
+              <Link
+                href="/entrar"
+                className={`text-xs font-bold px-3.5 sm:px-4 py-2 rounded-xl transition-all active:scale-95 whitespace-nowrap min-h-[38px] flex items-center justify-center cursor-pointer ${
+                  isDark
+                    ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950'
+                    : 'bg-[#111111] hover:bg-[#FF9900] hover:text-[#111111] text-[#FCFBF9]'
+                }`}
+              >
+                Entrar
+              </Link>
+            </>
           )}
 
           {usuario && showLogout && (

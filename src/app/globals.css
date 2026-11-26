@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+:root {
+  --fox-offwhite: #FCFBF9;
+  --fox-black: #111111;
+  --fox-orange: #FF9900;
+  --fox-orange-hover: #E68A00;
+  --fox-gray: #68666B;
+  --fox-grid: #EAE8E5;
+  --fox-beige: #F7EBD7;
+}
+
 @theme inline {
   /* 🦊 PALETA OFICIAL FOX REPLAY */
   --color-gold: #D4AF37;
@@ -127,6 +137,11 @@ body {
   color: transparent;
 }
 
+.text-stroke-fox-orange {
+  -webkit-text-stroke: 1.5px #FF9900;
+  color: transparent;
+}
+
 .text-stroke-white {
   -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.85);
   color: transparent;
@@ -141,11 +156,30 @@ body {
   .text-stroke-gold {
     -webkit-text-stroke: 2px #f59e0b;
   }
+  .text-stroke-fox-orange {
+    -webkit-text-stroke: 2px #FF9900;
+  }
   .text-stroke-white {
     -webkit-text-stroke: 2px rgba(255, 255, 255, 0.85);
   }
   .text-stroke-dark {
     -webkit-text-stroke: 2px #18181b;
+  }
+}
+
+/* Fundo geométrico sutil da landing page */
+.fox-editorial-grid {
+  background-image:
+    linear-gradient(to right, rgba(234, 232, 229, 0.85) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(234, 232, 229, 0.85) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 
