@@ -106,7 +106,7 @@ BEGIN
     END IF;
 
     v_camera_limpa := NULLIF(TRIM(COALESCE(p_camera_url, '')), '');
-    v_token := 'fox_tok_' || encode(gen_random_bytes(24), 'hex');
+    v_token := 'fox_tok_' || replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 
     INSERT INTO dispositivos (quadra_id, token_autenticacao, camera_url)
     VALUES (p_quadra_id, v_token, v_camera_limpa);

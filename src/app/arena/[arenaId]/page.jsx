@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 import ReplayThumbnail from '@/components/ReplayThumbnail';
 
-const TAMANHO_PAGINA = 24;
+const TAMANHO_PAGINA = 12;
 
 // Ícones SVG minimalistas para substituir emojis e remover estética de IA
 function IconMapPin({ className = "w-3.5 h-3.5" }) {
@@ -166,10 +166,30 @@ function ConteudoPortalArena() {
     }, []);
 
     const [dataFiltro, setDataFiltro] = useState(hojeStr);
-    const [periodoFiltro, setPeriodoFiltro] = useState('todos'); // 'todos', 'manha', 'tarde', 'noite', ou hora exata '18', '19', etc.
+    const [periodoFiltro, setPeriodoFiltro] = useState('todos'); // 'todos' ou hora exata '6', '7', ... '23'
     const [toastMensagem, setToastMensagem] = useState(null);
     const [calendarioAberto, setCalendarioAberto] = useState(false);
+    const [menuHoraAberto, setMenuHoraAberto] = useState(false);
+    const [menuQuadraAberto, setMenuQuadraAberto] = useState(false);
     const [dataVisualizacaoMes, setDataVisualizacaoMes] = useState(() => new Date());
+
+    // Faixas horárias de 1 hora (06:00 às 23:00)
+    const faixasHorario = useMemo(() => {
+        return Array.from({ length: 18 }, (_, i) => {
+            const h = i + 6;
+            return {
+                id: String(h),
+                label: `${String(h).padStart(2, '0')}:00 - ${String(h + 1).padStart(2, '0')}:00`,
+                curto: `${String(h).padStart(2, '0')}h - ${String(h + 1).padStart(2, '0')}h`,
+            };
+        });
+    }, []);
+
+    const rotuloHoraSelecionada = useMemo(() => {
+        if (periodoFiltro === 'todos') return 'Horário ▾';
+        const encontrada = faixasHorario.find((f) => f.id === periodoFiltro);
+        return encontrada ? `${encontrada.curto} ▾` : 'Horário ▾';
+    }, [periodoFiltro, faixasHorario]);
 
     // Janela de retenção de 14 dias (hoje + 13 dias passados)
     const dataLimite14Dias = useMemo(() => {
@@ -390,15 +410,37 @@ function ConteudoPortalArena() {
     const replaysFiltrados = replays;
     const temMaisReplays = replays.length < totalReplays;
 
-    // Fecha o calendário com Escape
+    const filtrosContainerRef = useRef(null);
+
+    // Fecha os menus flutuantes com Escape ou clique fora
     useEffect(() => {
-        if (!calendarioAberto) return;
-        const onKeyDown = (e) => {
-            if (e.key === 'Escape') setCalendarioAberto(false);
+        if (!calendarioAberto && !menuHoraAberto && !menuQuadraAberto) return;
+
+        const fecharTudo = () => {
+            setCalendarioAberto(false);
+            setMenuHoraAberto(false);
+            setMenuQuadraAberto(false);
         };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') fecharTudo();
+        };
+
+        const onPointerDown = (e) => {
+            if (filtrosContainerRef.current && !filtrosContainerRef.current.contains(e.target)) {
+                fecharTudo();
+            }
+        };
+
         window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [calendarioAberto]);
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('touchstart', onPointerDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('touchstart', onPointerDown);
+        };
+    }, [calendarioAberto, menuHoraAberto, menuQuadraAberto]);
 
     const filtrosPersonalizadosAtivos =
         quadraAtiva !== 'todas' || periodoFiltro !== 'todos' || dataFiltro !== hojeStr;
@@ -481,132 +523,235 @@ function ConteudoPortalArena() {
             )}
 
             {/* HEADER CLEAN */}
-            <header className="w-full max-w-xl flex justify-between items-center py-3 border-b border-zinc-200 mb-6 shrink-0 relative z-20">
+            <header className="w-full max-w-xl flex justify-between items-center py-2.5 border-b border-zinc-200/80 mb-3.5 shrink-0 relative z-20">
                 <button
                     onClick={() => router.push('/')}
-                    className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 min-h-[40px] cursor-pointer"
+                    className="text-xs font-bold text-zinc-600 hover:text-zinc-950 transition-colors bg-white border border-zinc-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 min-h-[36px] cursor-pointer"
                 >
                     <IconArrowLeft className="w-3.5 h-3.5" />
                     <span>Início</span>
                 </button>
                 <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => router.push('/')}>
-                    <Image src="/logo-fox.jpeg" alt="Logo Fox Replay" width={24} height={24} priority className="h-6 w-6 object-cover rounded-md border border-zinc-200" />
+                    <Image src="/logo-fox.jpeg" alt="Logo Fox Replay" width={22} height={22} priority className="h-5.5 w-5.5 object-cover rounded-md border border-zinc-200" />
                     <h2 className="text-xs font-black tracking-widest text-zinc-900 uppercase">
                         FOX <span className="text-amber-500">REPLAY</span>
                     </h2>
                 </div>
-                <div className="w-[65px] h-[30px] opacity-0 pointer-events-none" />
+                <div className="w-[60px] h-[28px] opacity-0 pointer-events-none" />
             </header>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="w-full max-w-xl relative z-10 space-y-6">
+            <main className="w-full max-w-xl relative z-10 space-y-4">
 
-                {/* HERO CARD DA ARENA COM LOGO FADE E IDENTIFICAÇÃO DA QUADRA */}
-                <div className="relative overflow-hidden bg-white border border-zinc-200/90 rounded-3xl p-5 sm:p-6 shadow-sm">
-                    {/* Fundo com efeito Fade da Logo da Arena */}
-                    <div className="absolute right-[-20px] top-[-20px] bottom-[-20px] w-64 pointer-events-none select-none overflow-hidden opacity-[0.06] flex items-center justify-center">
-                        {logoArena ? (
-                            <Image src={logoArena} alt="" fill unoptimized className="object-contain filter grayscale scale-125" />
-                        ) : (
-                            <span className="text-[130px] font-black text-zinc-900 tracking-tighter">
-                                {iniciaisArena}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Topo do Card: Avatar da Arena + Dados Principais */}
-                    <div className="relative z-10 flex items-start gap-4">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-lg sm:text-xl shrink-0 shadow-md border border-zinc-800 overflow-hidden relative">
+                {/* CARD UNIFICADO DA ARENA, QUADRAS E FILTROS (ULTRA COMPACTO & CLEAN) */}
+                <div
+                    ref={filtrosContainerRef}
+                    className="relative z-30 overflow-visible bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-3.5 shadow-sm space-y-2.5"
+                >
+                    {/* Fundo sutil com fade da logo da Arena (com overflow-hidden próprio para não cortar dropdowns) */}
+                    <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none select-none">
+                        <div className="absolute right-[-15px] top-[-15px] bottom-[-15px] w-48 opacity-[0.04] flex items-center justify-center">
                             {logoArena ? (
-                                <Image src={logoArena} alt={arena?.nome || 'Arena'} fill unoptimized className="object-cover" />
+                                <Image src={logoArena} alt="" fill unoptimized className="object-contain filter grayscale scale-125" />
                             ) : (
-                                <span className="text-amber-400 tracking-wider">{iniciaisArena}</span>
+                                <span className="text-[100px] font-black text-zinc-900 tracking-tighter">
+                                    {iniciaisArena}
+                                </span>
                             )}
                         </div>
+                    </div>
 
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    Complexo Oficial
-                                </span>
-
-                                {arena?.cidade && (
-                                    <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
-                                        <IconMapPin className="w-3 h-3 text-zinc-400" />
-                                        <span>{arena.cidade}{arena.estado ? `, ${arena.estado}` : ''}</span>
-                                    </span>
+                    {/* Topo do Módulo: Avatar + Nome + Cidade | Botão Selecionar Quadra */}
+                    <div className="relative z-20 flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm border border-zinc-800 overflow-hidden relative">
+                                {logoArena ? (
+                                    <Image src={logoArena} alt={arena?.nome || 'Arena'} fill unoptimized className="object-cover" />
+                                ) : (
+                                    <span className="text-amber-400 tracking-wider text-xs">{iniciaisArena}</span>
                                 )}
                             </div>
 
-                            <h1 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight uppercase truncate">
-                                {arena?.nome}
-                            </h1>
-
-                            {/* Identificação Dinâmica da Quadra Ativa */}
-                            <div className="mt-1.5 flex items-center gap-2">
-                                <span className="text-[11px] text-zinc-400 font-semibold">Exibindo:</span>
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                    {quadraSelecionadaObj ? quadraSelecionadaObj.nome : 'Todas as Quadras'}
-                                </span>
+                            <div className="min-w-0">
+                                <h1 className="text-sm sm:text-base font-black text-zinc-900 tracking-tight uppercase truncate">
+                                    {arena?.nome}
+                                </h1>
+                                {arena?.cidade && (
+                                    <div className="flex items-center gap-1 text-[11px] text-zinc-500 font-medium truncate">
+                                        <IconMapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                                        <span className="truncate">{arena.cidade}{arena.estado ? `, ${arena.estado}` : ''}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Seletor de Quadras Integrado */}
-                    <div className="relative z-10 pt-4 mt-4 border-t border-zinc-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                Filtrar por Quadra
-                            </span>
-                            {quadras.length > 0 && (
-                                <span className="text-[10px] text-zinc-400">
-                                    {quadras.length} quadra{quadras.length > 1 ? 's' : ''} no complexo
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                            <button
-                                onClick={() => setQuadraAtiva('todas')}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm active:scale-95 ${
-                                    quadraAtiva === 'todas'
-                                        ? 'bg-zinc-900 text-white shadow-md font-black'
-                                        : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
-                                }`}
-                            >
-                                Todas as Quadras
-                            </button>
-
-                            {quadras.map((q) => (
+                        {/* Botão Único Dinâmico de Selecionar Quadra (com Popover Flutuante) */}
+                        {quadras.length > 0 && (
+                            <div className="relative shrink-0">
                                 <button
-                                    key={q.id}
-                                    onClick={() => setQuadraAtiva(q.id)}
-                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm active:scale-95 flex items-center gap-1.5 ${
-                                        quadraAtiva === q.id
-                                            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-black'
-                                            : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-amber-400 hover:text-zinc-900'
+                                    type="button"
+                                    onClick={() => {
+                                        setMenuQuadraAberto(!menuQuadraAberto);
+                                        setCalendarioAberto(false);
+                                        setMenuHoraAberto(false);
+                                    }}
+                                    className={`h-8 max-w-[155px] sm:max-w-[190px] px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all flex items-center gap-1.5 border cursor-pointer active:scale-95 ${
+                                        quadraAtiva !== 'todas'
+                                            ? 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
+                                            : menuQuadraAberto
+                                            ? 'bg-zinc-100 border-zinc-300 text-zinc-900'
+                                            : 'bg-zinc-50/80 border-zinc-200/80 text-zinc-700 hover:bg-zinc-100 hover:border-zinc-300'
                                     }`}
                                 >
-                                    {q.nome}
+                                    <span className="truncate">
+                                        {quadraSelecionadaObj ? quadraSelecionadaObj.nome : 'Todas as Quadras'}
+                                    </span>
+                                    <span className="shrink-0 text-[10px] opacity-60">▾</span>
                                 </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
 
-                {/* ============================================================ */}
-                {/* 2. BARRA DE FILTROS COMPACTA COM CALENDÁRIO (14 DIAS)        */}
-                {/* ============================================================ */}
-                <div className="bg-white border border-zinc-200 rounded-3xl p-3.5 sm:p-4 shadow-sm space-y-3 relative">
-                    {/* Cabeçalho da barra de filtros */}
-                    <div className="flex justify-between items-center px-0.5 gap-2">
-                        <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider flex items-center gap-1.5">
-                            <IconSliders className="w-3 h-3 text-zinc-400" />
-                            <span>Filtro de Lances</span>
-                        </span>
-                        <div className="flex items-center gap-2">
+                                {/* DROPDOWN FLUTUANTE CLEAN DE QUADRA */}
+                                {menuQuadraAberto && (
+                                    <div className="absolute right-0 top-full mt-1.5 w-60 sm:w-64 p-2.5 bg-white/95 backdrop-blur-md text-zinc-900 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] border border-zinc-200/90 space-y-2 z-50 animate-fadeIn">
+                                        <div className="flex items-center justify-between px-1 pb-1.5 border-b border-zinc-100">
+                                            <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
+                                                Selecionar Quadra
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMenuQuadraAberto(false)}
+                                                aria-label="Fechar seletor de quadra"
+                                                className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-sm font-bold cursor-pointer"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+
+                                        <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto overscroll-contain scrollbar-none">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setQuadraAtiva('todas');
+                                                    setMenuQuadraAberto(false);
+                                                }}
+                                                className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-left flex items-center justify-between cursor-pointer ${
+                                                    quadraAtiva === 'todas'
+                                                        ? 'bg-zinc-900 text-white font-bold'
+                                                        : 'hover:bg-zinc-100 text-zinc-700'
+                                                }`}
+                                            >
+                                                <span className="truncate">Todas as Quadras</span>
+                                                {quadraAtiva === 'todas' && <span className="text-xs">✓</span>}
+                                            </button>
+
+                                            {quadras.map((q) => {
+                                                const selecionada = quadraAtiva === q.id;
+                                                return (
+                                                    <button
+                                                        key={q.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setQuadraAtiva(q.id);
+                                                            setMenuQuadraAberto(false);
+                                                        }}
+                                                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-left flex items-center justify-between cursor-pointer ${
+                                                            selecionada
+                                                                ? 'bg-amber-50 text-amber-900 border border-amber-200 font-bold'
+                                                                : 'hover:bg-zinc-100 text-zinc-700'
+                                                        }`}
+                                                    >
+                                                        <span className="truncate">{q.nome}</span>
+                                                        {selecionada && <span className="text-xs text-amber-600">✓</span>}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Toolbar de Filtros: 4 Botões Sutis na Mesma Linha */}
+                    <div className="relative z-10 pt-2 border-t border-zinc-100">
+                        <div className="flex items-center gap-1.5">
+                            <div className="grid grid-cols-4 gap-1.5 flex-1 min-w-0">
+                                {/* 1. Hoje */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDataFiltro(hojeStr);
+                                        setCalendarioAberto(false);
+                                        setMenuHoraAberto(false);
+                                        setMenuQuadraAberto(false);
+                                    }}
+                                    className={`h-8 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all text-center cursor-pointer active:scale-95 truncate border ${
+                                        dataFiltro === hojeStr
+                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-xs font-bold'
+                                            : 'bg-zinc-50/80 border-zinc-200/80 text-zinc-600 hover:bg-zinc-100 hover:border-zinc-300'
+                                    }`}
+                                >
+                                    Hoje
+                                </button>
+
+                                {/* 2. Outra Data */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCalendarioAberto(!calendarioAberto);
+                                        setMenuHoraAberto(false);
+                                        setMenuQuadraAberto(false);
+                                    }}
+                                    className={`h-8 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all flex items-center justify-center gap-1 border text-center cursor-pointer active:scale-95 min-w-0 ${
+                                        dataFiltro !== hojeStr
+                                            ? 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
+                                            : calendarioAberto
+                                            ? 'bg-zinc-100 border-zinc-300 text-zinc-900'
+                                            : 'bg-zinc-50/80 border-zinc-200/80 text-zinc-600 hover:bg-zinc-100 hover:border-zinc-300'
+                                    }`}
+                                >
+                                    <IconCalendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60 shrink-0 hidden xs:inline" />
+                                    <span className="truncate">{dataFiltro !== hojeStr ? formatarDataAmigavel(dataFiltro) : 'Data'}</span>
+                                </button>
+
+                                {/* 3. Todos */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPeriodoFiltro('todos');
+                                        setMenuHoraAberto(false);
+                                        setCalendarioAberto(false);
+                                        setMenuQuadraAberto(false);
+                                    }}
+                                    className={`h-8 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all text-center cursor-pointer active:scale-95 truncate border ${
+                                        periodoFiltro === 'todos'
+                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-xs font-bold'
+                                            : 'bg-zinc-50/80 border-zinc-200/80 text-zinc-600 hover:bg-zinc-100 hover:border-zinc-300'
+                                    }`}
+                                >
+                                    Todos
+                                </button>
+
+                                {/* 4. Horário */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMenuHoraAberto(!menuHoraAberto);
+                                        setCalendarioAberto(false);
+                                        setMenuQuadraAberto(false);
+                                    }}
+                                    className={`h-8 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all flex items-center justify-center gap-1 border text-center cursor-pointer active:scale-95 min-w-0 ${
+                                        periodoFiltro !== 'todos'
+                                            ? 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
+                                            : menuHoraAberto
+                                            ? 'bg-zinc-100 border-zinc-300 text-zinc-900'
+                                            : 'bg-zinc-50/80 border-zinc-200/80 text-zinc-600 hover:bg-zinc-100 hover:border-zinc-300'
+                                    }`}
+                                >
+                                    <IconClock className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60 shrink-0 hidden xs:inline" />
+                                    <span className="truncate">{rotuloHoraSelecionada}</span>
+                                </button>
+                            </div>
+
                             {filtrosPersonalizadosAtivos && (
                                 <button
                                     type="button"
@@ -615,176 +760,150 @@ function ConteudoPortalArena() {
                                         setPeriodoFiltro('todos');
                                         setDataFiltro(hojeStr);
                                         setCalendarioAberto(false);
+                                        setMenuHoraAberto(false);
+                                        setMenuQuadraAberto(false);
                                     }}
-                                    className="text-[10px] font-bold text-zinc-500 hover:text-amber-700 underline transition-colors"
+                                    title="Limpar todos os filtros"
+                                    className="h-8 w-8 rounded-lg bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 text-zinc-500 hover:text-zinc-900 transition-colors shrink-0 flex items-center justify-center active:scale-95 cursor-pointer"
                                 >
-                                    Limpar filtros
+                                    <IconRefresh className="w-3.5 h-3.5" />
                                 </button>
                             )}
-                            <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
-                                {totalReplays} lance{totalReplays === 1 ? '' : 's'}
-                            </span>
                         </div>
-                    </div>
 
-                    {/* Linha 1: Filtro de Data */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                            onClick={() => {
-                                setDataFiltro(hojeStr);
-                                setCalendarioAberto(false);
-                            }}
-                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center min-h-[42px] cursor-pointer active:scale-95 ${
-                                dataFiltro === hojeStr
-                                    ? 'bg-zinc-900 text-white shadow-sm font-black'
-                                    : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                            }`}
-                        >
-                            Hoje
-                        </button>
+                        {/* DROPDOWN FLUTUANTE CLEAN DE CALENDÁRIO (SOBREPÕE SEM EXPANDIR O CARD) */}
+                        {calendarioAberto && (
+                            <div className="absolute left-0 right-0 sm:left-auto sm:w-80 top-full mt-1.5 p-3.5 bg-white/95 backdrop-blur-md text-zinc-900 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] border border-zinc-200/90 space-y-2.5 z-50 animate-fadeIn">
+                                {/* Topo do calendário: Navegação de Mês */}
+                                <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                                    <span className="text-xs font-bold uppercase text-zinc-800 tracking-wider">
+                                        {mesesNomes[dataVisualizacaoMes.getMonth()]} {dataVisualizacaoMes.getFullYear()}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => mudarMes(-1)}
+                                            aria-label="Mês anterior"
+                                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
+                                        >
+                                            ‹
+                                        </button>
+                                        <button
+                                            onClick={() => mudarMes(1)}
+                                            aria-label="Próximo mês"
+                                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
+                                        >
+                                            ›
+                                        </button>
+                                        <button
+                                            onClick={() => setCalendarioAberto(false)}
+                                            aria-label="Fechar calendário"
+                                            className="ml-1 w-7 h-7 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <button
-                            onClick={() => {
-                                setDataFiltro(ontemStr);
-                                setCalendarioAberto(false);
-                            }}
-                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center min-h-[42px] cursor-pointer active:scale-95 ${
-                                dataFiltro === ontemStr
-                                    ? 'bg-zinc-900 text-white shadow-sm font-black'
-                                    : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                            }`}
-                        >
-                            Ontem
-                        </button>
+                                {/* Aviso de retenção de 14 dias */}
+                                <p className="text-[10px] text-zinc-400 font-medium">
+                                    Retenção em nuvem de 14 dias para gravação e download.
+                                </p>
 
-                        <button
-                            onClick={() => setCalendarioAberto(!calendarioAberto)}
-                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border text-center min-h-[42px] cursor-pointer active:scale-95 ${
-                                dataFiltro !== hojeStr && dataFiltro !== ontemStr
-                                    ? 'bg-amber-500 text-black border-amber-500 shadow-sm font-black'
-                                    : calendarioAberto
-                                    ? 'bg-amber-100 border-amber-300 text-amber-900 font-bold'
-                                    : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                            }`}
-                        >
-                            <IconCalendar className="w-3.5 h-3.5 opacity-70" />
-                            <span>{dataFiltro !== hojeStr && dataFiltro !== ontemStr ? formatarDataAmigavel(dataFiltro) : 'Outra Data'}</span>
-                        </button>
-                    </div>
+                                {/* Dias da semana */}
+                                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-zinc-400 uppercase">
+                                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                                </div>
 
-                    {/* POPUP / MODAL DE CALENDÁRIO COM RETENÇÃO DE 14 DIAS */}
-                    {calendarioAberto && (
-                        <div className="p-3.5 bg-zinc-950 text-white rounded-2xl shadow-2xl border border-zinc-800 space-y-3 animate-fadeIn">
-                            {/* Topo do calendário: Navegação de Mês */}
-                            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                                <span className="text-xs font-bold uppercase text-amber-400 tracking-wider">
-                                    {mesesNomes[dataVisualizacaoMes.getMonth()]} {dataVisualizacaoMes.getFullYear()}
-                                </span>
-                                <div className="flex items-center gap-1.5">
+                                {/* Grid dos dias */}
+                                <div className="grid grid-cols-7 gap-1">
+                                    {diasCalendario.map((item, idx) => {
+                                        if (!item) {
+                                            return <div key={`vazio-${idx}`} className="h-8 w-full" />;
+                                        }
+                                        return (
+                                            <button
+                                                key={item.dataStr}
+                                                disabled={!item.disponivel}
+                                                onClick={() => {
+                                                    setDataFiltro(item.dataStr);
+                                                    setCalendarioAberto(false);
+                                                }}
+                                                className={`h-8 w-full rounded-lg text-xs font-semibold transition-all flex items-center justify-center relative cursor-pointer active:scale-95 ${
+                                                    item.selecionado
+                                                        ? 'bg-zinc-900 text-white font-bold shadow-xs'
+                                                        : item.disponivel
+                                                        ? 'bg-zinc-50 hover:bg-amber-50 hover:text-amber-900 text-zinc-800 border border-zinc-200/70'
+                                                        : 'text-zinc-300 bg-transparent cursor-not-allowed'
+                                                }`}
+                                            >
+                                                <span>{item.numero}</span>
+                                                {item.ehHoje && !item.selecionado && (
+                                                    <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* DROPDOWN FLUTUANTE CLEAN DE HORÁRIO (SOBREPÕE SEM EXPANDIR O CARD) */}
+                        {menuHoraAberto && (
+                            <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 p-3 bg-white/95 backdrop-blur-md text-zinc-900 rounded-2xl shadow-[0_14px_40px_-10px_rgba(0,0,0,0.14)] border border-zinc-200/90 space-y-2.5 z-50 animate-fadeIn">
+                                {/* Topo do Menu: Título e Botão Fechar */}
+                                <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
+                                        <IconClock className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>Filtrar por Horário</span>
+                                    </div>
                                     <button
-                                        onClick={() => mudarMes(-1)}
-                                        aria-label="Mês anterior"
-                                        className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
-                                    >
-                                        ‹
-                                    </button>
-                                    <button
-                                        onClick={() => mudarMes(1)}
-                                        aria-label="Próximo mês"
-                                        className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
-                                    >
-                                        ›
-                                    </button>
-                                    <button
-                                        onClick={() => setCalendarioAberto(false)}
-                                        aria-label="Fechar calendário"
-                                        className="ml-1 w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
+                                        onClick={() => setMenuHoraAberto(false)}
+                                        aria-label="Fechar seletor de horários"
+                                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-sm font-bold active:scale-95 cursor-pointer"
                                     >
                                         ×
                                     </button>
                                 </div>
-                            </div>
 
-                            {/* Aviso de retenção de 14 dias */}
-                            <p className="text-[10px] text-zinc-400 font-medium">
-                                Retenção em nuvem de 14 dias para gravação e download.
-                            </p>
-
-                            {/* Dias da semana */}
-                            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-zinc-500 uppercase">
-                                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-                            </div>
-
-                            {/* Grid dos dias */}
-                            <div className="grid grid-cols-7 gap-1">
-                                {diasCalendario.map((item, idx) => {
-                                    if (!item) {
-                                        return <div key={`vazio-${idx}`} className="h-9 w-full" />;
-                                    }
-                                    return (
-                                        <button
-                                            key={item.dataStr}
-                                            disabled={!item.disponivel}
-                                            onClick={() => {
-                                                setDataFiltro(item.dataStr);
-                                                setCalendarioAberto(false);
-                                            }}
-                                            className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center relative cursor-pointer active:scale-95 ${
-                                                item.selecionado
-                                                    ? 'bg-amber-500 text-black font-black shadow-md'
-                                                    : item.disponivel
-                                                    ? 'bg-zinc-900 hover:bg-amber-500/20 hover:text-amber-300 text-white border border-zinc-800'
-                                                    : 'text-zinc-600 bg-transparent opacity-25 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            <span>{item.numero}</span>
-                                            {item.ehHoje && !item.selecionado && (
-                                                <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Linha 2: Faixa de Horário e Seletor Fino Compactos */}
-                    <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-1.5">
-                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1 py-0.5">
-                            {[
-                                { id: 'todos', label: 'Todos' },
-                                { id: 'manha', label: '06h-12h' },
-                                { id: 'tarde', label: '12h-18h' },
-                                { id: 'noite', label: '18h-00h' },
-                            ].map((turno) => (
+                                {/* Opção Rápida: Todos os horários */}
                                 <button
-                                    key={turno.id}
-                                    onClick={() => setPeriodoFiltro(turno.id)}
-                                    className={`py-2 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all min-h-[38px] cursor-pointer active:scale-95 ${
-                                        periodoFiltro === turno.id
-                                            ? 'bg-amber-500 text-black font-black shadow-sm'
-                                            : 'bg-zinc-50 border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                                    onClick={() => {
+                                        setPeriodoFiltro('todos');
+                                        setMenuHoraAberto(false);
+                                    }}
+                                    className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center cursor-pointer ${
+                                        periodoFiltro === 'todos'
+                                            ? 'bg-zinc-900 text-white font-bold'
+                                            : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border border-zinc-200/70'
                                     }`}
                                 >
-                                    {turno.label}
+                                    <span>Todos os horários do dia</span>
                                 </button>
-                            ))}
-                        </div>
 
-                        {/* Dropdown compacto para hora exata */}
-                        <select
-                            value={['todos', 'manha', 'tarde', 'noite'].includes(periodoFiltro) ? '' : periodoFiltro}
-                            onChange={(e) => setPeriodoFiltro(e.target.value || 'todos')}
-                            aria-label="Filtrar por hora exata"
-                            className="py-2 px-2.5 rounded-xl text-xs font-bold bg-zinc-50 border border-zinc-200 text-zinc-700 focus:outline-none focus:border-amber-500 cursor-pointer min-h-[38px]"
-                        >
-                            <option value="">Hora exata ▾</option>
-                            {Array.from({ length: 18 }, (_, i) => i + 6).map((h) => (
-                                <option key={h} value={String(h)}>
-                                    {String(h).padStart(2, '0')}:00 - {String(h + 1).padStart(2, '0')}:00
-                                </option>
-                            ))}
-                        </select>
+                                {/* Grade de 2 colunas com as faixas de 1 hora com scroll seguro anti-overflow */}
+                                <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-y-auto overscroll-contain pr-0.5 scrollbar-none">
+                                    {faixasHorario.map((faixa) => {
+                                        const selecionado = periodoFiltro === faixa.id;
+                                        return (
+                                            <button
+                                                key={faixa.id}
+                                                onClick={() => {
+                                                    setPeriodoFiltro(faixa.id);
+                                                    setMenuHoraAberto(false);
+                                                }}
+                                                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center text-center cursor-pointer active:scale-95 ${
+                                                    selecionado
+                                                        ? 'bg-amber-50 text-amber-900 border border-amber-300 font-bold'
+                                                        : 'bg-zinc-50/80 hover:bg-zinc-100 text-zinc-700 border border-zinc-200/60'
+                                                }`}
+                                            >
+                                                {faixa.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -853,7 +972,6 @@ function ConteudoPortalArena() {
                                         <div className="w-full aspect-video bg-black relative overflow-hidden group">
                                             <ReplayThumbnail
                                                 thumbnailUrl={replay.thumbnail_url}
-                                                videoUrl={replay.video_url}
                                                 alt={`Lance na ${nomeQuadra} às ${horarioFormatado}`}
                                             />
                                             <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/10 pointer-events-none">
