@@ -25,6 +25,23 @@ function gerarSenhaTemporaria() {
   return `Fox@${corpo}`;
 }
 
+async function listarMapaUsuarios(supabaseAdmin) {
+  const mapa = new Map();
+  let page = 1;
+  const perPage = 200;
+
+  while (page <= 20) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error || !data?.users?.length) break;
+    for (const u of data.users) {
+      mapa.set(u.id, u);
+    }
+    if (data.users.length < perPage) break;
+    page += 1;
+  }
+  return mapa;
+}
+
 async function localizarUsuarioPorEmail(supabaseAdmin, emailAlvo) {
   const alvo = emailAlvo.toLowerCase().trim();
   let page = 1;
@@ -42,6 +59,55 @@ async function localizarUsuarioPorEmail(supabaseAdmin, emailAlvo) {
 }
 
 /**
+ * GET /api/admin/arenas
+ * Retorna todas as arenas com quadras, dispositivos e dados do gestor criador (e-mail e telefone).
+ */
+export async function GET(request) {
+  const { errorResponse } = await exigirSuperAdminApi(request);
+  if (errorResponse) return errorResponse;
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const [resArenas, resCount, mapaUsuarios] = await Promise.all([
+      supabaseAdmin
+        .from('arenas')
+        .select('*, quadras(*, dispositivos(*))')
+        .order('nome', { ascending: true }),
+      supabaseAdmin.from('replays').select('id', { count: 'exact', head: true }),
+      listarMapaUsuarios(supabaseAdmin),
+    ]);
+
+    if (resArenas.error) throw resArenas.error;
+
+    const arenasEnriquecidas = (resArenas.data || []).map((arena) => {
+      const usuario = arena.usuario_id ? mapaUsuarios.get(arena.usuario_id) : null;
+      const meta = usuario?.user_metadata || {};
+      const telefone = meta.telefone || meta.phone || usuario?.phone || '';
+      const nomeGestor = meta.nome_completo || meta.name || '';
+
+      return {
+        ...arena,
+        gestor_email: usuario?.email || null,
+        gestor_nome: nomeGestor || null,
+        gestor_telefone: telefone || null,
+      };
+    });
+
+    return NextResponse.json({
+      arenas: arenasEnriquecidas,
+      totalReplays: resCount.count || 0,
+    });
+  } catch (err) {
+    console.error('Erro em GET /api/admin/arenas:', err);
+    return NextResponse.json(
+      { error: err.message || 'Erro interno ao carregar arenas.' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * POST /api/admin/arenas
  * Cria uma nova Arena Parceira e cria (ou vincula) a conta do Gestor pelo e-mail.
  */
@@ -56,6 +122,7 @@ export async function POST(request) {
     const estado = (body?.estado || 'SP').trim().toUpperCase().slice(0, 2);
     const emailGestor = (body?.email_gestor || '').trim().toLowerCase();
     const nomeGestor = (body?.nome_gestor || '').trim();
+    const telefoneGestor = (body?.telefone_gestor || '').trim();
     const limiteQuadras = Math.max(1, Math.min(100, parseInt(body?.limite_quadras, 10) || 2));
     const planoNome = (body?.plano_nome || `Plano ${limiteQuadras} ${limiteQuadras === 1 ? 'Quadra' : 'Quadras'}`).trim();
 
@@ -80,6 +147,7 @@ export async function POST(request) {
         email_confirm: true,
         user_metadata: {
           nome_completo: nomeGestor || nome,
+          telefone: telefoneGestor || undefined,
           tipo_usuario: 'gestor_arena',
         },
       });
@@ -93,6 +161,16 @@ export async function POST(request) {
 
       usuarioGestor = criado.user;
       contaExistente = false;
+    } else if (telefoneGestor || nomeGestor) {
+      // Atualiza telefone/nome nos metadados do gestor se informados no cadastro da arena
+      const metaAtual = usuarioGestor.user_metadata || {};
+      await supabaseAdmin.auth.admin.updateUserById(usuarioGestor.id, {
+        user_metadata: {
+          ...metaAtual,
+          ...(nomeGestor ? { nome_completo: nomeGestor } : {}),
+          ...(telefoneGestor ? { telefone: telefoneGestor } : {}),
+        },
+      }).catch(() => {});
     }
 
     const payloadArena = {
@@ -134,6 +212,7 @@ export async function POST(request) {
         gestor: {
           id: usuarioGestor.id,
           email: emailGestor,
+          telefone: telefoneGestor || null,
           contaExistente,
           senhaTemporaria,
         },
@@ -151,7 +230,7 @@ export async function POST(request) {
 
 /**
  * PATCH /api/admin/arenas
- * Edita nome, cidade/UF, plano, cota de quadras ou status (ativa/pausada) de uma arena.
+ * Edita nome, cidade/UF, plano, cota de quadras, status ou telefone do gestor de uma arena.
  */
 export async function PATCH(request) {
   const { errorResponse } = await exigirSuperAdminApi(request);
@@ -187,23 +266,54 @@ export async function PATCH(request) {
       atualizacao.ativa = body.ativa;
     }
 
-    if (Object.keys(atualizacao).length === 0) {
+    const temTelefoneGestor = typeof body.telefone_gestor === 'string';
+
+    if (Object.keys(atualizacao).length === 0 && !temTelefoneGestor) {
       return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin
-      .from('arenas')
-      .update(atualizacao)
-      .eq('id', id)
-      .select('*')
-      .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    let arenaAtualizada = null;
+    if (Object.keys(atualizacao).length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('arenas')
+        .update(atualizacao)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      arenaAtualizada = data;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('arenas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      arenaAtualizada = data;
     }
 
-    return NextResponse.json({ arena: data });
+    // Atualiza telefone nos metadados do gestor, se enviado
+    if (temTelefoneGestor && arenaAtualizada?.usuario_id) {
+      const { data: userRes } = await supabaseAdmin.auth.admin.getUserById(arenaAtualizada.usuario_id);
+      if (userRes?.user) {
+        const metaAtual = userRes.user.user_metadata || {};
+        await supabaseAdmin.auth.admin.updateUserById(arenaAtualizada.usuario_id, {
+          user_metadata: {
+            ...metaAtual,
+            telefone: body.telefone_gestor.trim(),
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ arena: arenaAtualizada });
   } catch (err) {
     console.error('Erro em PATCH /api/admin/arenas:', err);
     return NextResponse.json({ error: 'Erro interno ao atualizar arena.' }, { status: 500 });

@@ -32,6 +32,30 @@ const IconX = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const IconMail = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconPhone = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+  </svg>
+);
+
+const IconChevronDown = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+function limparTelefoneWhatsapp(tel) {
+  const digitos = String(tel || '').replace(/\D/g, '');
+  if (!digitos) return '';
+  return digitos.startsWith('55') ? digitos : `55${digitos}`;
+}
+
 function formatarTempoRelativo(isoDate) {
   if (!isoDate) return 'Sem heartbeat';
   const diffSec = Math.max(0, Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000));
@@ -61,6 +85,10 @@ export default function SuperAdminNOCPage() {
   const [arenas, setArenas] = useState([]);
   const [totalReplays, setTotalReplays] = useState(0);
   const [buscaArena, setBuscaArena] = useState('');
+  const [filtroSaude, setFiltroSaude] = useState('todas'); // 'todas' | 'alertas' | 'online' | 'pausadas'
+  const [arenasExpandidas, setArenasExpandidas] = useState({});
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState('');
   const [toast, setToast] = useState(null);
 
   // Modal Nova Arena + Gestor
@@ -73,6 +101,7 @@ export default function SuperAdminNOCPage() {
     plano_nome: 'Plano 2 Quadras',
     nome_gestor: '',
     email_gestor: '',
+    telefone_gestor: '',
   });
   const [criandoArena, setCriandoArena] = useState(false);
   const [acessoGerado, setAcessoGerado] = useState(null);
@@ -85,6 +114,7 @@ export default function SuperAdminNOCPage() {
     estado: '',
     plano_nome: '',
     limite_quadras: 2,
+    telefone_gestor: '',
     ativa: true,
   });
   const [salvandoArena, setSalvandoArena] = useState(false);
@@ -123,23 +153,46 @@ export default function SuperAdminNOCPage() {
   const recarregarDados = useCallback(async () => {
     setAtualizando(true);
     try {
-      const [resArenas, resCount] = await Promise.all([
-        supabase
-          .from('arenas')
-          .select('*, quadras(*, dispositivos(*))')
-          .order('nome', { ascending: true }),
-        supabase.from('replays').select('id', { count: 'exact', head: true }),
-      ]);
+      const token = await getAccessToken();
+      const res = await fetch('/api/admin/arenas', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) {
+        throw new Error(json?.error || 'Erro ao carregar arenas.');
+      }
 
-      if (resArenas.error) throw resArenas.error;
-      setArenas(resArenas.data || []);
-      setTotalReplays(resCount.count || 0);
+      const listaArenas = json.arenas || [];
+      setArenas(listaArenas);
+      setTotalReplays(json.totalReplays || 0);
+      setUltimaAtualizacao(new Date().toLocaleTimeString('pt-BR'));
+
+      // Se houver até 4 arenas e o mapa ainda estiver vazio, expande por padrão para conveniência
+      setArenasExpandidas((prev) => {
+        if (Object.keys(prev).length > 0 || listaArenas.length > 4) return prev;
+        const inicial = {};
+        listaArenas.forEach((a) => {
+          inicial[a.id] = true;
+        });
+        return inicial;
+      });
     } catch (e) {
       console.error('Erro ao carregar NOC:', e);
     } finally {
       setAtualizando(false);
     }
   }, []);
+
+  // Auto-refresh opcional (30s) para monitoramento em tela/TV
+  useEffect(() => {
+    if (!autoRefresh || !autorizado) return;
+    const interval = setInterval(() => {
+      recarregarDados();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, autorizado, recarregarDados]);
 
   // Fechar modais com Escape
   useEffect(() => {
@@ -207,6 +260,7 @@ export default function SuperAdminNOCPage() {
         plano_nome: 'Plano 2 Quadras',
         nome_gestor: '',
         email_gestor: '',
+        telefone_gestor: '',
       });
       await recarregarDados();
       exibirToast('Nova Arena Parceira provisionada com sucesso!');
@@ -245,6 +299,7 @@ export default function SuperAdminNOCPage() {
       estado: arena.estado || 'SP',
       plano_nome: arena.plano_nome || 'Plano Padrão',
       limite_quadras: arena.limite_quadras || 2,
+      telefone_gestor: arena.gestor_telefone || '',
       ativa: arena.ativa !== false,
     });
   };
@@ -424,16 +479,97 @@ export default function SuperAdminNOCPage() {
     }
   };
 
-  // Métricas NOC
+  const analisarSaudeArena = useCallback((arena) => {
+    const quadras = arena.quadras || [];
+    let online = 0;
+    let offline = 0;
+    let cameraOff = 0;
+    let semTotem = 0;
+    let filaOffline = 0;
+
+    quadras.forEach((q) => {
+      const disp = q.dispositivos?.[0];
+      if (!disp) {
+        semTotem += 1;
+        return;
+      }
+      if (disp.fila_offline_qtd > 0) filaOffline += disp.fila_offline_qtd;
+      const saude = avaliarSaudeTotem(disp);
+      if (saude.status === 'online') online += 1;
+      else if (saude.status === 'camera_off') cameraOff += 1;
+      else offline += 1;
+    });
+
+    const temAlerta = arena.ativa !== false && (offline > 0 || cameraOff > 0 || filaOffline > 0);
+    return {
+      totalQuadras: quadras.length,
+      online,
+      offline,
+      cameraOff,
+      semTotem,
+      filaOffline,
+      temAlerta,
+    };
+  }, []);
+
+  // Métricas NOC + Filtros Inteligentes
+  const contagensFiltro = useMemo(() => {
+    let alertas = 0;
+    let online = 0;
+    let pausadas = 0;
+    arenas.forEach((a) => {
+      if (a.ativa === false) {
+        pausadas += 1;
+        return;
+      }
+      const s = analisarSaudeArena(a);
+      if (s.temAlerta) alertas += 1;
+      else if (s.totalQuadras > 0 && s.online === s.totalQuadras) online += 1;
+    });
+    return { todas: arenas.length, alertas, online, pausadas };
+  }, [arenas, analisarSaudeArena]);
+
   const arenasFiltradas = useMemo(() => {
     const t = buscaArena.trim().toLowerCase();
-    if (!t) return arenas;
-    return arenas.filter(
-      (a) =>
+    return arenas.filter((a) => {
+      if (filtroSaude === 'pausadas' && a.ativa !== false) return false;
+      if (filtroSaude === 'alertas') {
+        if (a.ativa === false || !analisarSaudeArena(a).temAlerta) return false;
+      }
+      if (filtroSaude === 'online') {
+        const s = analisarSaudeArena(a);
+        if (a.ativa === false || s.totalQuadras === 0 || s.online !== s.totalQuadras) return false;
+      }
+
+      if (!t) return true;
+      return (
         (a.nome || '').toLowerCase().includes(t) ||
-        (a.cidade || '').toLowerCase().includes(t)
-    );
-  }, [arenas, buscaArena]);
+        (a.cidade || '').toLowerCase().includes(t) ||
+        (a.gestor_email || '').toLowerCase().includes(t) ||
+        (a.gestor_telefone || '').toLowerCase().includes(t) ||
+        (a.gestor_nome || '').toLowerCase().includes(t)
+      );
+    });
+  }, [arenas, buscaArena, filtroSaude, analisarSaudeArena]);
+
+  const todasExpandidas =
+    arenasFiltradas.length > 0 && arenasFiltradas.every((a) => Boolean(arenasExpandidas[a.id]));
+
+  const alternarExpandirArena = (id) => {
+    setArenasExpandidas((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const alternarTodasArenas = () => {
+    if (todasExpandidas) {
+      setArenasExpandidas({});
+    } else {
+      const novo = {};
+      arenasFiltradas.forEach((a) => {
+        novo[a.id] = true;
+      });
+      setArenasExpandidas(novo);
+    }
+  };
 
   const resumoGlobal = useMemo(() => {
     let quadrasTotal = 0;
@@ -520,11 +656,24 @@ export default function SuperAdminNOCPage() {
             </button>
             <button
               type="button"
+              onClick={() => setAutoRefresh((prev) => !prev)}
+              className={`text-xs font-bold px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                autoRefresh
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                  : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-400'
+              }`}
+              title="Atualizar dados automaticamente a cada 30 segundos"
+            >
+              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+              <span>Auto 30s</span>
+            </button>
+            <button
+              type="button"
               disabled={atualizando}
               onClick={recarregarDados}
               className="text-xs font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer disabled:opacity-50"
             >
-              {atualizando ? 'Atualizando...' : '↻ Atualizar'}
+              {atualizando ? 'Atualizando...' : `↻ Atualizar${ultimaAtualizacao ? ` (${ultimaAtualizacao})` : ''}`}
             </button>
           </div>
         </div>
@@ -569,21 +718,16 @@ export default function SuperAdminNOCPage() {
           </div>
         </div>
 
-        {/* CENTRAL LGPD / MODERAÇÃO GLOBAL POR ID */}
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                <IconShield className="w-4 h-4" />
+        {/* CENTRAL LGPD COMPACTA */}
+        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl px-4 py-3 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                <IconShield className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-wider text-white">
-                  Central LGPD &bull; Moderação Global de Replays
-                </h2>
-                <p className="text-[11px] text-zinc-400">
-                  Cole o UUID do replay enviado pelo atleta no WhatsApp para localizar e remover imediatamente do banco + Storage.
-                </p>
-              </div>
+              <span className="text-xs font-black uppercase tracking-wider text-zinc-200 truncate">
+                Central LGPD &bull; Moderação por UUID
+              </span>
             </div>
 
             <form onSubmit={handleBuscarReplayLgpd} className="flex items-center gap-2 w-full sm:w-auto">
@@ -592,12 +736,12 @@ export default function SuperAdminNOCPage() {
                 value={lgpdReplayId}
                 onChange={(e) => setLgpdReplayId(e.target.value)}
                 placeholder="Cole o ID do replay (UUID)..."
-                className="flex-1 sm:w-72 px-3.5 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="flex-1 sm:w-64 px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
               />
               <button
                 type="submit"
                 disabled={lgpdBuscando}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer disabled:opacity-50 shrink-0"
+                className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer disabled:opacity-50 shrink-0"
               >
                 {lgpdBuscando ? 'Buscando...' : 'Localizar'}
               </button>
@@ -640,43 +784,96 @@ export default function SuperAdminNOCPage() {
 
         {/* LISTA DE ARENAS, PLANOS E MONITORAMENTO DE HARDWARE */}
         <div className="bg-zinc-900/70 border border-zinc-800 rounded-3xl overflow-hidden shadow-xl">
-          <div className="p-5 sm:p-6 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                <IconBuilding className="w-4 h-4 text-amber-500" />
-                <span>Complexos Esportivos &bull; Planos e Saúde de Hardware</span>
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Gerencie cotas, pause/reative operações, acesse o dashboard do cliente e controle os totens.
-              </p>
+          <div className="p-5 sm:p-6 border-b border-zinc-800 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <IconBuilding className="w-4 h-4 text-amber-500" />
+                  <span>Complexos Esportivos &bull; Planos e Saúde de Hardware</span>
+                </h2>
+                <p className="text-xs text-zinc-400">
+                  Contato direto com os gestores, saúde dos totens e gestão de cotas.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={buscaArena}
+                  onChange={(e) => setBuscaArena(e.target.value)}
+                  placeholder="Buscar arena, cidade, e-mail ou telefone..."
+                  className="w-full sm:w-72 px-3.5 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                />
+                {arenasFiltradas.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={alternarTodasArenas}
+                    className="px-3 py-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-300 whitespace-nowrap cursor-pointer shrink-0"
+                  >
+                    {todasExpandidas ? 'Recolher' : 'Expandir todas'}
+                  </button>
+                )}
+              </div>
             </div>
 
-            <input
-              type="text"
-              value={buscaArena}
-              onChange={(e) => setBuscaArena(e.target.value)}
-              placeholder="Filtrar arena ou cidade..."
-              className="w-full sm:w-64 px-3.5 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
-            />
+            {/* CHIPS DE FILTRO RÁPIDO DE SAÚDE */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+              {[
+                { id: 'todas', label: `Todas (${contagensFiltro.todas})`, corAtiva: 'bg-zinc-100 text-zinc-950 border-zinc-100' },
+                { id: 'alertas', label: `Com Alertas (${contagensFiltro.alertas})`, corAtiva: 'bg-red-500/20 text-red-300 border-red-500/40' },
+                { id: 'online', label: `100% Online (${contagensFiltro.online})`, corAtiva: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+                { id: 'pausadas', label: `Pausadas (${contagensFiltro.pausadas})`, corAtiva: 'bg-zinc-700 text-white border-zinc-600' },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setFiltroSaude(chip.id)}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border whitespace-nowrap transition-all cursor-pointer ${
+                    filtroSaude === chip.id
+                      ? chip.corAtiva
+                      : 'bg-zinc-950/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="divide-y divide-zinc-800/80">
             {arenasFiltradas.length === 0 ? (
               <div className="p-12 text-center text-xs text-zinc-500">
-                Nenhuma arena encontrada. Clique em &quot;+ Nova Arena Parceira&quot; para cadastrar.
+                Nenhuma arena encontrada com o filtro selecionado.
               </div>
             ) : (
               arenasFiltradas.map((arena) => {
                 const limiteQuadras = arena.limite_quadras || 2;
                 const totalQuadrasArena = arena.quadras?.length || 0;
                 const pausada = arena.ativa === false;
+                const saudeArena = analisarSaudeArena(arena);
+                const expandida = Boolean(arenasExpandidas[arena.id]);
+                const whatsappLimpo = limparTelefoneWhatsapp(arena.gestor_telefone);
 
                 return (
-                  <div key={arena.id} className="p-5 sm:p-6 space-y-4 hover:bg-zinc-900/40 transition-colors">
+                  <div key={arena.id} className="p-4 sm:p-5 space-y-3 hover:bg-zinc-900/40 transition-colors">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-black text-white uppercase">{arena.nome}</h3>
+                          <button
+                            type="button"
+                            onClick={() => alternarExpandirArena(arena.id)}
+                            className="flex items-center gap-2 text-left group cursor-pointer"
+                          >
+                            <IconChevronDown
+                              className={`w-4 h-4 text-zinc-500 group-hover:text-amber-400 transition-transform duration-200 shrink-0 ${
+                                expandida ? 'rotate-180 text-amber-400' : ''
+                              }`}
+                            />
+                            <h3 className="text-base font-black text-white uppercase group-hover:text-amber-400 transition-colors">
+                              {arena.nome}
+                            </h3>
+                          </button>
+
                           {pausada ? (
                             <span className="text-[10px] font-mono font-bold uppercase bg-red-500/15 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-md">
                               PAUSADA
@@ -695,24 +892,101 @@ export default function SuperAdminNOCPage() {
                           <span className="text-[10px] font-mono text-zinc-400 bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800">
                             {arena.plano_nome || 'Plano Padrão'}
                           </span>
+
+                          {/* Resumo de saúde no cabeçalho */}
+                          {!pausada && totalQuadrasArena > 0 && (
+                            <span
+                              className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                saudeArena.temAlerta
+                                  ? 'bg-red-500/10 text-red-300 border-red-500/30'
+                                  : saudeArena.online > 0
+                                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                                  : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                              }`}
+                            >
+                              {saudeArena.online}/{totalQuadrasArena} Online
+                              {saudeArena.cameraOff > 0 ? ` • ${saudeArena.cameraOff} Câm Off` : ''}
+                              {saudeArena.offline > 0 ? ` • ${saudeArena.offline} Off` : ''}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-[10px] text-zinc-500 font-mono">ID: {arena.id}</p>
+
+                        {/* DADOS DE CONTATO DO GESTOR CRIADOR (E-MAIL + TELEFONE / WHATSAPP) */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-[11px]">
+                          {arena.gestor_nome && (
+                            <span className="text-zinc-400 font-semibold">
+                              Gestor: <span className="text-zinc-200">{arena.gestor_nome}</span>
+                            </span>
+                          )}
+
+                          {arena.gestor_email ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(arena.gestor_email);
+                                exibirToast(`E-mail copiado: ${arena.gestor_email}`);
+                              }}
+                              title="Clique para copiar o e-mail do gestor"
+                              className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-amber-400 transition-colors cursor-pointer bg-zinc-950/70 border border-zinc-800/80 px-2 py-0.5 rounded-lg"
+                            >
+                              <IconMail className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span className="font-mono text-[10px]">{arena.gestor_email}</span>
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-zinc-500 font-mono">Sem e-mail vinculado</span>
+                          )}
+
+                          {arena.gestor_telefone ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(arena.gestor_telefone);
+                                  exibirToast(`Telefone copiado: ${arena.gestor_telefone}`);
+                                }}
+                                title="Clique para copiar o telefone"
+                                className="inline-flex items-center gap-1 text-zinc-300 hover:text-white bg-zinc-950/70 border border-zinc-800/80 px-2 py-0.5 rounded-lg cursor-pointer"
+                              >
+                                <IconPhone className="w-3 h-3 text-zinc-400 shrink-0" />
+                                <span className="font-mono text-[10px]">{arena.gestor_telefone}</span>
+                              </button>
+                              {whatsappLimpo && (
+                                <a
+                                  href={`https://api.whatsapp.com/send?phone=${whatsappLimpo}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-lg transition-colors"
+                                >
+                                  WhatsApp ↗
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => abrirEditarArena(arena)}
+                              className="text-[10px] text-zinc-500 hover:text-amber-400 underline cursor-pointer"
+                            >
+                              + Adicionar telefone
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0 pl-6 lg:pl-0">
                         <button
                           type="button"
                           onClick={() => router.push(`/dashboard?arena=${arena.id}`)}
                           className="text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
                         >
-                          Abrir Dashboard ➔
+                          Dashboard ➔
                         </button>
                         <button
                           type="button"
                           onClick={() => abrirEditarArena(arena)}
                           className="text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
                         >
-                          Editar / Plano
+                          Editar
                         </button>
                         <button
                           type="button"
@@ -730,134 +1004,137 @@ export default function SuperAdminNOCPage() {
                           onClick={() => router.push(`/arena/${arena.id}`)}
                           className="text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
                         >
-                          Feed Público
+                          Feed
                         </button>
                       </div>
                     </div>
 
-                    {/* QUADRAS & DISPOSITIVOS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                      {(arena.quadras || []).length === 0 ? (
-                        <div className="col-span-full p-4 rounded-2xl bg-zinc-950/40 border border-dashed border-zinc-800 text-center text-xs text-zinc-500">
-                          Nenhuma quadra cadastrada ainda. Use &quot;Abrir Dashboard&quot; ou aguarde o gestor nomear as quadras.
-                        </div>
-                      ) : (
-                        (arena.quadras || []).map((quadra) => {
-                          const disp = quadra.dispositivos?.[0] || null;
-                          const saude = avaliarSaudeTotem(disp);
+                    {/* QUADRAS & DISPOSITIVOS (ACORDEÃO EXPANSÍVEL) */}
+                    {expandida && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 pl-0 sm:pl-6 animate-fadeIn">
+                        {(arena.quadras || []).length === 0 ? (
+                          <div className="col-span-full p-4 rounded-2xl bg-zinc-950/40 border border-dashed border-zinc-800 text-center text-xs text-zinc-500">
+                            Nenhuma quadra cadastrada ainda. Use &quot;Dashboard&quot; ou aguarde o gestor nomear as quadras.
+                          </div>
+                        ) : (
+                          (arena.quadras || []).map((quadra) => {
+                            const disp = quadra.dispositivos?.[0] || null;
+                            const saude = avaliarSaudeTotem(disp);
+                            const tokenCurto = disp?.token_autenticacao
+                              ? `...${disp.token_autenticacao.slice(-8)}`
+                              : '';
 
-                          return (
-                            <div
-                              key={quadra.id}
-                              className={`p-4 rounded-2xl border space-y-3 ${
-                                saude.status === 'online'
-                                  ? 'bg-zinc-950/80 border-emerald-500/25'
-                                  : saude.status === 'camera_off'
-                                  ? 'bg-zinc-950/80 border-red-500/35'
-                                  : 'bg-zinc-950/40 border-zinc-800'
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <div className="min-w-0">
-                                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                                    Quadra
-                                  </span>
-                                  <h4 className="text-xs font-black text-white uppercase truncate">
-                                    {quadra.nome}
-                                  </h4>
-                                </div>
+                            return (
+                              <div
+                                key={quadra.id}
+                                className={`p-3.5 rounded-2xl border space-y-2.5 ${
+                                  saude.status === 'online'
+                                    ? 'bg-zinc-950/80 border-emerald-500/25'
+                                    : saude.status === 'camera_off'
+                                    ? 'bg-zinc-950/80 border-red-500/35'
+                                    : 'bg-zinc-950/40 border-zinc-800'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="min-w-0">
+                                    <span className="text-[9px] font-mono uppercase text-zinc-500 block">
+                                      Quadra
+                                    </span>
+                                    <h4 className="text-xs font-black text-white uppercase truncate">
+                                      {quadra.nome}
+                                    </h4>
+                                  </div>
 
-                                <span
-                                  className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
-                                    saude.status === 'online'
-                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                      : saude.status === 'camera_off'
-                                      ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                                      : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                  }`}
-                                >
                                   <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
+                                    className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
                                       saude.status === 'online'
-                                        ? 'bg-emerald-400 animate-pulse'
+                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                                         : saude.status === 'camera_off'
-                                        ? 'bg-red-400 animate-ping'
-                                        : 'bg-amber-400'
+                                        ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                                     }`}
-                                  />
-                                  <span>{saude.label}</span>
-                                </span>
-                              </div>
-
-                              {disp ? (
-                                <div className="space-y-2">
-                                  <div className="text-[10px] font-mono text-zinc-400 space-y-1">
-                                    <p className="truncate">
-                                      Token: <code className="text-zinc-300">{disp.token_autenticacao}</code>
-                                    </p>
-                                    <p className="truncate">
-                                      RTSP: <span className="text-zinc-300">{disp.camera_url || 'Padrão local'}</span>
-                                    </p>
-                                    <p className="text-zinc-500">
-                                      Ping: {formatarTempoRelativo(disp.ultimo_heartbeat)}
-                                      {disp.fila_offline_qtd > 0 && (
-                                        <span className="text-amber-400 font-bold">
-                                          {' '}
-                                          &bull; {disp.fila_offline_qtd} na fila offline
-                                        </span>
-                                      )}
-                                    </p>
-                                  </div>
-
-                                  <div className="flex flex-wrap gap-1.5 pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        navigator.clipboard?.writeText(disp.token_autenticacao);
-                                        exibirToast('Token copiado!');
-                                      }}
-                                      className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1 rounded-lg cursor-pointer"
-                                    >
-                                      Copiar Token
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setDispEditando(disp);
-                                        setEditCameraUrl(disp.camera_url || '');
-                                      }}
-                                      className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-400 px-2.5 py-1 rounded-lg cursor-pointer"
-                                    >
-                                      Editar RTSP
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDesvincularDispositivo(disp)}
-                                      className="text-[10px] font-bold bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-lg cursor-pointer"
-                                    >
-                                      Desvincular
-                                    </button>
-                                  </div>
+                                  >
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        saude.status === 'online'
+                                          ? 'bg-emerald-400 animate-pulse'
+                                          : saude.status === 'camera_off'
+                                          ? 'bg-red-400 animate-ping'
+                                          : 'bg-amber-400'
+                                      }`}
+                                    />
+                                    <span>{saude.label}</span>
+                                  </span>
                                 </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setArenaSelModal(arena.id);
-                                    setQuadraSelModal(quadra.id);
-                                    setModalPareamento(true);
-                                  }}
-                                  className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                >
-                                  <IconRadio className="w-3 h-3" />
-                                  <span>Vincular Totem</span>
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+
+                                {disp ? (
+                                  <div className="space-y-2">
+                                    <div className="text-[10px] font-mono text-zinc-400 space-y-1">
+                                      <p className="truncate">
+                                        RTSP: <span className="text-zinc-200">{disp.camera_url || 'Padrão local'}</span>
+                                      </p>
+                                      <p className="text-zinc-500">
+                                        Ping: <span className="text-zinc-300">{formatarTempoRelativo(disp.ultimo_heartbeat)}</span>
+                                        {disp.fila_offline_qtd > 0 && (
+                                          <span className="text-amber-400 font-bold">
+                                            {' '}
+                                            &bull; {disp.fila_offline_qtd} na fila offline
+                                          </span>
+                                        )}
+                                      </p>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard?.writeText(disp.token_autenticacao);
+                                          exibirToast('Token copiado!');
+                                        }}
+                                        title={disp.token_autenticacao}
+                                        className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1 rounded-lg cursor-pointer"
+                                      >
+                                        Token ({tokenCurto})
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setDispEditando(disp);
+                                          setEditCameraUrl(disp.camera_url || '');
+                                        }}
+                                        className="text-[10px] font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-400 px-2.5 py-1 rounded-lg cursor-pointer"
+                                      >
+                                        Editar RTSP
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDesvincularDispositivo(disp)}
+                                        className="text-[10px] font-bold bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-lg cursor-pointer"
+                                      >
+                                        Desvincular
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setArenaSelModal(arena.id);
+                                      setQuadraSelModal(quadra.id);
+                                      setModalPareamento(true);
+                                    }}
+                                    className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                  >
+                                    <IconRadio className="w-3 h-3" />
+                                    <span>Vincular Totem</span>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -1049,6 +1326,13 @@ export default function SuperAdminNOCPage() {
                     placeholder="gestor@arena.com"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
                   />
+                  <input
+                    type="tel"
+                    value={novaArenaForm.telefone_gestor}
+                    onChange={(e) => setNovaArenaForm((p) => ({ ...p, telefone_gestor: e.target.value }))}
+                    placeholder="Telefone / WhatsApp do gestor (ex: (11) 99999-9999)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
                 </div>
 
                 <button
@@ -1150,7 +1434,20 @@ export default function SuperAdminNOCPage() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
+                    Telefone / WhatsApp do Gestor
+                  </label>
+                  <input
+                    type="tel"
+                    value={editArenaForm.telefone_gestor}
+                    onChange={(e) => setEditArenaForm((p) => ({ ...p, telefone_gestor: e.target.value }))}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={editArenaForm.ativa}
