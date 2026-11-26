@@ -90,36 +90,36 @@ sudo chown -R "$TARGET_USER:$TARGET_USER" "$AUTOSTART_DIR"
 sudo systemctl daemon-reload
 sudo systemctl enable foxreplay.service
 
-# 10. Rede isolada eth0 para câmera IP direta (Plug & Play: Pi = 192.168.100.1, Câmera = 192.168.100.64)
+# 10. Rede isolada eth0 para câmera IP direta (Plug & Play: Pi = 192.168.4.1, Câmera = 192.168.4.137)
 # Configurado SEM gateway padrão no eth0 para manter a internet 100% no Wi-Fi (wlan0)
-echo "🌐 Configurando rede isolada eth0 (192.168.100.1/24 sem gateway) para câmera direta..."
+echo "🌐 Configurando rede isolada eth0 (192.168.4.1/24 sem gateway) para câmera direta..."
 if command -v nmcli >/dev/null 2>&1 && systemctl is-active --quiet NetworkManager; then
   sudo nmcli connection delete "fox-camera-eth0" >/dev/null 2>&1 || true
   sudo nmcli connection add type ethernet ifname eth0 con-name "fox-camera-eth0" \
     ipv4.method manual \
-    ipv4.addresses 192.168.100.1/24 \
+    ipv4.addresses 192.168.4.1/24 \
     ipv4.never-default yes \
     connection.autoconnect yes \
     connection.autoconnect-priority 100 >/dev/null
   sudo nmcli connection up "fox-camera-eth0" >/dev/null 2>&1 || true
-  echo "✅ NetworkManager (nmcli) configurado: eth0 = 192.168.100.1/24 (sem gateway)."
+  echo "✅ NetworkManager (nmcli) configurado: eth0 = 192.168.4.1/24 (sem gateway)."
 elif [ -f /etc/dhcpcd.conf ]; then
   if ! grep -q "fox-camera-eth0" /etc/dhcpcd.conf; then
     cat <<EOF | sudo tee -a /etc/dhcpcd.conf >/dev/null
 
 # fox-camera-eth0 (câmera direta sem gateway para não conflitar com wlan0)
 interface eth0
-static ip_address=192.168.100.1/24
+static ip_address=192.168.4.1/24
 nogateway
 EOF
     sudo systemctl restart dhcpcd >/dev/null 2>&1 || true
   fi
-  echo "✅ dhcpcd configurado: eth0 = 192.168.100.1/24 (nogateway)."
+  echo "✅ dhcpcd configurado: eth0 = 192.168.4.1/24 (nogateway)."
 else
-  echo "⚠️ Nem NetworkManager nem dhcpcd encontrados; configure eth0 manualmente para 192.168.100.1/24 sem gateway."
+  echo "⚠️ Nem NetworkManager nem dhcpcd encontrados; configure eth0 manualmente para 192.168.4.1/24 sem gateway."
 fi
 
 echo "✅ Instalação v2 concluída com sucesso para o usuário '$TARGET_USER'!"
-echo "👉 Câmera IP padrão esperada no cabo eth0: 192.168.100.64 (gateway 192.168.100.1)"
+echo "👉 Câmera IP padrão esperada no cabo eth0: 192.168.4.137 (gateway 192.168.4.1)"
 echo "👉 Inicie agora com: sudo systemctl restart foxreplay"
 echo "👉 Acompanhe logs com: sudo journalctl -u foxreplay -f"
