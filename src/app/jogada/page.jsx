@@ -291,7 +291,7 @@ function ConteudoJogada() {
                 videoUrl: dados.videoUrl,
                 nomeArena: dados.nomeArena,
                 arenaLogoUrl: dados.logoArena,
-                foxLogoUrl: '/logo-fox.jpeg',
+                foxLogoUrl: '/images/logo-fox-escudo.jpg',
                 patrocinadores: dados.patrocinadores,
                 nomeArquivo,
                 onProgresso: (pct) => setProgressoDownload(pct),
@@ -506,11 +506,11 @@ function ConteudoJogada() {
                         {/* 1. Faixa de Logos (136..272px — abaixo do cabeçalho do Stories) */}
                         <div className="h-[10.6%] shrink-0 px-3 flex items-center justify-between bg-[#070709]">
                             <Image
-                                src="/logo-fox.jpeg"
+                                src="/images/logo-fox-escudo.jpg"
                                 alt="Fox Replay"
                                 width={64}
                                 height={64}
-                                className="h-[90%] w-auto aspect-square rounded-xl object-cover border border-amber-500/75"
+                                className="h-[92%] w-auto aspect-square object-contain"
                             />
 
                             <div className="h-[90%] flex items-center justify-end">

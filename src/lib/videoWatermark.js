@@ -106,16 +106,7 @@ function criarCanvasTopo(canvasWidth, alturaTopo, imgFox, imgArena, nomeArena) {
     const logoY = 142;
 
     if (imgFox) {
-        tCtx.save();
-        desenharRetanguloArredondado(tCtx, 28, logoY, 124, 124, 24);
-        tCtx.clip();
-        tCtx.drawImage(imgFox, 28, logoY, 124, 124);
-        tCtx.restore();
-
-        tCtx.strokeStyle = 'rgba(255, 153, 0, 0.75)';
-        tCtx.lineWidth = 2.5;
-        desenharRetanguloArredondado(tCtx, 28, logoY, 124, 124, 24);
-        tCtx.stroke();
+        tCtx.drawImage(imgFox, 28, logoY, 128, 128);
     } else {
         tCtx.fillStyle = '#FF9900';
         tCtx.font = '900 28px Inter, sans-serif';
@@ -254,7 +245,7 @@ export async function comporEBaixarVideoComPatrocinadores({
     videoUrl,
     nomeArena = 'Arena Parceira',
     arenaLogoUrl = null,
-    foxLogoUrl = '/logo-fox.jpeg',
+    foxLogoUrl = '/images/logo-fox-escudo.jpg',
     patrocinadores = [],
     nomeArquivo = 'fox-replay-lance',
     onProgresso = () => {},

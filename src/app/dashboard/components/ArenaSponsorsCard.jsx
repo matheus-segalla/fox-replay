@@ -115,11 +115,11 @@ export default function ArenaSponsorsCard({
               <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 via-black/35 to-transparent z-10 p-2.5 flex items-start justify-between">
                 <div className="flex items-center gap-1.5">
                   <Image
-                    src="/logo-fox.jpeg"
+                    src="/images/logo-fox-escudo.jpg"
                     alt="Fox Replay"
-                    width={26}
-                    height={26}
-                    className="w-6 h-6 object-cover rounded-md border border-amber-500/60"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 object-contain"
                   />
                   <span className="text-[8px] font-black text-white uppercase leading-none">
                     FOX <span className="text-amber-500">REPLAY</span>
